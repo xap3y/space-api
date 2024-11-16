@@ -10,7 +10,7 @@ import java.util.Objects;
 @WebFilter(urlPatterns = "/*")
 public class BlackListFilter implements Filter {
 
-    private final String[] allowedIps = {"169.254.169.126", "127.0.0.1", "localhost", "89.102.48.53"};
+    private final String[] allowedIps = {"169.254.169.126", "127.0.0.1", "localhost"};
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {

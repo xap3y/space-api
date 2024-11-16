@@ -96,6 +96,42 @@ public class PasteController {
         }
     }
 
+    @PostMapping(
+            value = "/create",
+            consumes = {
+                    MediaType.APPLICATION_JSON_VALUE
+            },
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<JsonResponse> createPasteBody(
+            @RequestBody PasteRequest body,
+            @RequestHeader("X-API-Key") String apiKey
+    ) {
+        if (body == null) {
+            return new ResponseEntity<>(new JsonResponse(true, "Please provide either text or file, not both"), HttpStatus.BAD_REQUEST);
+        } else if (body.getText().length() > ConfigDb.MAX_PASTE_TEXT_LENGTH) {
+            return new ResponseEntity<>(new JsonResponse(true, "Text is too long, max length is 55045 characters!"), HttpStatus.BAD_REQUEST);
+        }
+
+        User uploader;
+        try {
+            uploader = apiKeyService.validateApiKey(apiKey);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Invalid API Key")) {
+                return new ResponseEntity<>(new JsonResponse(true, "Invalid API Key!"), HttpStatus.UNAUTHORIZED);
+            }
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            PasteDto savedPasteDto = pasteService.savePaste(body.getText(), uploader);
+            String url2 = serverInfo.getProtocol() + "://" + serverInfo.getHost() + ":" + serverInfo.getPort() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
+            return new ResponseEntity<>(new JsonResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @GetMapping(
             value = "/get/{uniqueId}",
             produces = {

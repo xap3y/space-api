@@ -17,7 +17,7 @@ public class Image {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String uniqueId;  // Random ID (8 characters)
+    private String uniqueId;
 
     private String fileType;
     private long size;
