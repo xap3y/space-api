@@ -2,6 +2,7 @@ package me.xap3y.space.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
+import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.dto.UrlDto;
@@ -28,16 +29,18 @@ public class TestController {
     private final PasteMapper pasteMapper;
     private final UrlService urlService;
     private final UrlMapper urlMapper;
+    private final ServerInfo serverInfo;
 
     public static final String ERROR_PAGE_BAD_REQUEST = "redirect:/error400";
     public static final String ERROR_PAGE_NOT_FOUND = "redirect:/error404";
 
-    public TestController(ImageService imageService, PasteService pasteService, PasteMapper pasteMapper, UrlService urlService, UrlMapper urlMapper) {
+    public TestController(ImageService imageService, PasteService pasteService, PasteMapper pasteMapper, UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo) {
         this.imageService = imageService;
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
         this.urlService = urlService;
         this.urlMapper = urlMapper;
+        this.serverInfo = serverInfo;
     }
 
     @RequestMapping(
@@ -77,7 +80,7 @@ public class TestController {
 
         model.addAttribute("base64", image.base64());
         model.addAttribute("uploader", image.uploader().getUsername());
-        model.addAttribute("link", "https://api.xap3y.tech/v1/image/get/" + id);
+        model.addAttribute("link", serverInfo.getBaseUrl() + "/v1/image/get/" + id);
 
         return "render";
     }
@@ -112,7 +115,7 @@ public class TestController {
 
         model.addAttribute("paste", paste.content());
         model.addAttribute("uploader", paste.uploader());
-        model.addAttribute("link", "https://api.xap3y.tech/v1/paste/get/" + id + "?raw=true");
+        model.addAttribute("link", serverInfo.getBaseUrl() + "/v1/paste/get/" + id + "?raw=true");
 
         return "paste";
     }

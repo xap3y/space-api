@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "https://xap3y.tech",
                                 "https://xap3y.eu",
                                 "http://127.0.0.1:8012",
-                                "http://localhost:8012"
+                                "http://localhost:8012",
+                                "https://call.xap3y.tech"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE")
                         .allowedHeaders("*");

@@ -89,7 +89,7 @@ public class PasteController {
 
         try {
             PasteDto savedPasteDto = pasteService.savePaste(content, uploader);
-            String url2 = serverInfo.getProtocol() + "://" + serverInfo.getHost() + ":" + serverInfo.getPort() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
+            String url2 = serverInfo.getBaseUrl() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
             return new ResponseEntity<>(new JsonResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

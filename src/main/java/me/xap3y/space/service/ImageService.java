@@ -50,7 +50,7 @@ public class ImageService {
 
         String random = Utils.generateRandomId();
         String[] fileExtension = Objects.requireNonNull(file.getOriginalFilename()).split("\\.");
-        String fileNameWithExtension = random + "." + fileExtension[fileExtension.length - 1];
+        String fileNameWithExtension = random + "." + fileExtension[fileExtension.length - 1].toLowerCase();
         String fElc = fileExtension[fileExtension.length - 1].toLowerCase();
 
         for (String s : supportedExtensions) {

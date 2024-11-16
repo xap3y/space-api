@@ -1,5 +1,6 @@
 package me.xap3y.space.controller;
 
+import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.JsonResponse;
 import me.xap3y.space.entity.Image;
@@ -25,17 +26,28 @@ public class ImageController {
 
     private final ImageService imageService;
     private final ApiKeyService apiKeyService;
+    private final ServerInfo serverInfo;
 
-    public ImageController(ImageService imageService, ApiKeyService apiKeyService) {
+    public ImageController(ImageService imageService, ApiKeyService apiKeyService, ServerInfo serverInfo) {
         this.imageService = imageService;
         this.apiKeyService = apiKeyService;
+        this.serverInfo = serverInfo;
     }
 
     @PostMapping("/upload")
     public ResponseEntity<JsonResponse> uploadImage(
             @RequestParam("file") MultipartFile file,
-            @RequestHeader("X-API-Key") String apiKey
+            @RequestParam(value = "key", required = false) String apiKeyForm,
+            @RequestHeader(value = "X-API-Key", required = false) String apiKey
     ) {
+
+        if (apiKey == null && apiKeyForm == null) {
+            return new ResponseEntity<>(new JsonResponse(true, "API Key is required"), HttpStatus.BAD_REQUEST);
+        }
+
+        if (apiKey == null) {
+            apiKey = apiKeyForm;
+        }
 
         try {
             apiKeyService.validateApiKey(apiKey);
@@ -52,7 +64,7 @@ public class ImageController {
 
         try {
             Image savedImage = imageService.saveImage(file, apiKey);
-            String url = "https://api.xap3y.tech/v1/image/get/" + savedImage.getUniqueId();
+            String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             return new ResponseEntity<>(new JsonResponse(false, savedImage.getUniqueId(), url), HttpStatus.OK);
         } catch (Exception e) {
             log.error(e.getMessage());

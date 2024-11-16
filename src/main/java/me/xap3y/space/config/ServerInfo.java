@@ -35,4 +35,10 @@ public class ServerInfo {
         return environment.getProperty("server.protocol", "test");
     }
 
+    public String getBaseUrl() {
+        return environment.getProperty("server.protocol", "http") +
+                "://" +
+                environment.getProperty("server.baseurl", "127.0.0.1");
+    }
+
 }
