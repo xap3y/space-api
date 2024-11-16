@@ -1,0 +1,301 @@
+{
+	"info": {
+		"_postman_id": "ead19e4c-5bb8-4b4b-a538-3500b8f556af",
+		"name": "tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39643637"
+	},
+	"item": [
+		{
+			"name": "Get status",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/status",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Paste",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/v1/paste/get/:id?raw=false&uploader_info=false&paste_info=false",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"v1",
+						"paste",
+						"get",
+						":id"
+					],
+					"query": [
+						{
+							"key": "raw",
+							"value": "false"
+						},
+						{
+							"key": "uploader_info",
+							"value": "false"
+						},
+						{
+							"key": "paste_info",
+							"value": "false"
+						}
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create paste",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-Key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "body",
+							"value": "{\"text\": \"test\"}",
+							"contentType": "application/json",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "file",
+							"contentType": "multipart/form-data",
+							"type": "file",
+							"src": [],
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/v1/paste/create",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"v1",
+						"paste",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get URL",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/v1/url/get/:id?raw=false&uploader_info=false&url_info=false",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"v1",
+						"url",
+						"get",
+						":id"
+					],
+					"query": [
+						{
+							"key": "raw",
+							"value": "false"
+						},
+						{
+							"key": "uploader_info",
+							"value": "false"
+						},
+						{
+							"key": "url_info",
+							"value": "false"
+						}
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create URL",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-Key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "url",
+							"value": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/v1/url/create",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"v1",
+						"url",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Image",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/v1/image/get/:id?raw=false&uploader_info=false&image_info=false&base64=false",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"v1",
+						"image",
+						"get",
+						":id"
+					],
+					"query": [
+						{
+							"key": "raw",
+							"value": "false"
+						},
+						{
+							"key": "uploader_info",
+							"value": "false"
+						},
+						{
+							"key": "image_info",
+							"value": "false"
+						},
+						{
+							"key": "base64",
+							"value": "false"
+						}
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Upload Image",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "{{API_SERVER_PROTOCOL}}://{{API_SERVER_ADDRESS}}:{{API_SERVER_PORT}}/v1/image/upload",
+					"protocol": "{{API_SERVER_PROTOCOL}}",
+					"host": [
+						"{{API_SERVER_ADDRESS}}"
+					],
+					"port": "{{API_SERVER_PORT}}",
+					"path": [
+						"v1",
+						"image",
+						"upload"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

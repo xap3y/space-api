@@ -1,0 +1,142 @@
+package me.xap3y.space.controller;
+
+import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.SpaceApplication;
+import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.UrlDto;
+import me.xap3y.space.mapper.PasteMapper;
+import me.xap3y.space.mapper.UrlMapper;
+import me.xap3y.space.service.ImageService;
+import me.xap3y.space.service.PasteService;
+import me.xap3y.space.service.UrlService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.io.FileNotFoundException;
+
+@Slf4j
+@Controller
+@RequestMapping("/web")
+public class TestController {
+
+    private final ImageService imageService;
+    private final PasteService pasteService;
+    private final PasteMapper pasteMapper;
+    private final UrlService urlService;
+    private final UrlMapper urlMapper;
+
+    public static final String ERROR_PAGE_BAD_REQUEST = "redirect:/error400";
+    public static final String ERROR_PAGE_NOT_FOUND = "redirect:/error404";
+
+    public TestController(ImageService imageService, PasteService pasteService, PasteMapper pasteMapper, UrlService urlService, UrlMapper urlMapper) {
+        this.imageService = imageService;
+        this.pasteService = pasteService;
+        this.pasteMapper = pasteMapper;
+        this.urlService = urlService;
+        this.urlMapper = urlMapper;
+    }
+
+    @RequestMapping(
+            value = "/error400"
+    ) public String renderBadRequestErrorPage() {
+        return "error400";
+    }
+
+    @RequestMapping(
+            value = "/error404"
+    ) public String renderResourceNotFoundErrorPage() {
+        return "error404";
+    }
+
+    // Render .jsp files
+    @RequestMapping(
+            value = "/image-upload"
+    ) public String renderPage(Model model) {
+        model.addAttribute("version", SpaceApplication.VERSION);
+        log.info("Rendering test page");
+        return "upload";
+    }
+
+    @GetMapping(
+            value = "/image-render/{id}"
+    ) public String renderImage(
+            @PathVariable String id,
+            Model model
+    ) {
+        ImageDto image;
+
+        try {
+            image = imageService.getImage(id, true, true);
+        } catch (Exception e) {
+            return "error404";
+        }
+
+        model.addAttribute("base64", image.base64());
+        model.addAttribute("uploader", image.uploader().getUsername());
+        model.addAttribute("link", "https://api.xap3y.tech/v1/image/get/" + id);
+
+        return "render";
+    }
+
+    @RequestMapping(
+            value = "/paste-create"
+    ) public String createPastePage(Model model) {
+        return "createpaste";
+    }
+
+    @RequestMapping(
+            value = "/url-create"
+    ) public String createUrlPage(Model model) {
+        return "createurl";
+    }
+
+    @GetMapping(
+            value = "/paste-render/{id}"
+    ) public String renderPaste(
+            @PathVariable String id,
+            Model model
+    ) {
+        PasteDto paste;
+
+        try {
+            paste = pasteMapper.apply(pasteService.getPasteByUniqueId(id)
+                    .orElseThrow(() -> new FileNotFoundException("Paste not found")));
+
+        } catch (Exception e) {
+            return "error404";
+        }
+
+        model.addAttribute("paste", paste.content());
+        model.addAttribute("uploader", paste.uploader());
+        model.addAttribute("link", "https://api.xap3y.tech/v1/paste/get/" + id + "?raw=true");
+
+        return "paste";
+    }
+
+    @GetMapping(
+            value = "/url-render/{id}"
+    ) public String renderUrl(
+            @PathVariable String id,
+            Model model
+    ) {
+        UrlDto urlDto;
+
+        try {
+            urlDto = urlMapper.apply(urlService.getUrlByUniqueId(id)
+                    .orElseThrow(() -> new FileNotFoundException("Url not found")));
+
+        } catch (Exception e) {
+            return "error404";
+        }
+
+        model.addAttribute("code", urlDto.shortCode());
+        model.addAttribute("uploader", urlDto.uploader());
+        model.addAttribute("link", urlDto.url());
+
+        return "shorener";
+    }
+}

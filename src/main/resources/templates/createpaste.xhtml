@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Paste - create</title>
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="MyWebSite" />
+    <link rel="manifest" href="/site.webmanifest" />
+</head>
+<body>
+<h1>Create a Paste</h1>
+<form th:action="@{/v1/paste/create}" method="post" enctype="multipart/form-data">
+
+    <label for="key">API Key:</label>
+    <input type="text" id="key" name="key" /><br /><br />
+
+    <label for="file">.txt file</label>
+    <input type="file" id="file" name="file" /><br /><br />
+
+    <button type="submit">Create</button>
+</form>
+</body>
+</html>
