@@ -32,6 +32,10 @@ public class BlackListFilter implements Filter {
 
         String userAgent = httpRequest.getHeader("User-Agent");
 
+        if (userAgent == null) {
+            userAgent = "curl";
+        }
+
         if (userAgent.contains("curl") || userAgent.contains("wget") || userAgent.contains("Custom-")) {
             servletResponse.setContentType("application/json");
             servletResponse.getWriter().write("{\"error\": \"You are in blacklist!\"}");

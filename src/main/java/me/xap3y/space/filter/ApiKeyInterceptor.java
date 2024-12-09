@@ -1,0 +1,110 @@
+package me.xap3y.space.filter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.api.iface.RequiresSpecialApiKey;
+import me.xap3y.space.entity.User;
+import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.service.ApiKeyService;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+public class ApiKeyInterceptor implements HandlerInterceptor {
+
+    private final ApiKeyService apiKeyService;
+    private final ObjectMapper objectMapper;
+
+    private final String API_KEY_HEADER_NAME = "X-API-Key";
+    private final String API_KEY_FORM_NAME = "key";
+
+
+    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper) {
+        this.apiKeyService = apiKeyService;
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if (handler instanceof HandlerMethod method) {
+            RequiresApiKey annotation = method.getMethodAnnotation(RequiresApiKey.class);
+            RequiresSpecialApiKey specialKeyAnnotation = method.getMethodAnnotation(RequiresSpecialApiKey.class);
+            if (annotation != null || specialKeyAnnotation != null) {
+                String apiKey = request.getHeader(this.API_KEY_HEADER_NAME);
+                if (apiKey == null && request.getContentType() != null && request.getContentType().contains("application/x-www-form-urlencoded")) {
+                    apiKey = getApiKeyFromBody(request);
+                }
+
+                if (apiKey == null) {
+                    this.writeErrorResponse(response, new DefaultResponse(true, "API Key is required"), HttpStatus.BAD_REQUEST);
+                    return false;
+                }
+
+                User uploader;
+                try {
+                    uploader = apiKeyService.validateApiKey(apiKey);
+                } catch (InvalidApiKeyException e) {
+                    this.writeErrorResponse(response, new DefaultResponse(true, e.getMessage()), HttpStatus.UNAUTHORIZED);
+                    return false;
+                }
+
+                if (specialKeyAnnotation != null && !uploader.getRole().equals(UserRole.ADMIN)) {
+                    this.writeErrorResponse(response, new DefaultResponse(true, "You are not allowed to access this resource (KEY)"), HttpStatus.FORBIDDEN);
+                    return false;
+                }
+
+                request.setAttribute("uploader", uploader);
+            }
+        }
+        return true;
+    }
+
+    private void writeErrorResponse(HttpServletResponse response, Object errorObject, HttpStatus status) {
+        response.setStatus(status.value());
+        response.setContentType("application/json");
+        try {
+            response.getWriter().write(objectMapper.writeValueAsString(errorObject));
+        } catch (IOException e) {
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        }
+    }
+
+    private String getApiKeyFromBody(HttpServletRequest request) throws IOException {
+        String body = request.getReader().lines().reduce("", (accumulator, actual) -> accumulator + actual);
+        Map<String, String> params = parseUrlEncodedBody(body);
+        return params.get(this.API_KEY_FORM_NAME);
+    }
+
+    private Map<String, String> parseUrlEncodedBody(String body) {
+        Map<String, String> params = new HashMap<>();
+        String[] pairs = body.split("&");
+
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=", 2);
+            if (keyValue.length == 2) {
+                params.put(decodeUrl(keyValue[0]), decodeUrl(keyValue[1]));
+            }
+        }
+        return params;
+    }
+
+    private String decodeUrl(String value) {
+        try {
+            return URLDecoder.decode(value, StandardCharsets.UTF_8);
+        } catch (NullPointerException | IllegalArgumentException e) {
+            return value;
+        }
+    }
+}

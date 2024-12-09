@@ -34,4 +34,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Custom ###
 images/
+ver.md
+todo.md
+gradlew.bat

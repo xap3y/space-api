@@ -11,15 +11,87 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="MyWebSite" />
     <link rel="manifest" href="/site.webmanifest" />
+    <style>
+        body {
+            background-color: rgb(21, 21, 21);
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .image-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 80vh;
+            border: 2px solid #fff;
+            border-radius: 10px;
+        }
+        .url-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .url-container span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+            color: #ddd;
+            max-width: 80%;
+        }
+        .copy-button {
+            padding: 5px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #555;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #777;
+        }
+    </style>
 </head>
 <body>
-    <h1>Render an Image</h1>
+ <!--<a th:text="'Uploaded by ' + ${uploader}" href="/">Uploaded by ..</a>-->
 
-    <a th:text="'Uploaded by ' + ${uploader}" href="/">Uploaded by ..</a>
+    <div class="url-container">
+        <span id="image-url" th:text="${link}">link</span>
+        <button class="copy-button" onclick="copyToClipboard()">Copy</button>
+    </div>
 
-    <img th:src="${link}" alt="Image" />
+    <div class="image-container">
+        <img id="image-preview" th:src="${link}" alt="Uploaded Image" />
+    </div>
 
-    <pre th:text="${base64}">
-    </pre>
+    <script>
+        function copyToClipboard() {
+            const url = document.getElementById('image-url').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Image URL copied to clipboard!');
+            }).catch((err) => {
+                alert('Failed to copy URL: ' + err);
+            });
+        }
+    </script>
 </body>
 </html>

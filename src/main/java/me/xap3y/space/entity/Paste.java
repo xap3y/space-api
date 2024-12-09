@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import me.xap3y.space.util.ConfigDb;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ public class Paste {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
     private String uniqueId;
 
     /*@Column(
@@ -24,11 +26,14 @@ public class Paste {
     )
     private String content;*/
 
-    @Column(columnDefinition = "MEDIUMTEXT")
+    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
     private String content;
 
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    @ColumnDefault("false")
     private boolean isPublic;
 
     @ManyToOne

@@ -11,18 +11,211 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="MyWebSite" />
     <link rel="manifest" href="/site.webmanifest" />
+    <style>
+        h1 {
+            margin-right: 20px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: rgb(21, 21, 21);
+            color: #fff;
+        }
+        .upload-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #6c63ff;
+            border-radius: 10px;
+            background: rgb(31, 31, 31);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .upload-container.dragover {
+            background: rgb(51, 51, 51);
+            border-color: #4b4cff;
+        }
+        .upload-container input[type="file"] {
+            display: none;
+        }
+        .upload-container label {
+            display: block;
+            font-size: 18px;
+            color: #555;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        .upload-container .message {
+            font-size: 16px;
+            color: #888;
+        }
+        .api-key-field {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .api-key-field label {
+            display: block;
+            font-size: 14px;
+            color: #b1b1b1;
+        }
+        .api-key-field input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        label[for="file"] {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #b1b1b1;
+            background-color: #333; /* Darker background */
+            border: none;
+            border-radius: 8px; /* Rounded corners */
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-align: center;
+        }
+
+        label[for="file"]:hover {
+            background-color: #555; /* Slightly lighter on hover */
+        }
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #979797;
+        }
+        .submit-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #b1b1b1;
+            background-color: #6c63ff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .submit-button:hover {
+            background-color: #4b4cff;
+        }
+        #key {
+            background-color: #333;
+            color: white;
+            border: 0;
+            width: 95%;
+        }
+
+        #key:focus{
+            outline: none;
+        }
+    </style>
 </head>
 <body>
-<h1>Create a Paste</h1>
-<form th:action="@{/v1/paste/create}" method="post" enctype="multipart/form-data">
+    <h1>Create a Paste</h1> <br/>
 
-    <label for="key">API Key:</label>
-    <input type="text" id="key" name="key" /><br /><br />
+    <form id="upload-form" class="upload-container" th:action="@{/v1/paste/create}" method="post" enctype="multipart/form-data">
+        <div class="message">
+            Drag and drop a text file here, or click to browse
+        </div>
 
-    <label for="file">.txt file</label>
-    <input type="file" id="file" name="file" /><br /><br />
+        <input type="file" id="file" name="file" />
+        <label for="file">Choose a text file</label>
 
-    <button type="submit">Create</button>
-</form>
+        <div id="file-name" class="file-name">No file selected</div>
+
+        <div class="api-key-field">
+            <label for="key">API Key:</label>
+            <input type="password" id="key" name="key" required="required" />
+        </div>
+
+        <button type="submit" class="submit-button">Create</button>
+    </form>
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            const apiKey = document.getElementById('key').value;
+            localStorage.setItem('apiKey', apiKey);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+            })
+                .then((response) => {
+                    console.log(response);
+                    if (!response.ok) {
+                        throw new Error('Failed to upload');
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (data["data"]) {
+                        window.location.href = data.data["webview"];
+                    } else {
+                        alert('Upload succeeded, but no response was provided.');
+                    }
+                })
+                .catch((error) => {
+                    alert('Error: ' + error.message);
+                });
+        });
+    </script>
+    <script>
+        (function() {
+            const apiKey = localStorage.getItem('apiKey');
+            const form = document.querySelector('.upload-container');
+            const fileInput = document.getElementById('file');
+            const fileNameDisplay = document.getElementById('file-name');
+
+            if (apiKey) {
+                document.getElementById('key').value = apiKey;
+            }
+
+            form.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add('dragover');
+            });
+
+            form.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.remove('dragover');
+            });
+
+            form.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileNameDisplay.textContent = e.dataTransfer.files[0].name;
+                    fileNameDisplay.style.color = '#d5d5d5';
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    fileNameDisplay.textContent = fileInput.files[0].name;
+                    fileNameDisplay.style.color = '#d5d5d5';
+                } else {
+                    fileNameDisplay.textContent = "No file selected";
+                    fileNameDisplay.style.color = '#979797';
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

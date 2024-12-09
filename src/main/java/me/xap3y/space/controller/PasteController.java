@@ -1,14 +1,16 @@
 package me.xap3y.space.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.JsonResponse;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.model.PasteRequest;
-import me.xap3y.space.service.ApiKeyService;
+import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.PasteService;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.Utils;
@@ -19,6 +21,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping("/v1/paste")
@@ -26,27 +33,25 @@ public class PasteController {
 
 
     private final PasteService pasteService;
-    private final ApiKeyService apiKeyService;
     private final PasteMapper pasteMapper;
     private final ServerInfo serverInfo;
 
     //private static final String[] allowedExtensions = {"txt", "log", "java", "py", "sh", "json", "xml", "yml", "yaml", "properties", "md", "gradle", "conf", "cfg", "ini", "md", "markdown", "html", "htm", "css", "scss", "sass", "less", "ts", "js", "jsx", "tsx", "php", "sql", "csv", "tsv", "r", "rmd", "rdata", "rds", "rda", "rproj", "rhistory", "rprofile"};
 
-    public PasteController(PasteService pasteService, ApiKeyService apiKeyService, PasteMapper pasteMapper, ServerInfo serverInfo) {
+    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo) {
         this.pasteService = pasteService;
-        this.apiKeyService = apiKeyService;
         this.pasteMapper = pasteMapper;
         this.serverInfo = serverInfo;
     }
 
-    @PostMapping(
+    /*@PostMapping(
             value = "/create",
             consumes = {
                     MediaType.MULTIPART_FORM_DATA_VALUE
             },
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<JsonResponse> createPaste(
+    public ResponseEntity<?> createPaste(
             @RequestPart(value = "body", required = false) PasteRequest body,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestHeader("X-API-Key") String apiKey
@@ -94,6 +99,58 @@ public class PasteController {
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }*/
+
+    @PostMapping(
+            value = "/create",
+            consumes = {
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+            },
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> createPaste(
+            HttpServletRequest request,
+            @RequestParam(value = "file") MultipartFile file
+    ) {
+
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
+        }
+
+        if (file != null &&
+                !file.isEmpty() &&
+                //Arrays.stream(allowedExtensions).noneMatch(ext -> Objects.requireNonNull(file.getOriginalFilename()).endsWith("." + ext))
+                //!Objects.requireNonNull(file.getContentType()).startsWith("text/")
+                !Utils.containsText(file)
+        ) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Invalid file extension!"), HttpStatus.BAD_REQUEST);
+        } else if (file == null || file.isEmpty()) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Invalid file!"), HttpStatus.BAD_REQUEST);
+        }
+
+        String content;
+
+        try {
+            content = new String(file.getBytes());
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            PasteDto savedPasteDto = pasteService.savePaste(content, uploader);
+            String url2 = serverInfo.getBaseUrl() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
+            String webViewUrl = serverInfo.getBaseUrl() + "/web/paste-render/" + savedPasteDto.uniqueId();
+            Map<String, String> additionalJson = new HashMap<>() {{
+                put("message", url2);
+                put("webview", webViewUrl);
+            }};
+            return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), additionalJson), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping(
@@ -103,30 +160,25 @@ public class PasteController {
             },
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<JsonResponse> createPasteBody(
-            @RequestBody PasteRequest body,
-            @RequestHeader("X-API-Key") String apiKey
+    @RequiresApiKey
+    public ResponseEntity<?> createPasteBody(
+            HttpServletRequest request,
+            @RequestBody PasteRequest body
     ) {
-        if (body == null) {
-            return new ResponseEntity<>(new JsonResponse(true, "Please provide either text or file, not both"), HttpStatus.BAD_REQUEST);
-        } else if (body.getText().length() > ConfigDb.MAX_PASTE_TEXT_LENGTH) {
-            return new ResponseEntity<>(new JsonResponse(true, "Text is too long, max length is 55045 characters!"), HttpStatus.BAD_REQUEST);
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
         }
-
-        User uploader;
-        try {
-            uploader = apiKeyService.validateApiKey(apiKey);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("Invalid API Key")) {
-                return new ResponseEntity<>(new JsonResponse(true, "Invalid API Key!"), HttpStatus.UNAUTHORIZED);
-            }
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        if (body == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Please provide either text or file, not both"), HttpStatus.BAD_REQUEST);
+        } else if (body.getText().length() > ConfigDb.MAX_PASTE_TEXT_LENGTH) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Text is too long, max length is 55045 characters!"), HttpStatus.BAD_REQUEST);
         }
 
         try {
             PasteDto savedPasteDto = pasteService.savePaste(body.getText(), uploader);
             String url2 = serverInfo.getProtocol() + "://" + serverInfo.getHost() + ":" + serverInfo.getPort() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
-            return new ResponseEntity<>(new JsonResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
+            return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -139,7 +191,7 @@ public class PasteController {
                     MediaType.TEXT_PLAIN_VALUE
             }
     )
-    public ResponseEntity<Object> getPaste(
+    public ResponseEntity<?> getPaste(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
             @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
@@ -170,7 +222,27 @@ public class PasteController {
             headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(new JsonResponse(false, pasteDto.uniqueId(),pasteDto.content()));
+                    .body(new UIDResponse(false, pasteDto.uniqueId(),pasteDto.content()));
         }
+    }
+
+    @GetMapping(
+            value = "/stats",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    public ResponseEntity<?> getPaste() {
+        LocalDate date = LocalDate.now().minusYears(1);
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = LocalDateTime.now();
+
+        Map<String, ?> stats = pasteService.getStats(startOfDay, endOfDay);
+
+        if (stats == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No pastes found"), HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(new DefaultResponse(false, stats), HttpStatus.OK);
     }
 }

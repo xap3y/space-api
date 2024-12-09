@@ -41,4 +41,15 @@ public class ServerInfo {
                 environment.getProperty("server.baseurl", "127.0.0.1");
     }
 
+    public String getTestCorsUrl() {
+        return environment.getProperty("cors.test.url", "https://demo.xap3y.tech");
+    }
+
+    public String getEnv() {
+        return environment.getProperty("spring.enviroment", "dev");
+    }
+
+    public String getFrontEndUrl() {
+        return environment.getProperty("FRONTEND_URL", "http://127.0.0.1");
+    }
 }

@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /*@TestPropertySource(properties = {"spring.datasource.username=xapspace", "spring.datasource.password=space"})*/
 public class ImageTest {
 
-    private static final String IMAGE_ID = "JJYD7HAT";
+    private static final String IMAGE_ID = "XW9P7G7E";
     private static final String IMAGE_RENDER_PATH = "/v1/image/get/";
 
     @Autowired

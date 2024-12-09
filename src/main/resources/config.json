@@ -1,8 +1,0 @@
-{
-    "database": {
-        "url": "jdbc:mariadb://localhost:3306/space",
-        "username": "xapspace",
-        "password": "space",
-        "driverClassName": "org.mariadb.jdbc.Driver"
-    }
-}

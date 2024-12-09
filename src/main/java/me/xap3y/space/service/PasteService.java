@@ -3,7 +3,7 @@ package me.xap3y.space.service;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.exception.ResourceNotFoundException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.repository.PasteRepository;
 import me.xap3y.space.util.Utils;
@@ -11,7 +11,9 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -51,5 +53,25 @@ public class PasteService {
         pasteDto.setUniqueId(Utils.generateRandomId());
 
         return pasteMapper.apply(pasteRepository.save(pasteDto));
+    }
+
+    public Map<String, ?> getStats(LocalDateTime fromTime, LocalDateTime toTime) {
+        List<Object[]> stats = pasteRepository.findBiggestCreatorInRange(fromTime, toTime);
+        Object[] biggest;
+        if (!stats.isEmpty()) biggest = stats.get(0);
+        else biggest = null;
+
+        Map<String, ?> map = new HashMap<>() {{
+            put("fromDate", fromTime);
+            put("toDate", toTime);
+            put("biggest_creator", biggest != null ? Map.of(
+                    "uid", biggest[0],
+                    "username", biggest[1],
+                    "avatar", biggest[2],
+                    "uploads", biggest[3]
+            ) : null);
+            put("total_pastes", pasteRepository.count());
+        }};
+        return map;
     }
 }

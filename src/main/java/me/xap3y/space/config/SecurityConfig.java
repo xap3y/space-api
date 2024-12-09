@@ -9,13 +9,18 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    ServerInfo serverInfo;
+
+    public SecurityConfig(ServerInfo serverInfo) {
+        this.serverInfo = serverInfo;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -33,6 +38,7 @@ public class SecurityConfig {
                 )*/
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
+                /*.cors(AbstractHttpConfigurer::disable)*/
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/private/*").authenticated()
                         .anyRequest().permitAll())
@@ -49,11 +55,14 @@ public class SecurityConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "https://xap3y.space",
-                                "https://xap3y.tech",
-                                "https://xap3y.eu",
+                                "https://test.xap3y.tech",
+                                "https://call.xap3y.tech",
+                                "https://api.xap3y.tech",
                                 "http://127.0.0.1:8012",
                                 "http://localhost:8012",
-                                "https://call.xap3y.tech"
+                                "127.0.0.1",
+                                "http://127.0.0.1",
+                                serverInfo.getTestCorsUrl()
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE")
                         .allowedHeaders("*");

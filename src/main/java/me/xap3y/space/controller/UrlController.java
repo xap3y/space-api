@@ -1,10 +1,13 @@
 package me.xap3y.space.controller;
 
-import me.xap3y.space.dto.JsonResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.dto.UrlDto;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.exception.ResourceNotFoundException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.UrlMapper;
+import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.ApiKeyService;
 import me.xap3y.space.service.UrlService;
 import org.springframework.http.HttpHeaders;
@@ -18,13 +21,11 @@ import org.springframework.web.bind.annotation.*;
 public class UrlController {
 
 
-    private final ApiKeyService apiKeyService;
     private final UrlService urlService;
     private final UrlMapper urlMapper;
 
-    public UrlController(UrlService urlService, ApiKeyService apiKeyService, UrlMapper urlMapper) {
+    public UrlController(UrlService urlService, UrlMapper urlMapper) {
         this.urlService = urlService;
-        this.apiKeyService = apiKeyService;
         this.urlMapper = urlMapper;
     }
 
@@ -32,30 +33,25 @@ public class UrlController {
             value = "/create",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<JsonResponse> createPaste(
-            @RequestParam(value = "url") String url,
-            @RequestHeader("X-API-Key") String apiKey
+    @RequiresApiKey
+    public ResponseEntity<?> createPaste(
+            HttpServletRequest request,
+            @RequestParam(value = "url") String url
     ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
+        }
         if (url == null) {
-            return new ResponseEntity<>(new JsonResponse(true, "Please provide a URL"), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(new DefaultResponse(true, "Please provide a URL"), HttpStatus.BAD_REQUEST);
         }
 
         if (!url.startsWith("http")) {
-            url = "http://" + url;
+            url = "https://" + url;
         }
 
-        User creator;
-        try {
-            creator = apiKeyService.validateApiKey(apiKey);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("Invalid API Key")) {
-                return new ResponseEntity<>(new JsonResponse(true, "Invalid API Key!"), HttpStatus.UNAUTHORIZED);
-            }
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-
-        UrlDto urlDto = urlService.createUrl(url, creator);
-        return new ResponseEntity<>(new JsonResponse(false, urlDto), HttpStatus.OK);
+        UrlDto urlDto = urlService.createUrl(url, uploader);
+        return new ResponseEntity<>(new UIDResponse(false, urlDto.shortCode(), urlDto), HttpStatus.OK);
     }
 
     @GetMapping(
@@ -96,7 +92,7 @@ public class UrlController {
             headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(new JsonResponse(false, urlDto.shortCode(), urlDto.url()));
+                    .body(new UIDResponse(false, urlDto.shortCode(), urlDto.url()));
         }
     }
 

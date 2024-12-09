@@ -1,56 +1,115 @@
 package me.xap3y.space.service;
 
+import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.dto.UserDto;
+import me.xap3y.space.entity.ApiKey;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.exception.ResourceNotFoundException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.mapper.UserMapper;
+import me.xap3y.space.model.AuthRegisterRequest;
+import me.xap3y.space.model.UserSocials;
+import me.xap3y.space.repository.ApiKeyRepository;
+import me.xap3y.space.repository.InviteCodeRepository;
 import me.xap3y.space.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import me.xap3y.space.util.Utils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
+@Slf4j
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
-
+    private final ApiKeyRepository apiKeyRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
+    private final InviteCodeRepository inviteCodeRepository;
 
-    @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository) {
         this.userRepository = userRepository;
+        this.apiKeyRepository = apiKeyRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
+        this.inviteCodeRepository = inviteCodeRepository;
     }
 
-    public User createUser(String username, String password, String role) {
+    public void registerUser(AuthRegisterRequest req) {
+        String encodedPassword = passwordEncoder.encode(req.getPassword());
+        User user = new User(req.getEmail(), req.getUsername(), encodedPassword);
+        ApiKey apiKey = new ApiKey();
+        apiKey.setCreatedAt(LocalDateTime.now());
+        apiKey.setKeyHash(Utils.generateApiKey());
+        apiKey.setMaxUploadSize(-1);
+        apiKeyRepository.save(apiKey);
+        user.setApiKey(apiKey);
+        userRepository.save(user);
 
-        String apiKey = generateApiKey();
+        int res = inviteCodeRepository.markAsUsed(req.getInviteCode(), LocalDateTime.now(), user);
+        log.info("Marked invite code as used: {}", res);
+    }
+
+    public void createUser(String username, String password, String email, boolean test) {
 
         String encodedPassword = passwordEncoder.encode(password);
 
-        User user = new User(username, encodedPassword, role, apiKey);
-        return userRepository.save(user);
+        User user = new User(email, username, encodedPassword);
+        UserSocials socials;
+        if (test) socials = new UserSocials(
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test",
+                "test"
+        );
+        else socials = new UserSocials();
+
+        ApiKey apiKey = new ApiKey();
+        apiKey.setCreatedAt(LocalDateTime.now());
+        apiKey.setKeyHash(Utils.generateApiKey());
+        apiKey.setMaxUploadSize(-1);
+        apiKeyRepository.save(apiKey);
+
+        user.setApiKey(apiKey);
+        user.setSocials(socials);
+        userRepository.save(user);
     }
 
-    public User findByUsername(String username) {
-        return userRepository.findByUsername(username)
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public UserDto findByEmail(String email) throws ResourceNotFoundException {
+        return userRepository.findByEmail(email)
+                .map(userMapper)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    public User findByApiKey(String apiKey) {
-        return userRepository.findByApiKey(apiKey)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
     }
 
-    private String generateApiKey() {
-        SecureRandom random = new SecureRandom();
-        StringBuilder apiKey = new StringBuilder(8);
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (int i = 0; i < 8; i++) {
-            apiKey.append(characters.charAt(random.nextInt(characters.length())));
-        }
-
-        return apiKey.toString();
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
     }
+
 }

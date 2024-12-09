@@ -3,6 +3,7 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -19,9 +20,18 @@ public class Image {
     @Column(unique = true, nullable = false)
     private String uniqueId;
 
+    @Column(nullable = false)
+    @ColumnDefault("'png'")
     private String fileType;
+
+    @Column(nullable = false)
     private long size;
+
+    @Column(nullable = false)
     private LocalDateTime uploadTime;
+
+    @Column
+    private String description;
 
     @ManyToOne
     @JoinColumn(name = "uploader_id")

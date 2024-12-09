@@ -2,12 +2,11 @@ package me.xap3y.space.controller;
 
 
 import me.xap3y.space.SpaceApplication;
+import me.xap3y.space.model.response.DefaultResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +14,18 @@ import java.util.Map;
 @RestController
 @RequestMapping("/")
 public class BasicController {
+
+    @GetMapping(
+            value = "/v1/web/xap3y/render/{id}"
+    ) public ResponseEntity<?> renderPage(
+            @PathVariable String id
+    ) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("discord_id", "1234567890");
+        map.put("discord", 23);
+        Long discordId = (Long) map.get("discord_id");
+        return new ResponseEntity<>(new DefaultResponse(true, "Internal server error"), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
     @GetMapping(
             value = {"v1", "/", "status"},
@@ -25,6 +36,9 @@ public class BasicController {
             put("error", false);
             put("version", "v1");
             put("version_number", SpaceApplication.VERSION);
+            put("sitemap", "https://call.xap3y.tech/sitemap.xml");
+            put("robots", "https://call.xap3y.tech/robots.txt");
+            put("portal_url", "https://xap3y.space");
         }};
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

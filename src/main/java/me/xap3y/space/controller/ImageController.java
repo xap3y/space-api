@@ -1,10 +1,17 @@
 package me.xap3y.space.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import me.xap3y.space.api.exception.InternalServerException;
+import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
-import me.xap3y.space.dto.JsonResponse;
 import me.xap3y.space.entity.Image;
-import me.xap3y.space.service.ApiKeyService;
+import me.xap3y.space.entity.User;
+import me.xap3y.space.model.StatsRequest;
+import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.ImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +22,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/v1/image")
@@ -25,51 +37,72 @@ public class ImageController {
     private static final Logger log = LoggerFactory.getLogger(ImageController.class);
 
     private final ImageService imageService;
-    private final ApiKeyService apiKeyService;
     private final ServerInfo serverInfo;
 
-    public ImageController(ImageService imageService, ApiKeyService apiKeyService, ServerInfo serverInfo) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo) {
         this.imageService = imageService;
-        this.apiKeyService = apiKeyService;
         this.serverInfo = serverInfo;
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<JsonResponse> uploadImage(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "key", required = false) String apiKeyForm,
-            @RequestHeader(value = "X-API-Key", required = false) String apiKey
+    @RequiresApiKey
+    public ResponseEntity<?> uploadImage(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file
     ) {
-
-        if (apiKey == null && apiKeyForm == null) {
-            return new ResponseEntity<>(new JsonResponse(true, "API Key is required"), HttpStatus.BAD_REQUEST);
-        }
-
-        if (apiKey == null) {
-            apiKey = apiKeyForm;
-        }
-
-        try {
-            apiKeyService.validateApiKey(apiKey);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("Invalid API Key")) {
-                return new ResponseEntity<>(new JsonResponse(true, "Invalid API Key!"), HttpStatus.UNAUTHORIZED);
-            }
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized=test"), HttpStatus.UNAUTHORIZED);
         }
 
         if (file.isEmpty()) {
-            return new ResponseEntity<>(new JsonResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
         }
 
         try {
-            Image savedImage = imageService.saveImage(file, apiKey);
+            Image savedImage = imageService.saveImage(file, uploader);
             String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
-            return new ResponseEntity<>(new JsonResponse(false, savedImage.getUniqueId(), url), HttpStatus.OK);
+            Map<String, Object> data = new HashMap<>() {{
+                put("raw_url", url);
+                put("web_url", serverInfo.getBaseUrl() + "/web/image-render/" + savedImage.getUniqueId());
+                put("portal_url", serverInfo.getFrontEndUrl() + "/image/" + savedImage.getUniqueId());
+            }};
+            return new ResponseEntity<>(new UIDResponse(false, savedImage.getUniqueId(), data), HttpStatus.OK);
         } catch (Exception e) {
             log.error(e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @DeleteMapping(
+            value = "/get/{uniqueId}",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> deleteImage(
+            HttpServletRequest request,
+            @PathVariable String uniqueId
+    ) throws RuntimeException, IOException {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+
+        ImageDto image = imageService.getImage(uniqueId, false, true);
+        if (image.uploader() == null) {
+            throw new RuntimeException("Invalid uploader!");
+        }
+
+        if (!Objects.equals(image.uploader().getId(), uploader.getId())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
+        }
+
+        boolean deleted = imageService.deleteImageFile(uniqueId + "." + image.type().toLowerCase(Locale.ROOT));
+        if (!deleted) {
+            throw new InternalServerException("Falied to delete image file");
+        }
+        imageService.deleteByUniqueId(uniqueId);
+        return new ResponseEntity<>(new DefaultResponse(false, "Image deleted"), HttpStatus.OK);
     }
 
     @GetMapping(
@@ -82,32 +115,33 @@ public class ImageController {
                     MediaType.IMAGE_GIF_VALUE
             }
     )
-    public ResponseEntity<Object> getImageBase64(
+    public ResponseEntity<?> getImageBase64(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
             @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
-            @RequestParam(required = false, defaultValue = "false", value = "image_info") boolean imageInfo
+            @RequestParam(required = false, defaultValue = "false", value = "image_info") boolean imageInfo,
+            @RequestParam(required = false, defaultValue = "false", value = "info") boolean onlyInfo
     ) {
         HttpHeaders headers = new HttpHeaders();
-
         ImageDto image;
+        Map<String, Object> data = new HashMap<>();
 
         try {
             image = imageService.getImage(uniqueId, valBool, getUserInfo);
-        } catch (FileNotFoundException e) {
+        } catch (ResourceNotFoundException | IOException e) {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-            return new ResponseEntity<>(new JsonResponse(true, "Image not found"), headers, HttpStatus.NOT_FOUND);
-        } catch (IOException e) {
-            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-            return new ResponseEntity<>(new JsonResponse(true, "Failed to get image"), headers, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new UIDResponse(true, uniqueId, "Image not found"), headers, HttpStatus.NOT_FOUND);
         }
 
         if (getUserInfo) {
+            data.put("uploader", image.uploader().getUsername());
             headers.add("X-Uploader", image.uploader().getUsername());
         }
 
         if (imageInfo) {
+            data.put("image_size", image.size());
+            data.put("image_type", image.type());
             headers.add("X-Image-Size", String.valueOf(image.size()));
             headers.add("X-Image-Type", image.type());
         }
@@ -117,7 +151,10 @@ public class ImageController {
             if (rawData)
                 return new ResponseEntity<>(image.base64(), headers, HttpStatus.OK);
 
-            return new ResponseEntity<>(new JsonResponse(false, image.base64()), headers, HttpStatus.OK);
+            data.put("base64", image.base64());
+            return new ResponseEntity<>(new DefaultResponse(false, data), headers, HttpStatus.OK);
+        } else if (onlyInfo) {
+            return new ResponseEntity<>(new DefaultResponse(false, data), headers, HttpStatus.OK);
         }
 
         if (image.type().contains("png"))
@@ -134,6 +171,32 @@ public class ImageController {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
         return new ResponseEntity<>(image.bytes(), headers, HttpStatus.OK);
+    }
+
+    @GetMapping(
+            value = "/stats",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            },
+            consumes = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    public ResponseEntity<?> getImageStats(
+            @RequestBody(required = false) StatsRequest statsRequest
+    ) {
+        if (statsRequest == null) {
+            LocalDate date = LocalDate.now().minusYears(1);
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = LocalDateTime.now();
+            statsRequest = new StatsRequest(startOfDay, endOfDay);
+        }
+        Map<String, Object> stats = imageService.getStats(statsRequest.getFromDate(), statsRequest.getToDate());
+        if (stats == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No images found"), HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(new DefaultResponse(false, stats), HttpStatus.OK);
     }
 
     /*@GetMapping(

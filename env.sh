@@ -6,11 +6,9 @@ export SPRING_SERVER_PROTOCOL=http
 export SPRING_SERVER_BASEURL=127.0.0.1:$SPRING_SERVER_PORT
 
 # Database
-export SPRING_DATASOURCE_HOST=localhost
+#export SPRING_DATASOURCE_HOST=localhost
 export SPRING_DATASOURCE_PORT=3306
-export SPRING_DATASOURCE_USERNAME=admin
-export SPRING_DATASOURCE_PASSWORD=admin
-export SPRING_DATASOURCE_SCHEMA=space
+#export SPRING_DATASOURCE_SCHEMA=space
 export SPRING_JPA_SHOW_SQL=true
 
 # Security
@@ -18,7 +16,11 @@ export SPRING_SECURITY_USERNAME=xap3y
 export SPRING_SECURITY_PASSWORD=admin
 
 # File upload (For image and pastes)
-export SPRING_MAX_FILE_SIZE=8MB
+# If using nginx, make sure to set client_max_body_size to the same value
+export SPRING_MAX_FILE_SIZE=50MB
 
 # Debug
-export SPRING_DEBUG=true
+export SPRING_DEBUG=false
+export SPRING_ENV=dev
+export CORS_TESTING_URL=http://127.0.0.1
+export FRONTEND_URL=https://xap3y.space

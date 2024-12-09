@@ -17,12 +17,22 @@
 <form th:action="@{/v1/url/create}" method="post" enctype="multipart/form-data">
 
     <label for="key">API Key:</label>
-    <input type="text" id="key" name="key" /><br /><br />
+    <input type="password" id="key" name="key" /><br /><br />
 
     <label for="text">URL:</label>
     <input type="text" id="text" name="text" accept="text/plain" /><br /><br />
 
     <button type="submit">Create</button>
+
+    <script>
+        (function() {
+            const apiKey = localStorage.getItem('apiKey');
+
+            if (apiKey) {
+                document.getElementById('key').value = apiKey;
+            }
+        })();
+    </script>
 </form>
 </body>
 </html>

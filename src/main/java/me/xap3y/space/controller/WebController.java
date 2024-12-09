@@ -22,7 +22,7 @@ import java.io.FileNotFoundException;
 @Slf4j
 @Controller
 @RequestMapping("/web")
-public class TestController {
+public class WebController {
 
     private final ImageService imageService;
     private final PasteService pasteService;
@@ -34,7 +34,7 @@ public class TestController {
     public static final String ERROR_PAGE_BAD_REQUEST = "redirect:/error400";
     public static final String ERROR_PAGE_NOT_FOUND = "redirect:/error404";
 
-    public TestController(ImageService imageService, PasteService pasteService, PasteMapper pasteMapper, UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo) {
+    public WebController(ImageService imageService, PasteService pasteService, PasteMapper pasteMapper, UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo) {
         this.imageService = imageService;
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
@@ -47,6 +47,12 @@ public class TestController {
             value = "/error400"
     ) public String renderBadRequestErrorPage() {
         return "error400";
+    }
+
+    @RequestMapping(
+            value = "/apidocs"
+    ) public String renderApiDocs() {
+        return "error500";
     }
 
     @RequestMapping(
@@ -83,6 +89,12 @@ public class TestController {
         model.addAttribute("link", serverInfo.getBaseUrl() + "/v1/image/get/" + id);
 
         return "render";
+    }
+
+    @GetMapping(
+            value = "/image-render"
+    ) public String renderImageDefault() {
+        return "render-default";
     }
 
     @RequestMapping(

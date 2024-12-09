@@ -2,9 +2,11 @@ package me.xap3y.space.handler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import me.xap3y.space.dto.DefaultResponse;
-import me.xap3y.space.exception.InvalidApiKeyException;
-import me.xap3y.space.exception.ResourceNotFoundException;
+import me.xap3y.space.api.exception.InternalServerException;
+import me.xap3y.space.api.exception.InvalidInviteCodeException;
+import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -20,9 +22,8 @@ import java.time.LocalDateTime;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<DefaultResponse> handleAllExceptions(
-            BadCredentialsException ex,
-            HttpServletRequest request
+    public ResponseEntity<DefaultResponse> handleBadCredentialsExceptions(
+            BadCredentialsException ex
     ) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
@@ -30,9 +31,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({InsufficientAuthenticationException.class, InvalidApiKeyException.class})
-    public ResponseEntity<DefaultResponse> handleAllExceptions(
-            InsufficientAuthenticationException ex,
-            HttpServletRequest request
+    public ResponseEntity<DefaultResponse> handleUnauthorizedExceptions(
+            Exception ex
     ) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
@@ -41,22 +41,38 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({Exception.class, RuntimeException.class})
     public ResponseEntity<DefaultResponse> handleAllExceptions(
-            Exception ex,
-            HttpServletRequest request
+            Exception ex
     ) {
+        log.error("Exception: ", ex);
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler({FileNotFoundException.class, ResourceNotFoundException.class})
-    public ResponseEntity<DefaultResponse> handleAllExceptions(
-            FileNotFoundException ex,
-            HttpServletRequest request
+    public ResponseEntity<?> handleResourceNotFoundException(
+            Exception ex
+    ) {
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage() + "", LocalDateTime.now());
+
+        return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(InvalidInviteCodeException.class)
+    public ResponseEntity<?> handleInvalidApiKeyException(
+            InvalidInviteCodeException ex
     ) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
-        return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(defaultResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InternalServerException.class)
+    public ResponseEntity<?> handleInternalServerException(
+            InternalServerException ex
+    ) {
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 
