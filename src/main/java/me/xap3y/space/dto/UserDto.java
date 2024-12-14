@@ -1,6 +1,7 @@
 package me.xap3y.space.dto;
 
 import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.model.UserInviter;
 import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.model.UserStats;
 import org.springframework.lang.NonNull;
@@ -15,8 +16,10 @@ public record UserDto(
         String password,
         UserRole role,
         String avatar,
-        Long invitedBy,
         LocalDateTime createdAt,
+
+        @Nullable
+        UserInviter invitor,
 
         @NonNull
         UserStats stats,

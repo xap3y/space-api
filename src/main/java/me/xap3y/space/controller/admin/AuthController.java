@@ -9,6 +9,7 @@ import me.xap3y.space.model.AuthRegisterRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.InviteCodeService;
 import me.xap3y.space.service.UserService;
+import me.xap3y.space.util.ConfigDb;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.regex.Pattern;
 
 @Slf4j
 @RestController
@@ -69,7 +72,11 @@ public class AuthController {
             return new ResponseEntity<>(new DefaultResponse(true, "Registration is currently disabled"), HttpStatus.FORBIDDEN);
         }
 
-        if (userService.existsByUsername(registerRequest.getUsername())) {
+        if (!isValidEmailAddress(registerRequest.getEmail())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Invalid email address"), HttpStatus.BAD_REQUEST);
+        } else if (!isUsernameValid(registerRequest.getUsername())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "You can't have this username!"), HttpStatus.BAD_REQUEST);
+        } else if (userService.existsByUsername(registerRequest.getUsername())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Username is taken!"), HttpStatus.BAD_REQUEST);
         } else if (userService.existsByEmail(registerRequest.getEmail())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Email already in use!"), HttpStatus.BAD_REQUEST);
@@ -85,5 +92,21 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, "Registration successful"));
+    }
+
+    private boolean isValidEmailAddress(String email) {
+        String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@" +
+                "(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+        Pattern p = Pattern.compile(emailRegex);
+        return email != null && p.matcher(email).matches();
+    }
+
+    private boolean isUsernameValid(String username) {
+        for (String uname : ConfigDb.BLACKLISTED_USERNAMES) {
+            if (username.contains(uname)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -5,7 +5,6 @@ import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.model.response.DefaultResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -39,6 +38,7 @@ public class BasicController {
             put("sitemap", "https://call.xap3y.tech/sitemap.xml");
             put("robots", "https://call.xap3y.tech/robots.txt");
             put("portal_url", "https://xap3y.space");
+            // TODO: Get urls from enviroments variables
         }};
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

@@ -60,6 +60,11 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                     return false;
                 }
 
+                if (uploader.getRole() == UserRole.BANNED || uploader.getRole() == UserRole.DELETED) {
+                    this.writeErrorResponse(response, new DefaultResponse(true, "Your account is not able to create any new posts! Contact support."), HttpStatus.FORBIDDEN);
+                    return false;
+                }
+
                 if (specialKeyAnnotation != null && !uploader.getRole().equals(UserRole.ADMIN)) {
                     this.writeErrorResponse(response, new DefaultResponse(true, "You are not allowed to access this resource (KEY)"), HttpStatus.FORBIDDEN);
                     return false;

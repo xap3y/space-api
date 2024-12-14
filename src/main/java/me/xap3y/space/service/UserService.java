@@ -3,6 +3,7 @@ package me.xap3y.space.service;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.entity.ApiKey;
+import me.xap3y.space.entity.InviteCode;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.UserMapper;
@@ -45,6 +46,12 @@ public class UserService {
         apiKey.setMaxUploadSize(-1);
         apiKeyRepository.save(apiKey);
         user.setApiKey(apiKey);
+
+        InviteCode code = inviteCodeRepository.findByCode(req.getInviteCode()).orElseThrow();
+        if (code.getCreatedBy() != null) {
+            user.setInvitedBy(code.getCreatedBy());
+        }
+
         userRepository.save(user);
 
         int res = inviteCodeRepository.markAsUsed(req.getInviteCode(), LocalDateTime.now(), user);
@@ -96,6 +103,10 @@ public class UserService {
 
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    public Optional<User> findById(Long uid) {
+        return userRepository.findById(uid);
     }
 
     public UserDto findByEmail(String email) throws ResourceNotFoundException {

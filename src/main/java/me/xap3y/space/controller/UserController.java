@@ -63,8 +63,12 @@ public class UserController {
 
         log.info("Getting user by username: {}", username);
         UserDto userDto;
+        boolean isInteger = isInteger(username);
         try {
-            userDto = userService.findByUsername(username)
+            if (!isInteger) userDto = userService.findByUsername(username)
+                    .map(userMapper)
+                    .orElseThrow(() -> new ResourceNotFoundException("Username not found"));
+            else userDto = userService.findById(Long.parseLong(username))
                     .map(userMapper)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         } catch (Exception e) {
@@ -83,9 +87,6 @@ public class UserController {
             }
         }
 
-
-
-
         return ResponseEntity.ok()
                 .body(new DefaultResponse(false, userDto));
 
@@ -94,6 +95,22 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(user, HttpStatus.OK);*/
+    }
+
+    private static boolean isInteger(String s) {
+        return isInteger(s,10);
+    }
+
+    private static boolean isInteger(String s, int radix) {
+        if(s.isEmpty()) return false;
+        for(int i = 0; i < s.length(); i++) {
+            if(i == 0 && s.charAt(i) == '-') {
+                if(s.length() == 1) return false;
+                else continue;
+            }
+            if(Character.digit(s.charAt(i),radix) < 0) return false;
+        }
+        return true;
     }
 
 }
