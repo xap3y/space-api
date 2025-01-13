@@ -88,7 +88,7 @@ public class AuthController {
             userService.registerUser(registerRequest);
         } catch (Exception e) {
             log.error(e.getMessage());
-            return new ResponseEntity<>(new DefaultResponse(true, "Something went wrong!"), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new DefaultResponse(true, e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, "Registration successful"));

@@ -2,10 +2,14 @@ package me.xap3y.space.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.entity.Paste;
+import me.xap3y.space.entity.Url;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.model.PasteRequest;
@@ -25,6 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @RestController
@@ -167,7 +172,7 @@ public class PasteController {
     ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
+            throw new InvalidApiKeyException();
         }
         if (body == null) {
             return new ResponseEntity<>(new DefaultResponse(true, "Please provide either text or file, not both"), HttpStatus.BAD_REQUEST);
@@ -176,12 +181,37 @@ public class PasteController {
         }
 
         try {
-            PasteDto savedPasteDto = pasteService.savePaste(body.getText(), uploader);
+            PasteDto savedPasteDto = pasteService.savePaste(body.getTitle(), body.getText(), uploader);
             String url2 = serverInfo.getProtocol() + "://" + serverInfo.getHost() + ":" + serverInfo.getPort() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
             return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @DeleteMapping(
+            value = "/get/{uniqueId}"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> deletePaste(
+            HttpServletRequest request,
+            @PathVariable String uniqueId
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+
+        Paste paste = pasteService.getPasteByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Paste not found"));
+
+        if (!Objects.equals(paste.getCreatedBy().getId(), uploader.getId())  &&
+                !(uploader.getRole() == UserRole.USER
+                        || uploader.getRole() == UserRole.GUEST
+                        || uploader.getRole() == UserRole.TESTER
+                )) {
+            throw new InvalidApiKeyException();
+        }
+
+        pasteService.deleteByUniqueId(paste.getUniqueId());
+        return new ResponseEntity<>(new DefaultResponse(false, "Paste deleted"), HttpStatus.OK);
     }
 
     @GetMapping(

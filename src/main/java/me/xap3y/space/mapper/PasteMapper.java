@@ -12,6 +12,7 @@ public class PasteMapper implements Function<Paste, PasteDto> {
     @Override
     public PasteDto apply(Paste paste) {
         return new PasteDto(
+                paste.getTitle(),
                 paste.getContent(),
                 paste.isPublic(),
                 paste.getCreatedAt(),

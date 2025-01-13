@@ -8,6 +8,7 @@ public record UrlDto(
         LocalDateTime createdAt,
         LocalDateTime expiresAt,
         int visits,
-        String uploader
+        String uploader,
+        int maxUses
 ) {
 }

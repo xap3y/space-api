@@ -14,7 +14,13 @@ public interface PasteRepository extends JpaRepository<Paste, Long> {
 
     Optional<Paste> findByUniqueId(String uniqueId);
 
-    Optional<List<Paste>> findByCreatedBy(User createdBy);
+    List<Paste> findByCreatedById(Long createdById);
+
+    List<Paste> findByCreatedBy(User user);
+
+    void deleteByUniqueId(String uniqueId);
+
+    int countAllByCreatedById(Long createdById);
 
     @Query("SELECT e.createdBy.id as uid, u.username, u.avatar, COUNT(e) as uploadCount " +
             "FROM Paste e " +

@@ -28,6 +28,7 @@ public class Image {
     private long size;
 
     @Column(nullable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime uploadTime;
 
     @Column

@@ -1,9 +1,11 @@
 package me.xap3y.space.controller;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.dto.UrlDto;
 import me.xap3y.space.mapper.PasteMapper;
@@ -11,6 +13,7 @@ import me.xap3y.space.mapper.UrlMapper;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
 import me.xap3y.space.service.UrlService;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.FileNotFoundException;
+import java.nio.file.Files;
 
 @Slf4j
 @Controller
@@ -66,27 +70,33 @@ public class WebController {
             value = "/image-upload"
     ) public String renderPage(Model model) {
         model.addAttribute("version", SpaceApplication.VERSION);
-        log.info("Rendering test page");
+        log.info("Rendering image-upload page");
         return "upload";
     }
 
+    @SneakyThrows
     @GetMapping(
             value = "/image-render/{id}"
     ) public String renderImage(
             @PathVariable String id,
             Model model
     ) {
-        ImageDto image;
+        NewImageDto image;
 
         try {
-            image = imageService.getImage(id, true, true);
+            image = imageService.getImageStream(id, false, true);
         } catch (Exception e) {
             return "error404";
         }
 
-        model.addAttribute("base64", image.base64());
+        InputStreamResource fileResource = new InputStreamResource(Files.newInputStream(image.path()));
+        String mimeType = Files.probeContentType(image.path());
+
+        model.addAttribute("stream", fileResource);
+        model.addAttribute("mimeType", mimeType);
         model.addAttribute("uploader", image.uploader().getUsername());
         model.addAttribute("link", serverInfo.getBaseUrl() + "/v1/image/get/" + id);
+        model.addAttribute("portalurl", serverInfo.getFrontEndUrl() + "/image/" + id);
 
         return "render";
     }

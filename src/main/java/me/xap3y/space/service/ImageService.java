@@ -3,6 +3,7 @@ package me.xap3y.space.service;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.dto.StatImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
@@ -123,7 +124,24 @@ public class ImageService {
     }
 
     @NonNull
-    public ImageDto getImage(String uniqueId, boolean base64, boolean userInfo) throws IOException, ResourceNotFoundException {
+    public NewImageDto getImageStream(String uniqueId, boolean base64, boolean userInfo) throws IOException, ResourceNotFoundException {
+
+        Image image = imageRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Image not found"));
+
+        Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType());
+
+        return new NewImageDto(
+                filePath,
+                userInfo ? image.getUploader() : null,
+                image.getFileType(),
+                Files.size(filePath) / 1024,
+                null
+        );
+    }
+
+    @NonNull
+    public ImageDto getImage(String uniqueId, boolean base64, boolean userInfo, boolean info) throws IOException, ResourceNotFoundException {
 
         Image image = imageRepository.findByUniqueId(uniqueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Image not found"));
@@ -131,17 +149,17 @@ public class ImageService {
         if (image == null) {
             throw new ResourceNotFoundException("Image not found");
         }
-
-        Path filePath;
-        byte[] imageBytes;
-        try {
-            filePath= Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType());
-            imageBytes = Files.readAllBytes(filePath);
-        } catch(Exception e) {
-            throw new ResourceNotFoundException("Image not found");
+        byte[] imageBytes = null;
+        String imageBase64 = null;
+        Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType());
+        if (info) {
+            try {
+                imageBytes = Files.readAllBytes(filePath);
+            } catch(Exception e) {
+                throw new ResourceNotFoundException("Image not found");
+            }
+            imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
         }
-
-        String imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
 
         return new ImageDto(
                 imageBytes,

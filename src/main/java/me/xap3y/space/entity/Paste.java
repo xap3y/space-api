@@ -26,10 +26,17 @@ public class Paste {
     )
     private String content;*/
 
+    @Column(nullable = false)
+    private String title;
+
+    @Column
+    private String language;
+
     @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
     private String content;
 
     @Column(nullable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
     @Column(nullable = false)

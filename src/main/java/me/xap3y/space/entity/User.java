@@ -44,6 +44,7 @@ public class User {
     private ApiKey apiKey;
 
     @Column(nullable = false)
+    @ColumnDefault("'default'")
     private String avatar;
 
     @Column(nullable = false)
@@ -57,9 +58,9 @@ public class User {
     @Convert(converter = UserSocialsConverter.class)
     private UserSocials socials;
 
-    @Column(columnDefinition = "json", nullable = false)
+    /*@Column(columnDefinition = "json", nullable = false)
     @Convert(converter = UserStatsConverter.class)
-    private UserStats stats;
+    private UserStats stats;*/
 
     public User() {}
 
@@ -69,7 +70,7 @@ public class User {
         this.role = role;
         this.apiKey = key;
         this.createdAt = LocalDateTime.now();
-        this.stats = new UserStats(0, 0, 0, 0, 0);
+        /*this.stats = new UserStats(0, 0, 0, 0, 0);*/
         this.socials = null;
         this.invitedBy = null;
     }
@@ -80,7 +81,7 @@ public class User {
         this.email = email;
         this.role = UserRole.USER;
         this.createdAt = LocalDateTime.now();
-        this.stats = new UserStats(0, 0, 0, 0, 0);
+        /*this.stats = new UserStats(0, 0, 0, 0, 0);*/
         this.socials = null;
         this.invitedBy = null;
         this.avatar = "https://gravatar.com/avatar/" + Utils.sha256hex(email);

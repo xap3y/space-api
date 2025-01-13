@@ -1,12 +1,11 @@
 package me.xap3y.space.handler;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.exception.InternalServerException;
-import me.xap3y.space.api.exception.InvalidInviteCodeException;
-import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.exception.InvalidInviteCodeException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.model.response.DefaultResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -36,7 +35,7 @@ public class GlobalExceptionHandler {
     ) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
-        return new ResponseEntity<>(defaultResponse, HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(defaultResponse, HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler({Exception.class, RuntimeException.class})

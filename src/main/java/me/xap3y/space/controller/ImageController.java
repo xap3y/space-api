@@ -1,12 +1,15 @@
 package me.xap3y.space.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.SneakyThrows;
+import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.InternalServerException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.model.StatsRequest;
@@ -15,14 +18,14 @@ import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.ImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -52,7 +55,7 @@ public class ImageController {
     ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized=test"), HttpStatus.UNAUTHORIZED);
+            throw new InvalidApiKeyException();
         }
 
         if (file.isEmpty()) {
@@ -88,13 +91,18 @@ public class ImageController {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) throw new InvalidApiKeyException();
 
-        ImageDto image = imageService.getImage(uniqueId, false, true);
+        ImageDto image = imageService.getImage(uniqueId, false, true, false);
         if (image.uploader() == null) {
             throw new RuntimeException("Invalid uploader!");
         }
 
-        if (!Objects.equals(image.uploader().getId(), uploader.getId())) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
+        if (!Objects.equals(image.uploader().getId(), uploader.getId()) &&
+                (uploader.getRole() == UserRole.USER
+                        || uploader.getRole() == UserRole.GUEST
+                        || uploader.getRole() == UserRole.TESTER
+                )
+        ) {
+            throw new InvalidApiKeyException();
         }
 
         boolean deleted = imageService.deleteImageFile(uniqueId + "." + image.type().toLowerCase(Locale.ROOT));
@@ -105,6 +113,7 @@ public class ImageController {
         return new ResponseEntity<>(new DefaultResponse(false, "Image deleted"), HttpStatus.OK);
     }
 
+    @SneakyThrows
     @GetMapping(
             value = "/get/{uniqueId}",
             produces = {
@@ -121,14 +130,15 @@ public class ImageController {
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
             @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
             @RequestParam(required = false, defaultValue = "false", value = "image_info") boolean imageInfo,
-            @RequestParam(required = false, defaultValue = "false", value = "info") boolean onlyInfo
+            @RequestParam(required = false, defaultValue = "false", value = "info") boolean onlyInfo,
+            HttpServletRequest request
     ) {
         HttpHeaders headers = new HttpHeaders();
-        ImageDto image;
+        NewImageDto image;
         Map<String, Object> data = new HashMap<>();
 
         try {
-            image = imageService.getImage(uniqueId, valBool, getUserInfo);
+            image = imageService.getImageStream(uniqueId, valBool, getUserInfo);
         } catch (ResourceNotFoundException | IOException e) {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return new ResponseEntity<>(new UIDResponse(true, uniqueId, "Image not found"), headers, HttpStatus.NOT_FOUND);
@@ -157,7 +167,12 @@ public class ImageController {
             return new ResponseEntity<>(new DefaultResponse(false, data), headers, HttpStatus.OK);
         }
 
-        if (image.type().contains("png"))
+        String rangeHeader = request.getHeader(HttpHeaders.RANGE);
+        long fileLength = Files.size(image.path());
+
+        String mimeType = Files.probeContentType(image.path());
+
+        /*if (image.type().contains("png"))
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE);
         else if (image.type().contains("gif"))
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_GIF_VALUE);
@@ -168,9 +183,46 @@ public class ImageController {
         else if (image.type().contains("webp") || image.type().contains("webm"))
             headers.add(HttpHeaders.CONTENT_TYPE, "image/webp");
         else
-            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);*/
 
-        return new ResponseEntity<>(image.bytes(), headers, HttpStatus.OK);
+        headers.setContentType(MediaType.parseMediaType(mimeType != null ? mimeType : "application/octet-stream"));
+        headers.setContentLength(fileLength);
+        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+
+        headers.set(HttpHeaders.ACCEPT_RANGES, "bytes");
+
+        if (rangeHeader == null) {
+            InputStreamResource fileResource = new InputStreamResource(Files.newInputStream(image.path()));
+            return new ResponseEntity<>(fileResource, headers, HttpStatus.OK);
+        }
+
+        long rangeStart = 0, rangeEnd = fileLength - 1;
+        String[] ranges = rangeHeader.split("=")[1].split("-");
+
+        try {
+            if (ranges.length > 0) {
+                rangeStart = Long.parseLong(ranges[0]);
+            }
+            if (ranges.length > 1) {
+                rangeEnd = Long.parseLong(ranges[1]);
+            }
+        } catch (NumberFormatException ex) {
+            return new ResponseEntity<>(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+        }
+
+        if (rangeEnd > fileLength - 1) {
+            rangeEnd = fileLength - 1;
+        }
+
+        long contentLength = rangeEnd - rangeStart + 1;
+        headers.add(HttpHeaders.CONTENT_RANGE, "bytes " + rangeStart + "-" + rangeEnd + "/" + fileLength);
+        headers.setContentLength(contentLength);
+        headers.set(HttpHeaders.ACCEPT_RANGES, "bytes");
+
+        InputStream inputStream = Files.newInputStream(image.path());
+        inputStream.skip(rangeStart);
+
+        return new ResponseEntity<>(new InputStreamResource(inputStream), headers, HttpStatus.PARTIAL_CONTENT);
     }
 
     @GetMapping(

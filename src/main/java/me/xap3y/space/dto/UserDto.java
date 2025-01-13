@@ -25,6 +25,9 @@ public record UserDto(
         UserStats stats,
 
         @Nullable
-        UserSocials socials
+        UserSocials socials,
+
+        @Nullable
+        String apiKey
 ) {
 }

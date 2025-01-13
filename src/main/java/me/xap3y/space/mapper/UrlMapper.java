@@ -17,7 +17,8 @@ public class UrlMapper implements Function<Url, UrlDto> {
                 url.getCreatedAt(),
                 url.getExpiresAt(),
                 url.getVisits(),
-                url.getCreatedBy().getUsername()
+                url.getCreatedBy().getUsername(),
+                url.getMaxUses()
         );
     }
 }

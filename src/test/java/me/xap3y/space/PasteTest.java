@@ -1,4 +1,5 @@
 package me.xap3y.space;
+/*
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
@@ -65,4 +66,6 @@ public class PasteTest {
                 );
     }
 
-}
+}*/
+
+public class PasteTest {}

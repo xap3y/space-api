@@ -19,11 +19,8 @@ public class ApiKey {
     private String keyHash;
 
     @Column(nullable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
-
-    @Column(nullable = false)
-    @ColumnDefault("0")
-    private int usageCount;
 
     @Column(nullable = false)
     @ColumnDefault("-1")

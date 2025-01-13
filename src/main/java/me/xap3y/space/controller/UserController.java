@@ -2,12 +2,15 @@ package me.xap3y.space.controller;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImageService;
+import me.xap3y.space.service.PasteService;
+import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,12 +29,16 @@ public class UserController {
     private final ImageService imageService;
     private final UserMapper userMapper;
     private final ServerInfo serverInfo;
+    private final UrlService urlService;
+    private final PasteService pasteService;
 
-    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo) {
+    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService) {
         this.userService = userService;
         this.imageService = imageService;
         this.userMapper = userMapper;
         this.serverInfo = serverInfo;
+        this.urlService = urlService;
+        this.pasteService = pasteService;
     }
 
     @PostMapping("/create")
@@ -57,6 +64,7 @@ public class UserController {
             value = "/get/{username}",
             produces = "application/json"
     )
+    @RequiresSpecialApiKey
     public ResponseEntity<?> getUserByUsername(
             @PathVariable String username
     ) {
@@ -82,6 +90,8 @@ public class UserController {
             try {
                 userDto.stats().setStorageUsed((Long) map.get("total_size"));
                 userDto.stats().setTotalUploads(Integer.parseInt(((Long) map.get("uploads")).toString()));
+                userDto.stats().setUrlsShortened(urlService.countUrlsByUserId(userDto.uid()));
+                userDto.stats().setPastesCreated(pasteService.countPastesByUserId(userDto.uid()));
             } catch (Exception e) {
                 // IGNORE
             }

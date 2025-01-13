@@ -11,6 +11,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="MyWebSite" />
     <link rel="manifest" href="/site.webmanifest" />
+    <meta property="og:image" th:content="${link}"/>
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" th:content="${link}" />
+    <link rel="preload" as="image" th:href="${link}" />
     <style>
         body {
             background-color: rgb(21, 21, 21);
@@ -79,13 +83,34 @@
         <button class="copy-button" onclick="copyToClipboard()">Copy</button>
     </div>
 
-    <div class="image-container">
-        <img id="image-preview" th:src="${link}" alt="Uploaded Image" />
-    </div>
+     <div class="url-container">
+         <span id="portal-url" th:text="${portalurl}">Portal URL</span>
+         <button class="copy-button" onclick="copyToClipboardPortal()">Copy</button>
+     </div>
+
+     <div class="image-container" th:if="${mimeType == 'video/mp4'}">
+         <video width="640" height="480" controls="controls">
+             <source th:src="${link}" type="video/mp4" />
+             Your browser does not support the video tag.
+         </video>
+     </div>
+
+     <div class="image-container" th:if="${mimeType.startsWith('image/')}">
+         <img id="image-preview" th:src="${link}" alt="Image"/>
+     </div>
 
     <script>
         function copyToClipboard() {
             const url = document.getElementById('image-url').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Image URL copied to clipboard!');
+            }).catch((err) => {
+                alert('Failed to copy URL: ' + err);
+            });
+        }
+
+        function copyToClipboardPortal() {
+            const url = document.getElementById('portal-url').textContent;
             navigator.clipboard.writeText(url).then(() => {
                 alert('Image URL copied to clipboard!');
             }).catch((err) => {

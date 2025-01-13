@@ -3,7 +3,6 @@ package me.xap3y.space.service;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.repository.PasteRepository;
 import me.xap3y.space.util.Utils;
@@ -11,10 +10,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,20 +28,31 @@ public class PasteService {
         return pasteRepository.findByUniqueId(id);
     }
 
-    public Optional<List<Paste>> getPastesByUser(User user) {
+    public void deleteByUniqueId(String uniqueId) {
+        this.pasteRepository.deleteByUniqueId(uniqueId);
+    }
+
+    public List<Paste> getPastesByUser(User user) {
         return pasteRepository.findByCreatedBy(user);
     }
 
+    public int countPastesByUserId(Long uid) {
+        return pasteRepository.countAllByCreatedById(uid);
+    }
+
     public List<PasteDto> getPastesByUserId(User user) {
-        return pasteRepository.findByCreatedBy(user)
-                .orElseThrow(() -> new ResourceNotFoundException("No pastes found for user"))
-                .stream()
+        return pasteRepository.findByCreatedBy(user).stream()
                 .map(pasteMapper)
                 .collect(Collectors.toList());
     }
 
-    public PasteDto savePaste(String text, User uploader) throws IllegalArgumentException, OptimisticLockingFailureException {
+    public PasteDto savePaste(String text, User uploader) {
+        return savePaste("Untitled", text, uploader);
+    }
+
+    public PasteDto savePaste(String title, String text, User uploader) throws IllegalArgumentException, OptimisticLockingFailureException {
         Paste pasteDto = new Paste();
+        pasteDto.setTitle(title);
         pasteDto.setContent(text);
         pasteDto.setCreatedBy(uploader);
         pasteDto.setPublic(true);
@@ -73,5 +80,22 @@ public class PasteService {
             put("total_pastes", pasteRepository.count());
         }};
         return map;
+    }
+
+    public List<PasteDto> getAllPastesByUserId(Long uid) {
+        List<Paste> pastes = pasteRepository.findByCreatedById(uid);
+        if (pastes.isEmpty()) return List.of();
+        List<PasteDto> pasteDtos = new ArrayList<>();
+        for (Paste paste : pastes) {
+            pasteDtos.add(new PasteDto(
+                    paste.getTitle(),
+                    paste.getContent(),
+                    paste.isPublic(),
+                    paste.getCreatedAt(),
+                    paste.getUniqueId(),
+                    paste.getCreatedBy().getUsername()
+            ));
+        }
+        return pasteDtos;
     }
 }

@@ -25,6 +25,7 @@ public class InviteCode {
     private boolean used;
 
     @Column(nullable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
     @Column
@@ -35,4 +36,12 @@ public class InviteCode {
 
     @ManyToOne
     private User usedBy;
+
+    public InviteCode(String code) {
+        this.code = code;
+        this.createdAt = LocalDateTime.now();
+        this.used = false;
+    }
+
+    public InviteCode() {}
 }

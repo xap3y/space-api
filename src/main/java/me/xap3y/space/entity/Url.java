@@ -29,6 +29,11 @@ public class Url {
     private int visits;
 
     @Column(nullable = false)
+    @ColumnDefault("-1")
+    private int maxUses;
+
+    @Column(nullable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
     @Column

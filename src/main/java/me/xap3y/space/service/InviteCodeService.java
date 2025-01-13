@@ -1,5 +1,6 @@
 package me.xap3y.space.service;
 
+import me.xap3y.space.entity.InviteCode;
 import me.xap3y.space.repository.InviteCodeRepository;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,10 @@ public class InviteCodeService {
     }
 
     public void deleteInviteCode(String code) {
-        inviteCodeRepository.deleteByCode(code);
+        this.inviteCodeRepository.deleteByCode(code);
+    }
+
+    public void createInviteCode(InviteCode code) {
+        this.inviteCodeRepository.save(code);
     }
 }

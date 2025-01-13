@@ -10,6 +10,7 @@ import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ApiKeyService;
+import me.xap3y.space.service.LogsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
@@ -29,18 +30,22 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
 
     private final String API_KEY_HEADER_NAME = "X-API-Key";
     private final String API_KEY_FORM_NAME = "key";
+    private final LogsService logsService;
 
 
-    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper) {
+    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService) {
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
+        this.logsService = logsService;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (handler instanceof HandlerMethod method) {
             RequiresApiKey annotation = method.getMethodAnnotation(RequiresApiKey.class);
+            logsService.logFile(" --- - RequiresApiKey (RequiresApiKey.class) == " + annotation);
             RequiresSpecialApiKey specialKeyAnnotation = method.getMethodAnnotation(RequiresSpecialApiKey.class);
+            logsService.logFile(" --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == " + annotation);
             if (annotation != null || specialKeyAnnotation != null) {
                 String apiKey = request.getHeader(this.API_KEY_HEADER_NAME);
                 if (apiKey == null && request.getContentType() != null && request.getContentType().contains("application/x-www-form-urlencoded")) {
@@ -55,6 +60,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                 User uploader;
                 try {
                     uploader = apiKeyService.validateApiKey(apiKey);
+                    logsService.logFile(" --- - UPLOADER == " + uploader.getUsername());
                 } catch (InvalidApiKeyException e) {
                     this.writeErrorResponse(response, new DefaultResponse(true, e.getMessage()), HttpStatus.UNAUTHORIZED);
                     return false;

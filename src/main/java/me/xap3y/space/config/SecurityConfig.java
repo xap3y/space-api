@@ -38,7 +38,6 @@ public class SecurityConfig {
                 )*/
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                /*.cors(AbstractHttpConfigurer::disable)*/
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/private/*").authenticated()
                         .anyRequest().permitAll())
@@ -52,6 +51,7 @@ public class SecurityConfig {
 
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "https://xap3y.space",

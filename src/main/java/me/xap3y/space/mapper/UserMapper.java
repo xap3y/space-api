@@ -3,6 +3,7 @@ package me.xap3y.space.mapper;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.model.UserInviter;
+import me.xap3y.space.model.UserStats;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Function;
@@ -30,8 +31,9 @@ public class UserMapper implements Function<User, UserDto> {
                 user.getAvatar(),
                 user.getCreatedAt(),
                 inviter,
-                user.getStats(),
-                user.getSocials()
+                new UserStats(),
+                user.getSocials(),
+                user.getApiKey().getKeyHash()
         );
     }
 }

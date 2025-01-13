@@ -1,0 +1,178 @@
+ --- PRE-HANDLING HttpServletRequest, SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@75e96211]
+ --- PRE-HANDLING HttpServletRequest, me.xap3y.space.controller.ImageController#getImageBase64(String, boolean, boolean, boolean, boolean, boolean)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/VZY9PAG2
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- PRE-HANDLING HttpServletRequest, SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@156c6a68]
+ --- PRE-HANDLING HttpServletRequest, me.xap3y.space.controller.UserController#getUserByUsername(String)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/user/get/1
+ --- PRE-HANDLING HttpServletRequest, SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@295e83d3]
+ --- PRE-HANDLING HttpServletRequest, me.xap3y.space.controller.ImageController#getImageBase64(String, boolean, boolean, boolean, boolean, boolean)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] me.xap3y.space.filter.RequestFilter SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@295e83d3]
+ --- [space] me.xap3y.space.filter.RequestFilter org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterResponse@4bd37d80
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/VZY9PAG2
+ --- [space] me.xap3y.space.filter.RequestFilter SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@50b52f37]
+ --- [space] me.xap3y.space.filter.RequestFilter org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterResponse@3216984
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- PRE-HANDLING HttpServletRequest, SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@19a9c9f2]
+ --- PRE-HANDLING HttpServletRequest, me.xap3y.space.controller.UserController#getUserByUsername(String)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- - UPLOADER == admin
+ --- [space] me.xap3y.space.filter.RequestFilter SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@19a9c9f2]
+ --- [space] me.xap3y.space.filter.RequestFilter org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterResponse@310f5ea2
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/user/get/1
+ --- REQ_BODY ----------------------------318778490452696473304774Content-Disposition: form-data; name="email"----------------------------318778490452696473304774Content-Disposition: form-data; name="password"----------------------------318778490452696473304774--
+ --- [space] me.xap3y.space.filter.RequestFilter SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@34b96ae3]
+ --- [space] me.xap3y.space.filter.RequestFilter org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterResponse@5b9ff3b6
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/auth/login
+ --- REQ_BODY {    "username":"test",    "password":"test"}
+ --- PRE-HANDLING HttpServletRequest, SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@5bb13c90]
+ --- PRE-HANDLING HttpServletRequest, me.xap3y.space.controller.admin.AuthController#tryLogin(AuthLoginRequest)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] me.xap3y.space.filter.RequestFilter SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@5bb13c90]
+ --- [space] me.xap3y.space.filter.RequestFilter org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterResponse@64ae28b8
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/auth/login
+ --- REQ_BODY {    "email":"test",    "password":"test"}
+ --- PRE-HANDLING HttpServletRequest, SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@46ea2aeb]
+ --- PRE-HANDLING HttpServletRequest, me.xap3y.space.controller.admin.AuthController#tryLogin(AuthLoginRequest)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] me.xap3y.space.filter.RequestFilter SecurityContextHolderAwareRequestWrapper[ org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterRequest@46ea2aeb]
+ --- [space] me.xap3y.space.filter.RequestFilter org.springframework.security.web.header.HeaderWriterFilter$HeaderWriterResponse@7d720d0
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/auth/login
+ --- REQ_BODY {    "email":"test",    "password":"test"}
+ --- PRE-HANDLING HttpServletRequest_HANDLER, me.xap3y.space.controller.admin.AuthController#tryLogin(AuthLoginRequest)
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/auth/login
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/auth/login
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/8OSV0VFA
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/8OSV0VFA
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/9HFS9A7F
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/9HFS9A7F
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /web/image-render/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon-96x96.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /apple-touch-icon.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /web/image-render/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon-96x96.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/MATURAK0
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/9HFS9A7F
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /web/image-render/9HFS9A7F
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/9HFS9A7F
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon-96x96.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /apple-touch-icon.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
