@@ -1,5 +1,6 @@
 package me.xap3y.space;
 
+import lombok.SneakyThrows;
 import me.xap3y.space.api.enums.Environment;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,10 +14,11 @@ import java.time.LocalDateTime;
 public class SpaceApplication {
 
     /*public static final String VERSION = "{{ version }}";*/
-    public static final String VERSION = "1.0-beta.7";
+    public static final String VERSION = "1.0-beta.8";
     public static LocalDateTime startedAt = null;
     public static final Environment env = Environment.DEVELOPMENT;
 
+    @SneakyThrows
     public static void main(String[] args) {
         startedAt = LocalDateTime.now();
         SpringApplication.run(SpaceApplication.class, args);

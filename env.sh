@@ -26,4 +26,5 @@ export SPRING_MAX_FILE_SIZE=50MB
 export SPRING_DEBUG=false
 export SPRING_ENV=dev
 export CORS_TESTING_URL=http://127.0.0.1
-export FRONTEND_URL=https://xap3y.space
+export FRONTEND_URL=https://s.xap3y.tech
+export DISCORD_BOT=https://discord.com/api/webhooks/1328829837212913694/TjQj62v4zkfFAvWGnxFLFUBZqpC1Ho7mDhjbXSqJikFNru964kO7q4cRuhX7iPpojx_V

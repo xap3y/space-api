@@ -10,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -55,6 +56,8 @@ public class SecurityConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "https://xap3y.space",
+                                "https://s.xap3y.tech",
+                                "https://space.xap3y.tech",
                                 "https://test.xap3y.tech",
                                 "https://call.xap3y.tech",
                                 "https://api.xap3y.tech",
@@ -66,6 +69,12 @@ public class SecurityConfig {
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE")
                         .allowedHeaders("*");
+            }
+
+            @Override
+            public void addResourceHandlers(ResourceHandlerRegistry registry) {
+                registry.addResourceHandler("/static/**")
+                        .addResourceLocations("classpath:/static/");
             }
         };
     }

@@ -15,7 +15,9 @@ import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.model.PasteRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
+import me.xap3y.space.service.MetricService;
 import me.xap3y.space.service.PasteService;
+import me.xap3y.space.service.WebhookService;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.Utils;
 import org.springframework.http.HttpHeaders;
@@ -40,13 +42,17 @@ public class PasteController {
     private final PasteService pasteService;
     private final PasteMapper pasteMapper;
     private final ServerInfo serverInfo;
+    private final MetricService metricService;
+    private final WebhookService webhookService;
 
     //private static final String[] allowedExtensions = {"txt", "log", "java", "py", "sh", "json", "xml", "yml", "yaml", "properties", "md", "gradle", "conf", "cfg", "ini", "md", "markdown", "html", "htm", "css", "scss", "sass", "less", "ts", "js", "jsx", "tsx", "php", "sql", "csv", "tsv", "r", "rmd", "rdata", "rds", "rda", "rproj", "rhistory", "rprofile"};
 
-    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo) {
+    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService) {
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
         this.serverInfo = serverInfo;
+        this.metricService = metricService;
+        this.webhookService = webhookService;
     }
 
     /*@PostMapping(
@@ -152,6 +158,8 @@ public class PasteController {
                 put("message", url2);
                 put("webview", webViewUrl);
             }};
+            metricService.setDatabaseUpdated(true);
+            metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
             return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), additionalJson), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -183,6 +191,9 @@ public class PasteController {
         try {
             PasteDto savedPasteDto = pasteService.savePaste(body.getTitle(), body.getText(), uploader);
             String url2 = serverInfo.getProtocol() + "://" + serverInfo.getHost() + ":" + serverInfo.getPort() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
+            metricService.setDatabaseUpdated(true);
+            metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
+            webhookService.postPasteCreated(savedPasteDto);
             return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -211,6 +222,8 @@ public class PasteController {
         }
 
         pasteService.deleteByUniqueId(paste.getUniqueId());
+        metricService.setDatabaseUpdated(true);
+        //metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "Paste deleted"), HttpStatus.OK);
     }
 

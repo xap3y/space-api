@@ -1,6 +1,8 @@
 package me.xap3y.space.controller.admin;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.SpaceApplication;
+import me.xap3y.space.api.enums.Environment;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -68,7 +70,7 @@ public class AuthController {
             @RequestBody AuthRegisterRequest registerRequest
     ) {
 
-        if (!serverInfo.getEnv().equals("dev")) {
+        if (!serverInfo.getEnv().equals("dev") || SpaceApplication.env != Environment.PRODUCTION) {
             return new ResponseEntity<>(new DefaultResponse(true, "Registration is currently disabled"), HttpStatus.FORBIDDEN);
         }
 

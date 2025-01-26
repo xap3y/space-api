@@ -65,6 +65,12 @@ public class WebController {
         return "error404";
     }
 
+    @RequestMapping(
+            value = "/error500"
+    ) public String renderError500() {
+        return "error500";
+    }
+
     // Render .jsp files
     @RequestMapping(
             value = "/image-upload"

@@ -49,6 +49,10 @@ public class ServerInfo {
         return environment.getProperty("spring.enviroment", "dev");
     }
 
+    public String getDiscordBotToken() {
+        return environment.getProperty("DISCORD_BOT");
+    }
+
     public String getFrontEndUrl() {
         return environment.getProperty("FRONTEND_URL", "http://127.0.0.1");
     }

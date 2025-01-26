@@ -4,11 +4,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import me.xap3y.space.converter.UserSocialsConverter;
-import me.xap3y.space.converter.UserStatsConverter;
 import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.converter.UserSocialsConverter;
 import me.xap3y.space.model.UserSocials;
-import me.xap3y.space.model.UserStats;
 import me.xap3y.space.util.Utils;
 import org.hibernate.annotations.ColumnDefault;
 

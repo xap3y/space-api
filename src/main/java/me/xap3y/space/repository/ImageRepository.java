@@ -20,7 +20,14 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     boolean existsByUniqueId(String uniqueId);
 
-    long countByUploadTimeBetween(LocalDateTime startDate, LocalDateTime endDate);
+    @Query("SELECT COUNT(e.id) " +
+            "FROM Image e " +
+            "WHERE e.uploadTime BETWEEN :startDate AND :endDate ")
+    long countByUploadTimeBetween(@Param("startDate") LocalDateTime startDate,
+                                  @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COUNT(e.id) FROM Image e WHERE e.uploadTime >= :startDate")
+    long countByUploadTimeAfter(@Param("startDate") LocalDateTime startDate);
 
     @Query("SELECT MAX(e.size) as largest, MIN(e.size) as smallest, AVG(e.size) as average, SUM(e.size) as total " +
             "FROM Image e " +
@@ -54,6 +61,7 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
                             @Param("endDate") LocalDateTime endDate,
                             @Param("uid") Long uid);
 
+    long count();
 
     @Transactional
     void deleteByUniqueId(String uniqueId);

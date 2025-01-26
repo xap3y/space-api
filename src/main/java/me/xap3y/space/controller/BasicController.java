@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.service.MetricService;
 import me.xap3y.space.util.ConfigDb;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -22,9 +23,11 @@ import java.util.Map;
 public class BasicController {
 
     private final ServerInfo serverInfo;
+    private final MetricService metricService;
 
-    public BasicController(ServerInfo serverInfo) {
+    public BasicController(ServerInfo serverInfo, MetricService metricService) {
         this.serverInfo = serverInfo;
+        this.metricService = metricService;
     }
 
     @GetMapping(
@@ -49,8 +52,8 @@ public class BasicController {
             put("version", SpaceApplication.VERSION);
             put("level", SpaceApplication.env.toString());
             put("startedAt", SpaceApplication.startedAt);
-            put("sitemap", "https://call.xap3y.tech/sitemap.xml");
-            put("robots", "https://call.xap3y.tech/robots.txt");
+            put("sitemap", serverInfo.getBaseUrl() + "/sitemap.xml");
+            put("robots", serverInfo.getBaseUrl() + "/robots.txt");
             put("portal_url", "https://xap3y.space");
             // TODO: Get urls from enviroments variables
         }};
@@ -101,18 +104,56 @@ public class BasicController {
         String host = request.getServerName();
 
         log.info(" HOST IS :: {}", host);
+        log.info(" PATH-VARIABLE IS :: {}", id);
         HttpHeaders headers = new HttpHeaders();
 
         for (Map.Entry<String, String> entry : ConfigDb.getRedirectMapper().entrySet()) {
             if (entry.getKey().equalsIgnoreCase(host)) {
-                String finalUrl = entry.getValue()
-                        .replaceAll("%BASE%", serverInfo.getBaseUrl()
-                        .replaceAll("%PATH%", id));
-                headers.setLocation(URI.create(finalUrl));
+                log.info(" FOUND MATCHER :: {}", entry.getKey());
+                log.info(" RAW0 REDIRECTING TO :: {}", entry.getValue());
+                String finalUrl = entry.getValue().replaceAll("%BASE%", serverInfo.getBaseUrl());
+                log.info(" RAW1 REDIRECTING TO :: {}", finalUrl);
+                headers.setLocation(URI.create(finalUrl.replaceAll("%PATH%", id)));
                 return new ResponseEntity<>(headers, HttpStatus.MOVED_PERMANENTLY);
             }
         }
 
+        log.info(" MATCHER NOT FOUND");
         return null;
+    }
+
+    @GetMapping(
+            value = "/metrics",
+            produces = "application/json"
+    )
+    public ResponseEntity<?> metrics() {
+        Map<String, Object> response = new HashMap<>() {{
+
+            // INFO
+
+            put("error", false);
+            put("version", SpaceApplication.VERSION);
+            put("level", SpaceApplication.env.toString());
+            put("startedAt", SpaceApplication.startedAt);
+            put("sitemap", serverInfo.getBaseUrl() + "/sitemap.xml");
+            put("robots", serverInfo.getBaseUrl() + "/robots.txt");
+            put("portal_url", serverInfo.getFrontEndUrl());
+
+            // METRICS
+
+            put("session_images", metricService.getSessionImagesUploaded());
+            put("session_pastes", metricService.getSessionPastesCreated());
+            put("session_urls", metricService.getSessionUrlsShortened());
+
+            put("total_images", metricService.getTotalImagesUploaded());
+            put("total_pastes", metricService.getTotalPastesCreated());
+            put("total_urls", metricService.getTotalUrlsShortened());
+
+            put("today_images", metricService.getTodayImagesUploaded());
+            put("today_pastes", metricService.getTotalPastesCreated());
+            put("today_urls", metricService.getTodayUrlsShortened());
+
+        }};
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

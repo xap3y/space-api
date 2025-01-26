@@ -176,3 +176,48 @@
  --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /apple-touch-icon.png
  --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
  --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/image/upload
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/getAJ040XFY
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/image/upload
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/getY5K0XYNK
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/image/upload
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/O3AB0G1M
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/image/upload
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /web/image-render/YC1HPED2
+ --- - RequiresApiKey (RequiresApiKey.class) == null
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == null
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /v1/image/get/YC1HPED2
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon-96x96.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /apple-touch-icon.png
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.svg
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /favicon.ico
+ --- - RequiresApiKey (RequiresApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/image/upload
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /metrics
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /metrics
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /metrics
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [GET] REQ FROM: 127.0.0.1, TO /metrics
+ --- - RequiresApiKey (RequiresApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == @me.xap3y.space.api.iface.RequiresApiKey()
+ --- - UPLOADER == admin
+ --- [space] [nio-8012-exec-3] me.xap3y.space.filter.RequestFilter   : [POST] REQ FROM: 127.0.0.1, TO /v1/image/upload

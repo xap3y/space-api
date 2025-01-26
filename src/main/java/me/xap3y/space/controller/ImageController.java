@@ -16,6 +16,8 @@ import me.xap3y.space.model.StatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.ImageService;
+import me.xap3y.space.service.MetricService;
+import me.xap3y.space.service.WebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -41,10 +43,14 @@ public class ImageController {
 
     private final ImageService imageService;
     private final ServerInfo serverInfo;
+    private final WebhookService webhookService;
+    private final MetricService metricService;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
+        this.webhookService = webhookService;
+        this.metricService = metricService;
     }
 
     @PostMapping("/upload")
@@ -70,6 +76,9 @@ public class ImageController {
                 put("web_url", serverInfo.getBaseUrl() + "/web/image-render/" + savedImage.getUniqueId());
                 put("portal_url", serverInfo.getFrontEndUrl() + "/image/" + savedImage.getUniqueId());
             }};
+            metricService.setDatabaseUpdated(true);
+            metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() + 1);
+            webhookService.postImageUpload(savedImage.getUniqueId(), new NewImageDto(null, uploader, savedImage.getFileType(), savedImage.getSize(), null));
             return new ResponseEntity<>(new UIDResponse(false, savedImage.getUniqueId(), data), HttpStatus.OK);
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -110,6 +119,8 @@ public class ImageController {
             throw new InternalServerException("Falied to delete image file");
         }
         imageService.deleteByUniqueId(uniqueId);
+        metricService.setDatabaseUpdated(true);
+        //metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "Image deleted"), HttpStatus.OK);
     }
 

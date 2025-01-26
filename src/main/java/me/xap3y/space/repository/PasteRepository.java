@@ -30,4 +30,8 @@ public interface PasteRepository extends JpaRepository<Paste, Long> {
             "ORDER BY uploadCount DESC")
     List<Object[]> findBiggestCreatorInRange(@Param("startDate") LocalDateTime startDate,
                                              @Param("endDate") LocalDateTime endDate);
+
+    long count();
+
+    long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
 }

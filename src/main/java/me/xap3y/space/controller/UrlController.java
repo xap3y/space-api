@@ -14,7 +14,9 @@ import me.xap3y.space.model.ShortUrlRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.repository.UrlRepository;
+import me.xap3y.space.service.MetricService;
 import me.xap3y.space.service.UrlService;
+import me.xap3y.space.service.WebhookService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,11 +37,15 @@ public class UrlController {
     private final UrlService urlService;
     private final UrlMapper urlMapper;
     private final ServerInfo serverInfo;
+    private final MetricService metricService;
+    private final WebhookService webhookService;
 
-    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository) {
+    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService) {
         this.urlService = urlService;
         this.urlMapper = urlMapper;
         this.serverInfo = serverInfo;
+        this.metricService = metricService;
+        this.webhookService = webhookService;
     }
 
     @PostMapping(
@@ -77,6 +83,9 @@ public class UrlController {
         Map<String, Object> map = new HashMap<>();
         map.put("urlDto", urlDto);
         map.put("shortUrl", serverInfo.getBaseUrl() + "/v1/url/get/" + urlDto.shortCode());
+        metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() + 1);
+        metricService.setDatabaseUpdated(true);
+        webhookService.postUrlShorten(urlDto);
         return new ResponseEntity<>(new UIDResponse(false, urlDto.shortCode(), map), HttpStatus.OK);
     }
 
@@ -121,6 +130,8 @@ public class UrlController {
         }
 
         urlService.deleteByShortCode(urlDto.getShortCode());
+        metricService.setDatabaseUpdated(true);
+        //metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "ShortUrl deleted"), HttpStatus.OK);
     }
 
