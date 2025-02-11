@@ -67,10 +67,17 @@ public class UrlController {
             return new ResponseEntity<>(new DefaultResponse(true, "Missing request body"), HttpStatus.BAD_REQUEST);
         }
 
+        String uniqueId = body.getUniqueId();
         String url = body.getUrl();
 
         if (url == null) {
             return new ResponseEntity<>(new DefaultResponse(true, "Please provide a URL"), HttpStatus.BAD_REQUEST);
+        }
+
+        if (uniqueId != null) {
+            if (urlService.existByShortCode(uniqueId)) {
+                return new ResponseEntity<>(new DefaultResponse(true, "ShortUrl with this UID already exists"), HttpStatus.BAD_REQUEST);
+            }
         }
 
         if (!url.startsWith("http")) {
@@ -79,10 +86,12 @@ public class UrlController {
 
         int maxUses = body.getMaxUses() == null ? -1 : body.getMaxUses();
 
-        UrlDto urlDto = urlService.createUrl(url, uploader, maxUses);
+        UrlDto urlDto = urlService.createUrl(url, uploader, maxUses, uniqueId);
         Map<String, Object> map = new HashMap<>();
         map.put("urlDto", urlDto);
-        map.put("shortUrl", serverInfo.getBaseUrl() + "/v1/url/get/" + urlDto.shortCode());
+        map.put("rawurl", serverInfo.getBaseUrl() + "/v1/url/get/" + urlDto.shortCode());
+        map.put("redirecturl", serverInfo.getBaseUrl() + "/v1/url/r/" + urlDto.shortCode());
+        map.put("shorturl", serverInfo.getShortShortenerUrl() + "/" + urlDto.shortCode());
         metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() + 1);
         metricService.setDatabaseUpdated(true);
         webhookService.postUrlShorten(urlDto);
@@ -169,6 +178,8 @@ public class UrlController {
         boolean finalIsValid = isValid;
         Map<String, Object> map = new HashMap<>() {{
             put("original_url", urlDto.url());
+            put("shorturl", serverInfo.getShortShortenerUrl() + "/" + urlDto.shortCode());
+            put("redirecturl", serverInfo.getBaseUrl() + "/v1/url/r/" + urlDto.shortCode());
             put("created_at", urlDto.createdAt());
             put("expire_at", urlDto.expiresAt());
             put("creator", urlDto.uploader());

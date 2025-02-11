@@ -15,5 +15,8 @@ public class ShortUrlRequest {
     @Nullable
     private Integer maxUses;
 
+    @Nullable
+    private String uniqueId;
+
     public ShortUrlRequest() {}
 }

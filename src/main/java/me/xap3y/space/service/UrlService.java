@@ -1,5 +1,6 @@
 package me.xap3y.space.service;
 
+import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.dto.UrlDto;
 import me.xap3y.space.entity.Url;
 import me.xap3y.space.entity.User;
@@ -38,12 +39,19 @@ public class UrlService {
         return urlRepository.countAllByCreatedById(uid);
     }
 
-    public UrlDto createUrl(String url, User creator, int maxUses) {
+    public UrlDto createUrl(String url, User creator, int maxUses, String uniqueId) {
+
+        if (uniqueId == null) {
+            uniqueId = Utils.generateRandomId();
+        } else if (!uniqueId.matches("^[a-zA-Z0-9]*$")) {
+            throw new InvalidUniqueIdException();
+        }
+
         Url urlDto = new Url();
         urlDto.setOriginalUrl(url);
         urlDto.setCreatedAt(LocalDateTime.now());
         urlDto.setExpiresAt(LocalDateTime.now().plusDays(7));
-        urlDto.setShortCode(Utils.generateRandomId());
+        urlDto.setShortCode(uniqueId);
         urlDto.setVisits(0);
         urlDto.setMaxUses(maxUses);
         urlDto.setCreatedBy(creator);
@@ -53,5 +61,9 @@ public class UrlService {
 
     public void deleteByShortCode(String shortCode) {
         urlRepository.deleteByShortCode(shortCode);
+    }
+
+    public boolean existByShortCode(String shortCode) {
+        return urlRepository.existsByShortCode(shortCode);
     }
 }

@@ -54,9 +54,14 @@ public class WebhookService {
         embedObject.addField("UID", id, true);
         //embedObject.addField("URL", serverInfo.getBaseUrl() + "/v1/image/get/" + id, true);
         embedObject.addField("| SIZE", "**|** " + imageDto.size() / 1024 + " KiB", true);
-        embedObject.addField("| UPLOADER", "**|** [" + imageDto.uploader().getUsername() + "](https://xap3y.space/profile/xap3y)" , true);
+        embedObject.addField("| UPLOADER", "**|** [" + imageDto.uploader().getUsername() + "](https://s.xap3y.tech/profile/xap3y)" , true);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
+        hook.setContent(
+                "[RAW_URL](" + serverInfo.getBaseUrl() + "/v1/image/get/" + id + ")" +
+                        " | [WEB_URL](" + serverInfo.getBaseUrl() + "/web/image-render/" + id + ")" +
+                        " | [PORTAL_URL](" + serverInfo.getFrontEndUrl() + "/image/" + id + ")" +
+                        " | [SHORT_URL](" + serverInfo.getShortImageUrl() + "/" + id + ")");
         try {
             hook.execute();
         } catch (IOException e) {

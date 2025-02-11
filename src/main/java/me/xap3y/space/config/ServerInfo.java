@@ -56,4 +56,16 @@ public class ServerInfo {
     public String getFrontEndUrl() {
         return environment.getProperty("FRONTEND_URL", "http://127.0.0.1");
     }
+
+    public String getShortImageUrl() {
+        return environment.getProperty("SHORT_IMAGE_URL", "https://i.xap3y.tech");
+    }
+
+    public String getShortPasteUrl() {
+        return environment.getProperty("SHORT_PASTE_URL", "https://p.xap3y.tech");
+    }
+
+    public String getShortShortenerUrl() {
+        return environment.getProperty("SHORT_SHORTENER_URL", "https://r.xap3y.tech");
+    }
 }

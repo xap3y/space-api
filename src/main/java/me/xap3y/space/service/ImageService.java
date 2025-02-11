@@ -1,15 +1,15 @@
 package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.InvalidUniqueIdException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.dto.StatImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.repository.ImageRepository;
-import me.xap3y.space.repository.UserRepository;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.ImageCompressor;
 import me.xap3y.space.util.Utils;
@@ -21,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -58,10 +57,22 @@ public class ImageService {
     }
 
     public Image saveImage(MultipartFile file, User uploader) throws IOException, RuntimeException {
+        return saveImage(file, uploader, null);
+    }
 
-        String random = Utils.generateRandomId();
+
+    public Image saveImage(MultipartFile file, User uploader, String uniqueId) throws IOException, RuntimeException {
+
+        if (uniqueId == null) {
+            uniqueId = Utils.generateRandomId();
+        } else {
+            if (!uniqueId.matches("^[a-zA-Z0-9]*$")) {
+                throw new InvalidUniqueIdException();
+            }
+        }
+
         String[] fileExtension = Objects.requireNonNull(file.getOriginalFilename()).split("\\.");
-        String fileNameWithExtension = random + "." + fileExtension[fileExtension.length - 1].toLowerCase();
+        String fileNameWithExtension = uniqueId + "." + fileExtension[fileExtension.length - 1].toLowerCase();
         String fElc = fileExtension[fileExtension.length - 1].toLowerCase();
 
         boolean isSupported = false;
@@ -76,15 +87,14 @@ public class ImageService {
             throw new IOException("Unsupported file type");
         }
 
-
-        log.info("Handling image with id: {}", random);
+        log.info("Handling image with id: {}", uniqueId);
         File compressedImageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
 
         log.info("Checking image type: {}", fElc);
 
 
         if ((fElc.equals("png") || fElc.equals("jpg") || fElc.equals("webp")) && file.getSize() > 70000) {
-            log.info("Compressing image with id: {} and size: {}", random, file.getSize());
+            log.info("Compressing image with id: {} and size: {}", uniqueId, file.getSize());
             float quality = 0.9f;
             double scale = 1;
 
@@ -100,7 +110,7 @@ public class ImageService {
 
             imageCompressor.compressImage(file.getInputStream(), compressedImageFile, scale, quality);
         } else {
-            log.info("Saving image with id: {}", random);
+            log.info("Saving image with id: {}", uniqueId);
             byte[] bytes = file.getBytes();
             Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
             Files.write(filePath, bytes);
@@ -108,7 +118,7 @@ public class ImageService {
 
         log.info("Saving image with file name: {}", file.getOriginalFilename());
         Image imageDto = new Image();
-        imageDto.setUniqueId(random);
+        imageDto.setUniqueId(uniqueId);
         imageDto.setFileType(fileExtension[fileExtension.length - 1]);
         imageDto.setSize(file.getSize());
         imageDto.setUploadTime(LocalDateTime.now());

@@ -8,12 +8,19 @@ import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.MetricService;
 import me.xap3y.space.util.ConfigDb;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,10 +31,12 @@ public class BasicController {
 
     private final ServerInfo serverInfo;
     private final MetricService metricService;
+    private final ResourceLoader resourceLoader;
 
-    public BasicController(ServerInfo serverInfo, MetricService metricService) {
+    public BasicController(ServerInfo serverInfo, MetricService metricService, ResourceLoader resourceLoader) {
         this.serverInfo = serverInfo;
         this.metricService = metricService;
+        this.resourceLoader = resourceLoader;
     }
 
     @GetMapping(
@@ -46,7 +55,7 @@ public class BasicController {
             value = {"v1", "/", "status"},
             produces = "application/json"
     )
-    public ResponseEntity<Map<String, Object>> rootRoute() {
+    public ResponseEntity<Map<String, ?>> rootRoute() {
         Map<String, Object> response = new HashMap<>() {{
             put("error", false);
             put("version", SpaceApplication.VERSION);
@@ -54,7 +63,7 @@ public class BasicController {
             put("startedAt", SpaceApplication.startedAt);
             put("sitemap", serverInfo.getBaseUrl() + "/sitemap.xml");
             put("robots", serverInfo.getBaseUrl() + "/robots.txt");
-            put("portal_url", "https://xap3y.space");
+            put("portal_url", serverInfo.getFrontEndUrl());
             // TODO: Get urls from enviroments variables
         }};
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -101,6 +110,26 @@ public class BasicController {
             @PathVariable String id,
             HttpServletRequest request
     ) {
+
+        // If the resource exists, return it
+        try {
+            Resource resource = resourceLoader.getResource("classpath:static/" + id);
+
+            if (resource.exists()) {
+                Path path = Paths.get(resource.getURI());
+                String contentType = Files.probeContentType(path);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(contentType != null ? MediaType.parseMediaType(contentType) : MediaType.APPLICATION_OCTET_STREAM);
+
+                return ResponseEntity.ok()
+                        .headers(headers)
+                        .body(resource);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error handling resource: " + e.getMessage());
+        }
+
+        // Otherwise, check if the host matches a redirect
         String host = request.getServerName();
 
         log.info(" HOST IS :: {}", host);

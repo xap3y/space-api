@@ -1,10 +1,7 @@
 package me.xap3y.space.handler;
 
 import lombok.extern.slf4j.Slf4j;
-import me.xap3y.space.api.exception.InternalServerException;
-import me.xap3y.space.api.exception.InvalidApiKeyException;
-import me.xap3y.space.api.exception.InvalidInviteCodeException;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.exception.*;
 import me.xap3y.space.model.response.DefaultResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,9 +54,9 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(InvalidInviteCodeException.class)
+    @ExceptionHandler({InvalidInviteCodeException.class, InvalidUniqueIdException.class})
     public ResponseEntity<?> handleInvalidApiKeyException(
-            InvalidInviteCodeException ex
+            RuntimeException ex
     ) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 

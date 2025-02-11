@@ -10,8 +10,6 @@ export SPRING_SERVER_BASEURL=127.0.0.1:$SPRING_SERVER_PORT
 export SPRING_DATASOURCE_HOST=localhost
 export SPRING_DATASOURCE_PORT=3306
 export SPRING_DATASOURCE_SCHEMA=space
-export SPRING_DATASOURCE_USERNAME=xapspace
-export SPRING_DATASOURCE_PASSWORD=space
 export SPRING_JPA_SHOW_SQL=true
 
 # Security
@@ -27,4 +25,7 @@ export SPRING_DEBUG=false
 export SPRING_ENV=dev
 export CORS_TESTING_URL=http://127.0.0.1
 export FRONTEND_URL=https://s.xap3y.tech
-export DISCORD_BOT=https://discord.com/api/webhooks/1328829837212913694/TjQj62v4zkfFAvWGnxFLFUBZqpC1Ho7mDhjbXSqJikFNru964kO7q4cRuhX7iPpojx_V
+
+export SHORT_IMAGE_URL=https://i0.xap3y.tech
+export SHORT_PASTE_URL=https://p0.xap3y.tech
+export SHORT_SHORTENER_URL=https://r0.xap3y.tech

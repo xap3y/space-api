@@ -57,7 +57,8 @@ public class ImageController {
     @RequiresApiKey
     public ResponseEntity<?> uploadImage(
             HttpServletRequest request,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "uniqueId", required = false) String uniqueId
     ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) {
@@ -68,12 +69,19 @@ public class ImageController {
             return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
         }
 
+        if (uniqueId != null) {
+            if (imageService.doesImageExist(uniqueId)) {
+                return new ResponseEntity<>(new DefaultResponse(true, "Image with this UID already exists"), HttpStatus.BAD_REQUEST);
+            }
+        }
+
         try {
-            Image savedImage = imageService.saveImage(file, uploader);
+            Image savedImage = imageService.saveImage(file, uploader, uniqueId);
             String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             Map<String, Object> data = new HashMap<>() {{
                 put("raw_url", url);
                 put("web_url", serverInfo.getBaseUrl() + "/web/image-render/" + savedImage.getUniqueId());
+                put("short_url", serverInfo.getShortImageUrl() + "/" + savedImage.getUniqueId());
                 put("portal_url", serverInfo.getFrontEndUrl() + "/image/" + savedImage.getUniqueId());
             }};
             metricService.setDatabaseUpdated(true);
