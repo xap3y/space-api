@@ -5,6 +5,7 @@ import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UrlDto;
 import org.springframework.stereotype.Service;
 
@@ -69,14 +70,14 @@ public class WebhookService {
         }
     }
 
-    public void postUrlShorten(UrlDto urlDto) {
+    public void postUrlShorten(ShortUrlDto urlDto) {
         DiscordWebhook hook = getHook();
         DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
         embedObject.setColor(Color.ORANGE);
-        embedObject.setTitle("URL Shortened! (" + urlDto.shortCode() + ")");
-        embedObject.setUrl(urlDto.url());
-        embedObject.addField("shortURL", "https://r0.xap3y.tech/" + urlDto.shortCode(), false);
-        embedObject.addField("creator", urlDto.uploader(), false);
+        embedObject.setTitle("URL Shortened! (" + urlDto.uniqueId() + ")");
+        embedObject.setUrl(urlDto.urlSet().rawUrl());
+        embedObject.addField("shortURL", "https://r0.xap3y.tech/" + urlDto.uniqueId(), false);
+        embedObject.addField("creator", urlDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
         try {
@@ -93,7 +94,7 @@ public class WebhookService {
         embedObject.setTitle("Paste Created! (" + pasteDto.uniqueId() + ")");
         embedObject.setUrl(serverInfo.getBaseUrl() + "/v1/paste/get/" + pasteDto.uniqueId());
         embedObject.addField("shortURL", "https://p0.xap3y.tech/" + pasteDto.uniqueId(), false);
-        embedObject.addField("creator", pasteDto.uploader(), false);
+        embedObject.addField("creator", pasteDto.uploader().getUsername(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
         try {

@@ -1,9 +1,11 @@
 package me.xap3y.space.service;
 
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
+import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UrlDto;
 import me.xap3y.space.entity.Url;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.mapper.ShortUrlMapper;
 import me.xap3y.space.mapper.UrlMapper;
 import me.xap3y.space.repository.UrlRepository;
 import me.xap3y.space.util.Utils;
@@ -19,10 +21,12 @@ public class UrlService {
 
     private final UrlRepository urlRepository;
     private final UrlMapper urlMapper;
+    private final ShortUrlMapper shortUrlMapper;
 
-    public UrlService(UrlRepository urlRepository, UrlMapper urlMapper) {
+    public UrlService(UrlRepository urlRepository, UrlMapper urlMapper, ShortUrlMapper shortUrlMapper) {
         this.urlRepository = urlRepository;
         this.urlMapper = urlMapper;
+        this.shortUrlMapper = shortUrlMapper;
     }
 
     public Optional<Url> getUrlByUniqueId(String id) {
@@ -39,7 +43,7 @@ public class UrlService {
         return urlRepository.countAllByCreatedById(uid);
     }
 
-    public UrlDto createUrl(String url, User creator, int maxUses, String uniqueId) {
+    public ShortUrlDto createUrl(String url, User creator, int maxUses, String uniqueId) {
 
         if (uniqueId == null) {
             uniqueId = Utils.generateRandomId();
@@ -56,7 +60,7 @@ public class UrlService {
         urlDto.setMaxUses(maxUses);
         urlDto.setCreatedBy(creator);
 
-        return urlMapper.apply(urlRepository.save(urlDto));
+        return shortUrlMapper.apply(urlRepository.save(urlDto));
     }
 
     public void deleteByShortCode(String shortCode) {

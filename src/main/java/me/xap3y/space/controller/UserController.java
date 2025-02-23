@@ -72,11 +72,14 @@ public class UserController {
         log.info("Getting user by username: {}", username);
         UserDto userDto;
         boolean isInteger = isInteger(username);
+        boolean containsAt = username.contains("@");
         try {
-            if (!isInteger) userDto = userService.findByUsername(username)
-                    .map(userMapper)
-                    .orElseThrow(() -> new ResourceNotFoundException("Username not found"));
-            else userDto = userService.findById(Long.parseLong(username))
+            if (!isInteger) {
+                if (!containsAt)
+                    userDto = userService.findByUsername(username);
+                else
+                    userDto = userService.findByEmail(username);
+            } else userDto = userService.findById(Long.parseLong(username))
                     .map(userMapper)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         } catch (Exception e) {

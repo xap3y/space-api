@@ -87,14 +87,7 @@ public class PasteService {
         if (pastes.isEmpty()) return List.of();
         List<PasteDto> pasteDtos = new ArrayList<>();
         for (Paste paste : pastes) {
-            pasteDtos.add(new PasteDto(
-                    paste.getTitle(),
-                    paste.getContent(),
-                    paste.isPublic(),
-                    paste.getCreatedAt(),
-                    paste.getUniqueId(),
-                    paste.getCreatedBy().getUsername()
-            ));
+            pasteDtos.add(pasteMapper.apply(paste));
         }
         return pasteDtos;
     }

@@ -3,7 +3,7 @@
 # Spring boot application properties
 export SPRING_SERVER_PORT=8012
 export SPRING_SERVER_PROTOCOL=http
-export SPRING_SERVER_BASEURL=127.0.0.1:$SPRING_SERVER_PORT
+export SPRING_SERVER_BASEURL=192.168.100.100:$SPRING_SERVER_PORT
 #export SPRING_SERVER_BASEURL=api.xap3y.tech
 
 # Database

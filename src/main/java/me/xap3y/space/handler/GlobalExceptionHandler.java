@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleResourceNotFoundException(
             Exception ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage() + "", LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
     }

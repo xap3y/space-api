@@ -70,7 +70,7 @@ public class AuthController {
             @RequestBody AuthRegisterRequest registerRequest
     ) {
 
-        if (!serverInfo.getEnv().equals("dev") || SpaceApplication.env != Environment.PRODUCTION) {
+        if (!serverInfo.getEnv().equals("dev") || SpaceApplication.env == Environment.PRODUCTION) {
             return new ResponseEntity<>(new DefaultResponse(true, "Registration is currently disabled"), HttpStatus.FORBIDDEN);
         }
 
@@ -84,6 +84,12 @@ public class AuthController {
             return new ResponseEntity<>(new DefaultResponse(true, "Email already in use!"), HttpStatus.BAD_REQUEST);
         } else if (!inviteCodeService.isValidInviteCode(registerRequest.getInviteCode())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Invalid invite code"), HttpStatus.BAD_REQUEST);
+        } else if (registerRequest.getUsername().contains(registerRequest.getEmail())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Username can't contain your email!"), HttpStatus.BAD_REQUEST);
+        } else if (registerRequest.getUsername().contains(registerRequest.getPassword())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Username can't contain your password!"), HttpStatus.BAD_REQUEST);
+        } else if (registerRequest.getEmail().equals(registerRequest.getPassword())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Email and password can't be the same!"), HttpStatus.BAD_REQUEST);
         }
 
         try {

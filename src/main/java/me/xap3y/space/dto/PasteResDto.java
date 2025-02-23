@@ -1,15 +1,14 @@
 package me.xap3y.space.dto;
 
-import me.xap3y.space.entity.User;
-
 import java.time.LocalDateTime;
 
-public record PasteDto(
+public record PasteResDto (
         String title,
         String content,
         boolean isPublic,
-        LocalDateTime createdAt,
         String uniqueId,
-        User uploader
+        LocalDateTime createdAt,
+        ShortUserDto uploader,
+        UrlSetDto urlSet
 ) {
 }

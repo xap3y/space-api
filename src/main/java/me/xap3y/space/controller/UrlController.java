@@ -6,9 +6,11 @@ import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
+import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UrlDto;
 import me.xap3y.space.entity.Url;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.mapper.ShortUrlMapper;
 import me.xap3y.space.mapper.UrlMapper;
 import me.xap3y.space.model.ShortUrlRequest;
 import me.xap3y.space.model.response.DefaultResponse;
@@ -39,13 +41,15 @@ public class UrlController {
     private final ServerInfo serverInfo;
     private final MetricService metricService;
     private final WebhookService webhookService;
+    private final ShortUrlMapper shortUrlMapper;
 
-    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService) {
+    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper) {
         this.urlService = urlService;
         this.urlMapper = urlMapper;
         this.serverInfo = serverInfo;
         this.metricService = metricService;
         this.webhookService = webhookService;
+        this.shortUrlMapper = shortUrlMapper;
     }
 
     @PostMapping(
@@ -86,16 +90,11 @@ public class UrlController {
 
         int maxUses = body.getMaxUses() == null ? -1 : body.getMaxUses();
 
-        UrlDto urlDto = urlService.createUrl(url, uploader, maxUses, uniqueId);
-        Map<String, Object> map = new HashMap<>();
-        map.put("urlDto", urlDto);
-        map.put("rawurl", serverInfo.getBaseUrl() + "/v1/url/get/" + urlDto.shortCode());
-        map.put("redirecturl", serverInfo.getBaseUrl() + "/v1/url/r/" + urlDto.shortCode());
-        map.put("shorturl", serverInfo.getShortShortenerUrl() + "/" + urlDto.shortCode());
+        ShortUrlDto urlDto = urlService.createUrl(url, uploader, maxUses, uniqueId);
         metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() + 1);
         metricService.setDatabaseUpdated(true);
         webhookService.postUrlShorten(urlDto);
-        return new ResponseEntity<>(new UIDResponse(false, urlDto.shortCode(), map), HttpStatus.OK);
+        return new ResponseEntity<>(new UIDResponse(false, urlDto.uniqueId(), urlDto), HttpStatus.OK);
     }
 
     @GetMapping(
@@ -152,25 +151,16 @@ public class UrlController {
             }
     )
     public ResponseEntity<?> getUrl(
-            @PathVariable String uniqueId,
-            @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData
-            /*@RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
+            @PathVariable String uniqueId
+            /*@RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData
+            @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
             @RequestParam(required = false, defaultValue = "false", value = "url_info") boolean urlInfo*/
     ) {
-        UrlDto urlDto = urlService.getUrlByUniqueId(uniqueId)
-                .map(urlMapper)
+        ShortUrlDto urlDto = urlService.getUrlByUniqueId(uniqueId)
+                .map(shortUrlMapper)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found"));
 
-        HttpHeaders headers = new HttpHeaders();
-
-        if (rawData) {
-            headers.set(HttpHeaders.CONTENT_TYPE, "text/plain;charset=UTF-8");
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(urlDto.url());
-        }
-
-        boolean isValid;
+        /*boolean isValid;
 
         isValid = LocalDateTime.now().isBefore(urlDto.expiresAt());
         if (isValid) isValid = urlDto.maxUses() < 0 || urlDto.maxUses() > urlDto.visits();
@@ -186,12 +176,10 @@ public class UrlController {
             put("max_uses", urlDto.maxUses());
             put("visits", urlDto.visits());
             put("valid", finalIsValid);
-        }};
+        }};*/
 
-        headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return ResponseEntity.ok()
-                .headers(headers)
-                .body(new UIDResponse(false, urlDto.shortCode(), map));
+                .body(new UIDResponse(false, urlDto.uniqueId(), urlDto));
     }
 
 

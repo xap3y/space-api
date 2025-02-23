@@ -176,7 +176,8 @@ public class ImageService {
                 userInfo ? image.getUploader() : null,
                 image.getFileType(),
                 Files.size(filePath) / 1024,
-                base64 ? imageBase64 : null
+                base64 ? imageBase64 : null,
+                image.getUploadTime()
         );
     }
 

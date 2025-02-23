@@ -101,8 +101,14 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public Optional<User> findByUsername(String username) {
+    public Optional<User> tryFindByUsername(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    public UserDto findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(userMapper)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     public Optional<User> findById(Long uid) {

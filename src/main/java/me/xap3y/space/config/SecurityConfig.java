@@ -63,6 +63,7 @@ public class SecurityConfig {
                                 "https://api.xap3y.tech",
                                 "http://127.0.0.1:8012",
                                 "http://localhost:8012",
+                                "http://localhost:3000",
                                 "127.0.0.1",
                                 "http://127.0.0.1",
                                 serverInfo.getTestCorsUrl()

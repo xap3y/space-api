@@ -8,10 +8,14 @@ import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.PasteResDto;
+import me.xap3y.space.dto.ShortUserDto;
+import me.xap3y.space.dto.UrlSetDto;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.Url;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.PasteMapper;
+import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.model.PasteRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
@@ -44,15 +48,17 @@ public class PasteController {
     private final ServerInfo serverInfo;
     private final MetricService metricService;
     private final WebhookService webhookService;
+    private final ShortUserMapper shortUserMapper;
 
     //private static final String[] allowedExtensions = {"txt", "log", "java", "py", "sh", "json", "xml", "yml", "yaml", "properties", "md", "gradle", "conf", "cfg", "ini", "md", "markdown", "html", "htm", "css", "scss", "sass", "less", "ts", "js", "jsx", "tsx", "php", "sql", "csv", "tsv", "r", "rmd", "rdata", "rds", "rda", "rproj", "rhistory", "rprofile"};
 
-    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService) {
+    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService, ShortUserMapper shortUserMapper) {
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
         this.serverInfo = serverInfo;
         this.metricService = metricService;
         this.webhookService = webhookService;
+        this.shortUserMapper = shortUserMapper;
     }
 
     /*@PostMapping(
@@ -236,9 +242,7 @@ public class PasteController {
     )
     public ResponseEntity<?> getPaste(
             @PathVariable String uniqueId,
-            @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
-            @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
-            @RequestParam(required = false, defaultValue = "false", value = "paste_info") boolean pasteInfo
+            @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData
     ) {
 
         PasteDto pasteDto = pasteService.getPasteByUniqueId(uniqueId)
@@ -246,13 +250,6 @@ public class PasteController {
                 .orElseThrow(() -> new ResourceNotFoundException("Paste not found"));
 
         HttpHeaders headers = new HttpHeaders();
-
-        if (getUserInfo) {
-            headers.add("X-Uploader", pasteDto.uploader());
-        }
-        if (pasteInfo) {
-            headers.add("X-Paste-CreatedAt", pasteDto.createdAt().toString());
-        }
 
         headers.add("X-Paste-IsPublic", String.valueOf(pasteDto.isPublic()));
 
@@ -262,10 +259,24 @@ public class PasteController {
                     .headers(headers)
                     .body(pasteDto.content());
         } else {
+            PasteResDto pasteInfo = new PasteResDto(
+                    pasteDto.title(),
+                    pasteDto.content(),
+                    pasteDto.isPublic(),
+                    pasteDto.uniqueId(),
+                    pasteDto.createdAt(),
+                    shortUserMapper.apply(pasteDto.uploader()),
+                    new UrlSetDto(
+                            null,
+                            null,
+                            serverInfo.getBaseUrl() + "/v1/paste/get/" + pasteDto.uniqueId() + "?raw=true",
+                            null, null
+                    )
+            );
             headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(new UIDResponse(false, pasteDto.uniqueId(),pasteDto.content()));
+                    .body(new UIDResponse(false, pasteDto.uniqueId(),pasteInfo));
         }
     }
 

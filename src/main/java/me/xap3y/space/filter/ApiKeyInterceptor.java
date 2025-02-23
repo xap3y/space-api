@@ -71,7 +71,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                     return false;
                 }
 
-                if (specialKeyAnnotation != null && !uploader.getRole().equals(UserRole.ADMIN)) {
+                if (specialKeyAnnotation != null && (!uploader.getRole().equals(UserRole.ADMIN) && !uploader.getRole().equals(UserRole.OWNER))) {
                     this.writeErrorResponse(response, new DefaultResponse(true, "You are not allowed to access this resource (KEY)"), HttpStatus.FORBIDDEN);
                     return false;
                 }

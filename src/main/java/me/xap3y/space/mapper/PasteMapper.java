@@ -17,7 +17,7 @@ public class PasteMapper implements Function<Paste, PasteDto> {
                 paste.isPublic(),
                 paste.getCreatedAt(),
                 paste.getUniqueId(),
-                paste.getCreatedBy().getUsername()
+                paste.getCreatedBy()
         );
     }
 }

@@ -7,11 +7,14 @@ import me.xap3y.space.api.exception.InternalServerException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.mapper.ImageInfoMapper;
 import me.xap3y.space.model.StatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
@@ -21,6 +24,7 @@ import me.xap3y.space.service.WebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,12 +49,14 @@ public class ImageController {
     private final ServerInfo serverInfo;
     private final WebhookService webhookService;
     private final MetricService metricService;
+    private final ImageInfoMapper imageInfoMapper;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, ImageInfoMapper imageInfoMapper) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
         this.metricService = metricService;
+        this.imageInfoMapper = imageInfoMapper;
     }
 
     @PostMapping("/upload")
@@ -130,6 +136,25 @@ public class ImageController {
         metricService.setDatabaseUpdated(true);
         //metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "Image deleted"), HttpStatus.OK);
+    }
+
+    @SneakyThrows
+    @GetMapping(
+            value = "/info/{uniqueId}",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> getImageBase64(
+            @PathVariable String uniqueId
+    ) {
+
+        ImageDto image = imageService.getImage(uniqueId, false, true, false);
+        ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(uniqueId, image));
+
+        return ResponseEntity.ok()
+                .body(new UIDResponse(false, uniqueId,imageInfoDto));
     }
 
     @SneakyThrows
