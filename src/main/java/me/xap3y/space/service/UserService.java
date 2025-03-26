@@ -1,11 +1,11 @@
 package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.entity.ApiKey;
 import me.xap3y.space.entity.InviteCode;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.AuthRegisterRequest;
 import me.xap3y.space.model.UserSocials;

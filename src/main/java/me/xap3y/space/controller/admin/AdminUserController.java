@@ -1,10 +1,12 @@
 package me.xap3y.space.controller.admin;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
+import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.PasteDto;
-import me.xap3y.space.dto.StatImageDto;
 import me.xap3y.space.dto.UrlDto;
+import me.xap3y.space.model.UserImagesRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
@@ -12,10 +14,7 @@ import me.xap3y.space.service.UrlService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -42,12 +41,18 @@ public class AdminUserController {
     )
     @RequiresSpecialApiKey
     public ResponseEntity<?> getUserImages(
-            @PathVariable Long uid
+            HttpServletRequest request,
+            @PathVariable("uid") Long uid,
+            @RequestBody(required = false) UserImagesRequest body
     ) {
 
-        List<StatImageDto> imageDtos = imageService.getAllImagesByUser(uid);
+        if (body == null) {
+            body = new UserImagesRequest();
+        }
+        List<ImageInfoDto> imageDtos = imageService.getAllImagesByUser(uid, body.getFrom(), body.getTo(), body.getAmount());
+
         if (imageDtos.isEmpty()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No images found for this UID"), HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(new DefaultResponse(true, "No images found for this user UID"), HttpStatus.NOT_FOUND);
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, imageDtos));

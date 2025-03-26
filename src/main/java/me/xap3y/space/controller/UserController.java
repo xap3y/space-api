@@ -2,10 +2,10 @@ package me.xap3y.space.controller;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UserDto;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImageService;
@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/user")
@@ -85,19 +84,6 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new DefaultResponse(true, e.getMessage(), LocalDateTime.now()));
-        }
-
-        Map<String, ?> map = imageService.getUserStats(userDto.uid());
-
-        if (map != null) {
-            try {
-                userDto.stats().setStorageUsed((Long) map.get("total_size"));
-                userDto.stats().setTotalUploads(Integer.parseInt(((Long) map.get("uploads")).toString()));
-                userDto.stats().setUrlsShortened(urlService.countUrlsByUserId(userDto.uid()));
-                userDto.stats().setPastesCreated(pasteService.countPastesByUserId(userDto.uid()));
-            } catch (Exception e) {
-                // IGNORE
-            }
         }
 
         return ResponseEntity.ok()

@@ -29,3 +29,5 @@ export FRONTEND_URL=https://s.xap3y.tech
 export SHORT_IMAGE_URL=https://i0.xap3y.tech
 export SHORT_PASTE_URL=https://p0.xap3y.tech
 export SHORT_SHORTENER_URL=https://r0.xap3y.tech
+
+export NAMESPACE_TAG=local

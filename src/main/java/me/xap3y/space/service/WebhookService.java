@@ -94,7 +94,7 @@ public class WebhookService {
         embedObject.setTitle("Paste Created! (" + pasteDto.uniqueId() + ")");
         embedObject.setUrl(serverInfo.getBaseUrl() + "/v1/paste/get/" + pasteDto.uniqueId());
         embedObject.addField("shortURL", "https://p0.xap3y.tech/" + pasteDto.uniqueId(), false);
-        embedObject.addField("creator", pasteDto.uploader().getUsername(), false);
+        embedObject.addField("creator", pasteDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
         try {

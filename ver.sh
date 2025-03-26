@@ -1,6 +1,7 @@
 #!/bin/bash
 
-read -p "New version: " NEW_VERSION
+# use gum to read mew version
+NEW_VERSION=$(gum input --placeholder "Enter new version" --no-show-help)
 
 BUILD_GRADLE_PATH="./build.gradle"
 SPACE_APP_PATH="./src/main/java/me/xap3y/space/SpaceApplication.java"

@@ -1,5 +1,6 @@
 package me.xap3y.space.util;
 
+import me.xap3y.space.model.UserStats;
 import org.springframework.lang.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -8,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Map;
 import java.util.Random;
 
 public class Utils {

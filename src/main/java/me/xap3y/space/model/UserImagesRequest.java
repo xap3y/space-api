@@ -5,20 +5,25 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import me.xap3y.space.util.CustomLocalDateTimeDeserializer;
+import org.springframework.lang.Nullable;
 
 import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class StatsRequest {
+public class UserImagesRequest {
 
+    public UserImagesRequest() {}
+
+    @Nullable
     @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
-    private LocalDateTime fromDate;
+    private LocalDateTime from;
 
+    @Nullable
     @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
-    private LocalDateTime toDate;
+    private LocalDateTime to;
 
-    public StatsRequest() {}
-
+    @Nullable
+    private Integer amount;
 }

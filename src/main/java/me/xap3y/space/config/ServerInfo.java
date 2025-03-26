@@ -53,6 +53,10 @@ public class ServerInfo {
         return environment.getProperty("DISCORD_BOT");
     }
 
+    public String getNamespaceName() {
+        return environment.getProperty("NAMESPACE_TAG", "local");
+    }
+
     public String getFrontEndUrl() {
         return environment.getProperty("FRONTEND_URL", "http://127.0.0.1");
     }

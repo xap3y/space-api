@@ -11,6 +11,5 @@ public record ShortUrlDto (
         LocalDateTime expiresAt,
         UrlSetDto urlSet,
         ShortUserDto uploader
-
 ) {
 }

@@ -5,14 +5,18 @@ import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.dto.StatImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.mapper.ImageInfoMapper;
+import me.xap3y.space.mapper.ImageMapper;
 import me.xap3y.space.repository.ImageRepository;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.ImageCompressor;
 import me.xap3y.space.util.Utils;
+import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -39,11 +43,15 @@ public class ImageService {
     private final ImageRepository imageRepository;
     private final ImageCompressor imageCompressor;
     private final ServerInfo serverInfo;
+    private final ImageInfoMapper imageInfoMapper;
+    private final ImageMapper imageMapper;
 
-    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ServerInfo serverInfo) {
+    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ServerInfo serverInfo, ImageInfoMapper imageInfoMapper, ImageMapper imageMapper) {
         this.imageRepository = imageRepository;
         this.imageCompressor = imageCompressor;
         this.serverInfo = serverInfo;
+        this.imageInfoMapper = imageInfoMapper;
+        this.imageMapper = imageMapper;
     }
 
     public boolean deleteImageFile(String fileName) {
@@ -274,18 +282,29 @@ public class ImageService {
         return this.getUserStats(LocalDateTime.of(LocalDate.now().minusYears(10), LocalTime.MIN), LocalDateTime.now(), uid);
     }
 
-    public List<StatImageDto> getAllImagesByUser(Long uid) {
-        List<Image> images = imageRepository.findAllByUploaderId(uid);
+    public List<ImageInfoDto> getAllImagesByUser(Long uid, LocalDateTime from, LocalDateTime to, Integer limit) {
+
+        if (from == null) {
+            from = LocalDateTime.of(LocalDate.now().minusYears(10), LocalTime.MIN);
+        }
+        if (to == null) {
+            to = LocalDateTime.now();
+        }
+        if (limit == null) {
+            limit = 25;
+        }
+        List<Image> images = imageRepository.findAllByUploaderIdBetween(uid, from, to, limit);
         if (images.isEmpty()) return List.of();
-        List<StatImageDto> imageDtos = new ArrayList<>();
+        List<ImageInfoDto> imageDtos = new ArrayList<>();
         for (Image image : images) {
-            imageDtos.add(new StatImageDto(
+            imageDtos.add(imageMapper.apply(image));
+            /*imageDtos.add(new StatImageDto(
                     image.getUniqueId(),
                     image.getUploadTime(),
                     image.getFileType(),
                     image.getSize(),
                     serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId()
-            ));
+            ));*/
         }
         return imageDtos;
     }

@@ -16,7 +16,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,6 +63,7 @@ public class BasicController {
             put("sitemap", serverInfo.getBaseUrl() + "/sitemap.xml");
             put("robots", serverInfo.getBaseUrl() + "/robots.txt");
             put("portal_url", serverInfo.getFrontEndUrl());
+            put("namespace_tag", serverInfo.getNamespaceName());
             // TODO: Get urls from enviroments variables
         }};
         return new ResponseEntity<>(response, HttpStatus.OK);

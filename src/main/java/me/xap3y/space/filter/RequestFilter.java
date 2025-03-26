@@ -52,7 +52,7 @@ public class RequestFilter implements Filter {
         String path = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
 
-        if (userAgent.startsWith("HetrixTools")) {
+        if (userAgent.startsWith("HetrixTools") || userAgent.startsWith("Uptime-")) {
             return;
         }
 

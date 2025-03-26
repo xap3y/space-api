@@ -16,6 +16,17 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     Optional<Image> findByUniqueId(String uniqueId);
 
+    @Query("SELECT e FROM Image e " +
+                    "WHERE e.uploader.id = :uploaderId " +
+                    "AND e.uploadTime BETWEEN :from AND :to " +
+                    "ORDER BY e.uploadTime DESC " +
+                    "LIMIT :amount"
+    )
+    List<Image> findAllByUploaderIdBetween(@Param("uploaderId") Long uploaderId,
+                                           @Param("from") LocalDateTime from,
+                                           @Param("to") LocalDateTime to,
+                                           @Param("amount") Integer amount);
+
     List<Image> findAllByUploaderId(Long uploaderId);
 
     boolean existsByUniqueId(String uniqueId);

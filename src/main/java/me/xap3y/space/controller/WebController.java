@@ -4,7 +4,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.dto.UrlDto;

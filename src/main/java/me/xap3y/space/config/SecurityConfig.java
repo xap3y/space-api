@@ -61,11 +61,11 @@ public class SecurityConfig {
                                 "https://test.xap3y.tech",
                                 "https://call.xap3y.tech",
                                 "https://api.xap3y.tech",
-                                "http://127.0.0.1:8012",
-                                "http://localhost:8012",
                                 "http://localhost:3000",
-                                "127.0.0.1",
-                                "http://127.0.0.1",
+                                "http://192.168.100.100:3000",
+                                "https://ext-space.xap3y.tech",
+                                "https://space0.xap3y.tech",
+                                "https://space1.xap3y.tech",
                                 serverInfo.getTestCorsUrl()
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE")

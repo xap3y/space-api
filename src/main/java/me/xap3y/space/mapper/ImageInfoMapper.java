@@ -1,8 +1,10 @@
 package me.xap3y.space.mapper;
 
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.*;
-import me.xap3y.space.entity.InviteCode;
+import me.xap3y.space.dto.ImageDto;
+import me.xap3y.space.dto.ImageInfoDto;
+import me.xap3y.space.dto.ShortUserDto;
+import me.xap3y.space.dto.UrlSetDto;
 import me.xap3y.space.model.UserInviter;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;

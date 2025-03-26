@@ -83,17 +83,19 @@ public class ImageController {
 
         try {
             Image savedImage = imageService.saveImage(file, uploader, uniqueId);
-            String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
+            ImageDto imgDto = new ImageDto(null, savedImage.getUploader(), savedImage.getFileType(), savedImage.getSize(), null, savedImage.getUploadTime());
+            ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(savedImage.getUniqueId(), imgDto));
+            /*String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             Map<String, Object> data = new HashMap<>() {{
                 put("raw_url", url);
                 put("web_url", serverInfo.getBaseUrl() + "/web/image-render/" + savedImage.getUniqueId());
                 put("short_url", serverInfo.getShortImageUrl() + "/" + savedImage.getUniqueId());
                 put("portal_url", serverInfo.getFrontEndUrl() + "/image/" + savedImage.getUniqueId());
-            }};
+            }};*/
             metricService.setDatabaseUpdated(true);
             metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() + 1);
-            webhookService.postImageUpload(savedImage.getUniqueId(), new NewImageDto(null, uploader, savedImage.getFileType(), savedImage.getSize(), null));
-            return new ResponseEntity<>(new UIDResponse(false, savedImage.getUniqueId(), data), HttpStatus.OK);
+            webhookService.postImageUpload(imageInfoDto.uniqueId(), new NewImageDto(null, uploader, savedImage.getFileType(), savedImage.getSize(), null));
+            return new ResponseEntity<>(new UIDResponse(false, imageInfoDto.uniqueId(), imageInfoDto), HttpStatus.OK);
         } catch (Exception e) {
             log.error(e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -171,6 +173,7 @@ public class ImageController {
     public ResponseEntity<?> getImageBase64(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
+            @RequestParam(required = false, defaultValue = "false", value = "download") boolean download,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
             @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
             @RequestParam(required = false, defaultValue = "false", value = "image_info") boolean imageInfo,
@@ -186,6 +189,11 @@ public class ImageController {
         } catch (ResourceNotFoundException | IOException e) {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return new ResponseEntity<>(new UIDResponse(true, uniqueId, "Image not found"), headers, HttpStatus.NOT_FOUND);
+        }
+
+        if (download) {
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + uniqueId + "." + image.type().toLowerCase(Locale.ROOT) + "\"");
+            return new ResponseEntity<>(image.base64(), headers, HttpStatus.OK);
         }
 
         if (getUserInfo) {
@@ -282,7 +290,7 @@ public class ImageController {
             @RequestBody(required = false) StatsRequest statsRequest
     ) {
         if (statsRequest == null) {
-            LocalDate date = LocalDate.now().minusYears(1);
+            LocalDate date = LocalDate.now().minusYears(10);
             LocalDateTime startOfDay = date.atStartOfDay();
             LocalDateTime endOfDay = LocalDateTime.now();
             statsRequest = new StatsRequest(startOfDay, endOfDay);

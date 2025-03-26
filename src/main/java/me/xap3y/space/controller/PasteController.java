@@ -8,11 +8,7 @@ import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.PasteDto;
-import me.xap3y.space.dto.PasteResDto;
-import me.xap3y.space.dto.ShortUserDto;
-import me.xap3y.space.dto.UrlSetDto;
 import me.xap3y.space.entity.Paste;
-import me.xap3y.space.entity.Url;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.mapper.ShortUserMapper;
@@ -194,13 +190,16 @@ public class PasteController {
             return new ResponseEntity<>(new DefaultResponse(true, "Text is too long, max length is 55045 characters!"), HttpStatus.BAD_REQUEST);
         }
 
+        String title = body.getTitle();
+        if (title == null || title.isEmpty()) {
+            title = Utils.generateRandomId();
+        }
         try {
-            PasteDto savedPasteDto = pasteService.savePaste(body.getTitle(), body.getText(), uploader);
-            String url2 = serverInfo.getProtocol() + "://" + serverInfo.getHost() + ":" + serverInfo.getPort() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
+            PasteDto savedPasteDto = pasteService.savePaste(title, body.getText(), uploader);
             metricService.setDatabaseUpdated(true);
             metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
             webhookService.postPasteCreated(savedPasteDto);
-            return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
+            return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), savedPasteDto), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -259,24 +258,10 @@ public class PasteController {
                     .headers(headers)
                     .body(pasteDto.content());
         } else {
-            PasteResDto pasteInfo = new PasteResDto(
-                    pasteDto.title(),
-                    pasteDto.content(),
-                    pasteDto.isPublic(),
-                    pasteDto.uniqueId(),
-                    pasteDto.createdAt(),
-                    shortUserMapper.apply(pasteDto.uploader()),
-                    new UrlSetDto(
-                            null,
-                            null,
-                            serverInfo.getBaseUrl() + "/v1/paste/get/" + pasteDto.uniqueId() + "?raw=true",
-                            null, null
-                    )
-            );
             headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(new UIDResponse(false, pasteDto.uniqueId(),pasteInfo));
+                    .body(new UIDResponse(false, pasteDto.uniqueId(),pasteDto));
         }
     }
 
