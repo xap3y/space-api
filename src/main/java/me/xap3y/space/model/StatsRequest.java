@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import me.xap3y.space.util.CustomLocalDateTimeDeserializer;
+import org.springframework.lang.Nullable;
 
 import java.time.LocalDateTime;
 
@@ -14,10 +15,18 @@ import java.time.LocalDateTime;
 public class StatsRequest {
 
     @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
+    @Nullable
     private LocalDateTime fromDate;
 
     @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
+    @Nullable
     private LocalDateTime toDate;
+
+    @Nullable
+    private Integer limit;
+
+    @Nullable
+    private Boolean fillMissing;
 
     public StatsRequest() {}
 

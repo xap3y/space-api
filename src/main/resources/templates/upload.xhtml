@@ -125,7 +125,7 @@
             Drag and drop an image here, or click to browse
         </div>
 
-        <input type="file" id="file" name="file" accept="image/*" />
+        <input type="file" id="file" name="file" accept="*/*" />
         <label for="file">Choose an image</label>
 
         <div id="file-name" class="file-name">No file selected</div>
@@ -163,7 +163,7 @@
                 })
                 .then((data) => {
                     if (data["uniqueId"]) {
-                        window.location.href = data["message"]["web_url"];
+                        window.location.href = data["message"]["urlSet"]["portalUrl"];
                     } else {
                         alert('Upload succeeded, but no URL was provided.');
                     }

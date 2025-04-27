@@ -22,6 +22,9 @@ public class InviteCodeService {
     }
 
     public void createInviteCode(InviteCode code) {
+        if (this.inviteCodeRepository.existsByCode(code.getCode())) {
+            throw new IllegalArgumentException("Invite code already exists");
+        }
         this.inviteCodeRepository.save(code);
     }
 }

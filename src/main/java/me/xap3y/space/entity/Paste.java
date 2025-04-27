@@ -3,7 +3,6 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import me.xap3y.space.util.ConfigDb;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;

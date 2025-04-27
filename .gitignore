@@ -43,4 +43,9 @@ gradlew.bat
 
 logs.txt
 
-startdev.sh
+zscripts/startdev.sh
+
+zscripts/up.sh
+zscripts/
+
+zscripts/env_dev.sh

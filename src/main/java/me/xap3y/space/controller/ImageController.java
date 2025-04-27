@@ -3,9 +3,7 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import me.xap3y.space.api.enums.UserRole;
-import me.xap3y.space.api.exception.InternalServerException;
-import me.xap3y.space.api.exception.InvalidApiKeyException;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
@@ -15,6 +13,7 @@ import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ImageInfoMapper;
+import me.xap3y.space.model.ImageGetRequest;
 import me.xap3y.space.model.StatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
@@ -23,9 +22,13 @@ import me.xap3y.space.service.MetricService;
 import me.xap3y.space.service.WebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -50,13 +53,15 @@ public class ImageController {
     private final WebhookService webhookService;
     private final MetricService metricService;
     private final ImageInfoMapper imageInfoMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, ImageInfoMapper imageInfoMapper) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, ImageInfoMapper imageInfoMapper, PasswordEncoder passwordEncoder) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
         this.metricService = metricService;
         this.imageInfoMapper = imageInfoMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/upload")
@@ -64,7 +69,10 @@ public class ImageController {
     public ResponseEntity<?> uploadImage(
             HttpServletRequest request,
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "uniqueId", required = false) String uniqueId
+            @RequestParam(value = "uniqueId", required = false) String uniqueId,
+            @RequestParam(value = "private", required = false) Boolean isPrivate,
+            @RequestParam(value = "password", required = false) String password,
+            @RequestParam(value = "desc", required = false) String description
     ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) {
@@ -81,9 +89,36 @@ public class ImageController {
             }
         }
 
+        if (uploader.getApiKey().getKeyCode().equals(password)) {
+            throw new BadRequestException("Password cannot be the same as your API key!");
+        } else if (password != null && password.length() < 3) {
+            throw new BadRequestException("Password must be at least 3 characters long!");
+        } else if (password != null && password.length() > 100) {
+            throw new BadRequestException("Password must be at most 100 characters long!");
+        } else if (password != null && !password.matches("^[a-zA-Z0-9]*$")) {
+            throw new BadRequestException("Password can only contain alphanumeric characters!");
+        } else if (description != null && description.length() > 200) {
+            throw new BadRequestException("Description must be at most 200 characters long!");
+        }
+
+        boolean isPublic = isPrivate == null || !isPrivate;
+        String pass = (password == null) ? null : passwordEncoder.encode(password);
+
         try {
-            Image savedImage = imageService.saveImage(file, uploader, uniqueId);
-            ImageDto imgDto = new ImageDto(null, savedImage.getUploader(), savedImage.getFileType(), savedImage.getSize(), null, savedImage.getUploadTime());
+            Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description);
+            ImageDto imgDto = new ImageDto(
+                    null,
+                    savedImage.getUploader(),
+                    savedImage.getDescription(),
+                    savedImage.getFileType(),
+                    savedImage.getPassword(),
+                    savedImage.getSize(),
+                    null,
+                    savedImage.getUploadTime(),
+                    savedImage.getExpirationTime(),
+                    savedImage.getIsPublic()
+            );
+
             ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(savedImage.getUniqueId(), imgDto));
             /*String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             Map<String, Object> data = new HashMap<>() {{
@@ -94,7 +129,7 @@ public class ImageController {
             }};*/
             metricService.setDatabaseUpdated(true);
             metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() + 1);
-            webhookService.postImageUpload(imageInfoDto.uniqueId(), new NewImageDto(null, uploader, savedImage.getFileType(), savedImage.getSize(), null));
+            webhookService.postImageUpload( imageInfoDto.uniqueId(), imageInfoDto);
             return new ResponseEntity<>(new UIDResponse(false, imageInfoDto.uniqueId(), imageInfoDto), HttpStatus.OK);
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -147,7 +182,6 @@ public class ImageController {
                     MediaType.APPLICATION_JSON_VALUE
             }
     )
-    @RequiresSpecialApiKey
     public ResponseEntity<?> getImageBase64(
             @PathVariable String uniqueId
     ) {
@@ -160,6 +194,39 @@ public class ImageController {
     }
 
     @SneakyThrows
+    @PostMapping(
+            value = "/get/{uniqueId}",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getImageBase64(
+            @PathVariable String uniqueId,
+            @RequestBody(required = false) ImageGetRequest body,
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+
+        ImageDto image = imageService.getImage(uniqueId, false, true, false);
+
+        if (image.password() != null && body.getPassword() == null) {
+            throw new MissingCredentialsException();
+        }
+        else if (image.password() != null && !passwordEncoder.matches(image.password(), body.getPassword())) {
+            throw new BadCredentialsException("Invalid password");
+        } else if (!image.isPublic() && (uploader == null || !Objects.equals(image.uploader().getId(), uploader.getId()))) {
+            throw new ResourceVisibilityException();
+        } else if (image.expiresAt() != null && LocalDateTime.now().isAfter(image.expiresAt())) {
+            throw new ResourceExpiredException();
+        }
+
+        ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(uniqueId, image));
+
+        return new ResponseEntity<>(new DefaultResponse(false, imageInfoDto), HttpStatus.OK);
+    }
+
+    @SneakyThrows
     @GetMapping(
             value = "/get/{uniqueId}",
             produces = {
@@ -167,7 +234,8 @@ public class ImageController {
                     MediaType.TEXT_PLAIN_VALUE,
                     MediaType.IMAGE_PNG_VALUE,
                     MediaType.IMAGE_JPEG_VALUE,
-                    MediaType.IMAGE_GIF_VALUE
+                    MediaType.IMAGE_GIF_VALUE,
+                    MediaType.APPLICATION_OCTET_STREAM_VALUE
             }
     )
     public ResponseEntity<?> getImageBase64(
@@ -175,31 +243,44 @@ public class ImageController {
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
             @RequestParam(required = false, defaultValue = "false", value = "download") boolean download,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
-            @RequestParam(required = false, defaultValue = "false", value = "uploader_info") boolean getUserInfo,
             @RequestParam(required = false, defaultValue = "false", value = "image_info") boolean imageInfo,
             @RequestParam(required = false, defaultValue = "false", value = "info") boolean onlyInfo,
+            @RequestHeader(required = false, value = "X-Password") String password,
+            @RequestHeader(required = false, value = "X-API-Key") String apiKey,
             HttpServletRequest request
     ) {
+        User uploader = (User) request.getAttribute("uploader");
         HttpHeaders headers = new HttpHeaders();
         NewImageDto image;
         Map<String, Object> data = new HashMap<>();
 
         try {
-            image = imageService.getImageStream(uniqueId, valBool, getUserInfo);
+            image = imageService.getImageStream(uniqueId, valBool, true);
+            //headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + uniqueId + "." + image.type() + "\"");
         } catch (ResourceNotFoundException | IOException e) {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return new ResponseEntity<>(new UIDResponse(true, uniqueId, "Image not found"), headers, HttpStatus.NOT_FOUND);
         }
 
-        if (download) {
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + uniqueId + "." + image.type().toLowerCase(Locale.ROOT) + "\"");
-            return new ResponseEntity<>(image.base64(), headers, HttpStatus.OK);
+        if (
+                (image.password() != null || !image.isPublic()) && (uploader == null || !Objects.equals(image.uploader().getId(), uploader.getId()))
+                        && !(password != null && image.password() != null && passwordEncoder.matches(password, image.password())) // TODO - PasswordEncoder
+                        && !(apiKey != null && Objects.equals(image.uploader().getApiKey().getKeyCode(), apiKey))
+        ) {
+            throw new ResourceVisibilityException("Insufficient permissions to view this resource");
+        }
+        else if (image.expiresAt() != null && LocalDateTime.now().isAfter(image.expiresAt())) {
+            throw new ResourceExpiredException();
         }
 
-        if (getUserInfo) {
-            data.put("uploader", image.uploader().getUsername());
-            headers.add("X-Uploader", image.uploader().getUsername());
+        if (download) {
+            Resource video = new FileSystemResource(image.path());
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + uniqueId + "." + image.type().toLowerCase(Locale.ROOT) + "\"");
+            return new ResponseEntity<>(video, headers, HttpStatus.OK);
         }
+
+        data.put("uploader", image.uploader().getUsername());
+        headers.add("X-Uploader", image.uploader().getUsername());
 
         if (imageInfo) {
             data.put("image_size", image.size());
@@ -293,7 +374,7 @@ public class ImageController {
             LocalDate date = LocalDate.now().minusYears(10);
             LocalDateTime startOfDay = date.atStartOfDay();
             LocalDateTime endOfDay = LocalDateTime.now();
-            statsRequest = new StatsRequest(startOfDay, endOfDay);
+            statsRequest = new StatsRequest(startOfDay, endOfDay, 0, false);
         }
         Map<String, Object> stats = imageService.getStats(statsRequest.getFromDate(), statsRequest.getToDate());
         if (stats == null) {

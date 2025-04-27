@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 import me.xap3y.space.api.enums.UserRole;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -15,4 +17,6 @@ public class UserInviter {
     private long uid;
     private String username;
     private UserRole role;
+    private String avatar;
+    private LocalDateTime createdAt;
 }

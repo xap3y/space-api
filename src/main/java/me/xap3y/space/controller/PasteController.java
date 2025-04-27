@@ -44,17 +44,15 @@ public class PasteController {
     private final ServerInfo serverInfo;
     private final MetricService metricService;
     private final WebhookService webhookService;
-    private final ShortUserMapper shortUserMapper;
 
     //private static final String[] allowedExtensions = {"txt", "log", "java", "py", "sh", "json", "xml", "yml", "yaml", "properties", "md", "gradle", "conf", "cfg", "ini", "md", "markdown", "html", "htm", "css", "scss", "sass", "less", "ts", "js", "jsx", "tsx", "php", "sql", "csv", "tsv", "r", "rmd", "rdata", "rds", "rda", "rproj", "rhistory", "rprofile"};
 
-    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService, ShortUserMapper shortUserMapper) {
+    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService) {
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
         this.serverInfo = serverInfo;
         this.metricService = metricService;
         this.webhookService = webhookService;
-        this.shortUserMapper = shortUserMapper;
     }
 
     /*@PostMapping(
@@ -128,9 +126,7 @@ public class PasteController {
     ) {
 
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
-        }
+        if (uploader == null) return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
 
         if (file != null &&
                 !file.isEmpty() &&
@@ -219,7 +215,7 @@ public class PasteController {
         Paste paste = pasteService.getPasteByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Paste not found"));
 
         if (!Objects.equals(paste.getCreatedBy().getId(), uploader.getId())  &&
-                !(uploader.getRole() == UserRole.USER
+                (uploader.getRole() == UserRole.USER
                         || uploader.getRole() == UserRole.GUEST
                         || uploader.getRole() == UserRole.TESTER
                 )) {

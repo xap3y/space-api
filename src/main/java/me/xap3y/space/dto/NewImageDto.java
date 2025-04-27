@@ -3,11 +3,16 @@ package me.xap3y.space.dto;
 import me.xap3y.space.entity.User;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 
 public record NewImageDto (
         Path path,
         User uploader,
         String type,
+        String description,
+        String password,
+        LocalDateTime expiresAt,
         long size,
-        String base64
+        String base64,
+        boolean isPublic
 ){ }

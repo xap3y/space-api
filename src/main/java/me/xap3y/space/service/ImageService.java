@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -65,11 +66,11 @@ public class ImageService {
     }
 
     public Image saveImage(MultipartFile file, User uploader) throws IOException, RuntimeException {
-        return saveImage(file, uploader, null);
+        return saveImage(file, uploader, null, null, true, null);
     }
 
 
-    public Image saveImage(MultipartFile file, User uploader, String uniqueId) throws IOException, RuntimeException {
+    public Image saveImage(MultipartFile file, User uploader, String uniqueId, String password, boolean isPublic, String description) throws IOException, RuntimeException {
 
         if (uniqueId == null) {
             uniqueId = Utils.generateRandomId();
@@ -127,6 +128,9 @@ public class ImageService {
         log.info("Saving image with file name: {}", file.getOriginalFilename());
         Image imageDto = new Image();
         imageDto.setUniqueId(uniqueId);
+        imageDto.setIsPublic(isPublic);
+        imageDto.setPassword(password);
+        imageDto.setDescription(description);
         imageDto.setFileType(fileExtension[fileExtension.length - 1]);
         imageDto.setSize(file.getSize());
         imageDto.setUploadTime(LocalDateTime.now());
@@ -153,8 +157,12 @@ public class ImageService {
                 filePath,
                 userInfo ? image.getUploader() : null,
                 image.getFileType(),
+                image.getDescription(),
+                image.getPassword(),
+                image.getExpirationTime(),
                 Files.size(filePath) / 1024,
-                null
+                null,
+                image.getIsPublic()
         );
     }
 
@@ -182,10 +190,14 @@ public class ImageService {
         return new ImageDto(
                 imageBytes,
                 userInfo ? image.getUploader() : null,
+                image.getDescription(),
                 image.getFileType(),
+                image.getPassword(),
                 Files.size(filePath) / 1024,
                 base64 ? imageBase64 : null,
-                image.getUploadTime()
+                image.getUploadTime(),
+                image.getExpirationTime(),
+                image.getIsPublic()
         );
     }
 
@@ -307,5 +319,43 @@ public class ImageService {
             ));*/
         }
         return imageDtos;
+    }
+
+    // COUNT METHODS
+
+    public Long countByUploadTimeBetweenAndUploaderId(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId) {
+        return imageRepository.countByUploadTimeBetweenAndUploaderId(startDate, endDate, uploaderId);
+    }
+
+    public List<Pair<LocalDate, Long>> findTotalImagesPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {
+        List<Object[]> results = imageRepository.findTotalImagesPerDayByUser(startDate, endDate, uploaderId);
+        return Utils.convertToPairList(startDate, endDate, results, fillMissingDates);
+    }
+
+    // Accept start and end date, get total of images each day filter by user, return List<Pair<LocalDate, Long>>
+    // example: if start date is 2024-01-01 and end date is 2024-01-07, return:
+    // 2024-01-01 -> 10 images | 2024-01-02 -> 5 images | 2024-01-03 -> 0 images
+    // 2024-01-04 -> 0 images | 2024-01-05 -> 0 images | 2024-01-06 -> 0 images | 2024-01-07 -> 0 images
+    /*public List<Pair<LocalDate, Long>> findTotalImagesPerDayByUser(LocalDateTime startDate, LocalDateTime endDate) {
+        List<Object[]> result = imageRepository.findTotalImagesPerDayByUser(startDate, endDate);
+        List<Pair<LocalDate, Long>> imagesPerDay = new ArrayList<>();
+        for (Object[] row : result) {
+            LocalDate date = (LocalDate) row[0];
+            Long count = (Long) row[1];
+            imagesPerDay.add(Pair.of(date, count));
+        }
+        return imagesPerDay;
+    }*/
+
+    //findTotalImagesPerDay
+    public List<Pair<LocalDate, Long>> findTotalImagesPerDay(LocalDateTime startDate, LocalDateTime endDate) {
+        List<Object[]> result = imageRepository.findTotalImagesPerDay(startDate, endDate);
+        List<Pair<LocalDate, Long>> imagesPerDay = new ArrayList<>();
+        for (Object[] row : result) {
+            LocalDate date = (LocalDate) row[0];
+            Long count = (Long) row[1];
+            imagesPerDay.add(Pair.of(date, count));
+        }
+        return imagesPerDay;
     }
 }

@@ -1,12 +1,17 @@
 package me.xap3y.space.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UserDto;
+import me.xap3y.space.dto.UserSocialsPatchDto;
+import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.UserMapper;
+import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
@@ -57,6 +62,49 @@ public class UserController {
         userService.createUser(username, password, email, test);
 
         return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.CREATED);
+    }
+
+    @PatchMapping(
+            value = "/me/socials",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> updateUserSocials(
+            HttpServletRequest request,
+            @RequestBody UserSocialsPatchDto body
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+
+        UserSocials socials = uploader.getSocials();
+        if (socials == null) socials = new UserSocials();
+
+        if (body.getWebsite() != null) socials.setWebsite(body.getWebsite());
+        if (body.getTwitter() != null) socials.setTwitter(body.getTwitter());
+        if (body.getGithub() != null) socials.setGithub(body.getGithub());
+        if (body.getGitlab() != null) socials.setGitlab(body.getGitlab());
+        if (body.getDiscord() != null) socials.setDiscord(body.getDiscord());
+        if (body.getTelegram() != null) socials.setTelegram(body.getTelegram());
+        if (body.getVk() != null) socials.setVk(body.getVk());
+        if (body.getFacebook() != null) socials.setFacebook(body.getFacebook());
+        if (body.getInstagram() != null) socials.setInstagram(body.getInstagram());
+        if (body.getYoutube() != null) socials.setYoutube(body.getYoutube());
+        if (body.getTwitch() != null) socials.setTwitch(body.getTwitch());
+        if (body.getSteam() != null) socials.setSteam(body.getSteam());
+        if (body.getReddit() != null) socials.setReddit(body.getReddit());
+        if (body.getLinkedin() != null) socials.setLinkedin(body.getLinkedin());
+        if (body.getTiktok() != null) socials.setTiktok(body.getTiktok());
+        if (body.getSnapchat() != null) socials.setSnapchat(body.getSnapchat());
+        if (body.getWhatsapp() != null) socials.setWhatsapp(body.getWhatsapp());
+        if (body.getSoundcloud() != null) socials.setSoundcloud(body.getSoundcloud());
+        if (body.getSpotify() != null) socials.setSpotify(body.getSpotify());
+        if (body.getThreads() != null) socials.setThreads(body.getThreads());
+        if (body.getEmail() != null) socials.setEmail(body.getEmail());
+        if (body.getMessenger() != null) socials.setMessenger(body.getMessenger());
+
+        uploader.setSocials(socials);
+        userService.saveUser(uploader);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.OK);
     }
 
     @GetMapping(

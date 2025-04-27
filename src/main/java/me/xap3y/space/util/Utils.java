@@ -1,6 +1,7 @@
 package me.xap3y.space.util;
 
 import me.xap3y.space.model.UserStats;
+import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,8 +10,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Map;
-import java.util.Random;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Utils {
 
@@ -78,4 +82,27 @@ public class Utils {
         return hexString.toString();
     }
 
+    public static List<Pair<LocalDate, Long>> convertToPairList(LocalDateTime startDate, LocalDateTime endDate, List<Object[]> results, boolean fillMissingDates) {
+        Map<LocalDate, Long> resultMap = new HashMap<>();
+        for (Object[] result : results) {
+            LocalDate date = ((Date) result[0]).toLocalDate();
+            Long count = ((Number) result[1]).longValue();
+            resultMap.put(date, count);
+        }
+
+        if (fillMissingDates) {
+            List<Pair<LocalDate, Long>> filledResults = new ArrayList<>();
+            LocalDate currentDate = startDate.toLocalDate();
+            while (!currentDate.isAfter(endDate.toLocalDate())) {
+                Long count = resultMap.getOrDefault(currentDate, 0L);
+                filledResults.add(Pair.of(currentDate, count));
+                currentDate = currentDate.plusDays(1);
+            }
+            return filledResults;
+        } else {
+            return results.stream()
+                    .map(result -> Pair.of(((Date) result[0]).toLocalDate(), ((Number) result[1]).longValue()))
+                    .collect(Collectors.toList());
+        }
+    }
 }

@@ -19,6 +19,7 @@ public interface InviteCodeRepository extends JpaRepository<InviteCode, Long> {
 
     boolean existsByCode(String code);
 
+    @jakarta.transaction.Transactional
     void deleteByCode(String code);
 
     @Modifying
@@ -29,4 +30,5 @@ public interface InviteCodeRepository extends JpaRepository<InviteCode, Long> {
     int markAsUsed(@Param("code") String code,
                    @Param("usedAt") LocalDateTime usedAt,
                    @Param("usedBy") User usedBy);
+
 }

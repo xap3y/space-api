@@ -3,10 +3,8 @@ package me.xap3y.space.service;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.NewImageDto;
-import me.xap3y.space.dto.PasteDto;
-import me.xap3y.space.dto.ShortUrlDto;
-import me.xap3y.space.dto.UrlDto;
+import me.xap3y.space.dto.*;
+import me.xap3y.space.entity.Sessions;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
@@ -36,16 +34,17 @@ public class WebhookService {
     }
 
     public void postMessage(String message) {
-        DiscordWebhook hook = getHook();
+        return;
+        /*DiscordWebhook hook = getHook();
         hook.setContent(message);
         try {
             hook.execute();
         } catch (IOException e) {
             log.error(e.getMessage());
-        }
+        }*/
     }
 
-    public void postImageUpload(String id, NewImageDto imageDto) {
+    public void postImageUpload(String id, ImageInfoDto imageDto) {
         DiscordWebhook hook = getHook();
         DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
         embedObject.setColor(Color.GREEN);
@@ -55,7 +54,7 @@ public class WebhookService {
         embedObject.addField("UID", id, true);
         //embedObject.addField("URL", serverInfo.getBaseUrl() + "/v1/image/get/" + id, true);
         embedObject.addField("| SIZE", "**|** " + imageDto.size() / 1024 + " KiB", true);
-        embedObject.addField("| UPLOADER", "**|** [" + imageDto.uploader().getUsername() + "](https://s.xap3y.tech/profile/xap3y)" , true);
+        embedObject.addField("| UPLOADER", "**|** [" + imageDto.uploader().username() + "](https://s.xap3y.tech/profile/xap3y)" , true);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
         hook.setContent(
@@ -102,5 +101,13 @@ public class WebhookService {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    public void postSessionInit(Sessions session) {
+        postMessage("> [SESSION-INIT] U: [" + session.getUserId().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUserId().getUsername() + ") F: **" + session.getIpAddress() + "** A: **" + session.getUserAgent() + "**");
+    }
+
+    public void postSessionInvalid(Sessions session) {
+        postMessage("> [SESSION-INVALIDATED] U: [" + session.getUserId().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUserId().getUsername() + ") -ID: **" + session.getId() + "**  -F: **" + session.getIpAddress() + "** -A: **" + session.getUserAgent() + "**");
     }
 }

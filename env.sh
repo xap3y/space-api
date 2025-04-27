@@ -3,7 +3,7 @@
 # Spring boot application properties
 export SPRING_SERVER_PORT=8012
 export SPRING_SERVER_PROTOCOL=http
-export SPRING_SERVER_BASEURL=192.168.100.100:$SPRING_SERVER_PORT
+export SPRING_SERVER_BASEURL=127.0.0.1:$SPRING_SERVER_PORT
 #export SPRING_SERVER_BASEURL=api.xap3y.tech
 
 # Database
@@ -18,16 +18,16 @@ export SPRING_SECURITY_PASSWORD=admin
 
 # File upload (For image and pastes)
 # If using nginx, make sure to set client_max_body_size to the same value
-export SPRING_MAX_FILE_SIZE=50MB
+export SPRING_MAX_FILE_SIZE=5000MB
 
 # Debug
 export SPRING_DEBUG=false
 export SPRING_ENV=dev
 export CORS_TESTING_URL=http://127.0.0.1
-export FRONTEND_URL=https://s.xap3y.tech
+export FRONTEND_URL=https://ext-space.xap3y.tech
 
-export SHORT_IMAGE_URL=https://i0.xap3y.tech
-export SHORT_PASTE_URL=https://p0.xap3y.tech
-export SHORT_SHORTENER_URL=https://r0.xap3y.tech
+export SHORT_IMAGE_URL=https://i1.xap3y.tech
+export SHORT_PASTE_URL=https://p1.xap3y.tech
+export SHORT_SHORTENER_URL=https://r1.xap3y.tech
 
-export NAMESPACE_TAG=local
+export NAMESPACE_TAG=local_xap

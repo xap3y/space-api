@@ -1,6 +1,7 @@
 package me.xap3y.space.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ShortUrlDto (
         String uniqueId,
@@ -10,6 +11,7 @@ public record ShortUrlDto (
         LocalDateTime createdAt,
         LocalDateTime expiresAt,
         UrlSetDto urlSet,
-        ShortUserDto uploader
+        ShortUserDto uploader,
+        List<UrlLogDto> urlLogs
 ) {
 }

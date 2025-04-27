@@ -23,10 +23,13 @@ public class ConfigDb {
     private final static Map<String, String> redirectMapper = new HashMap<>() {{
         put("r.xap3y.tech", "%BASE%/v1/url/r/%PATH%");
         put("r0.xap3y.tech", "%BASE%/v1/url/r/%PATH%");
+        put("r1.xap3y.tech", "%BASE%/v1/url/r/%PATH%");
         put("i.xap3y.tech", "%BASE%/v1/image/get/%PATH%");
         put("i0.xap3y.tech", "%BASE%/v1/image/get/%PATH%");
+        put("i1.xap3y.tech", "https://ext-space.xap3y.tech/i/%PATH%");
         put("img.xap3y.tech", "%BASE%/v1/image/get/%PATH%");
         put("p.xap3y.tech", "%BASE%/v1/paste/get/%PATH%");
         put("p0.xap3y.tech", "%BASE%/v1/paste/get/%PATH%");
+        put("p1.xap3y.tech", "%BASE%/v1/paste/get/%PATH%");
     }};
 }

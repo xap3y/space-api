@@ -1,5 +1,6 @@
 package me.xap3y.space.repository;
 
+import jakarta.transaction.Transactional;
 import me.xap3y.space.entity.ApiKey;
 import me.xap3y.space.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +20,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByUsername(String username);
+
+    @Transactional
+    void deleteByUsername(String username);
 }
+

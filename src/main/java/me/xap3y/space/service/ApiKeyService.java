@@ -22,7 +22,7 @@ public class ApiKeyService {
     }
 
     public User validateApiKey(String apiKey) throws InvalidApiKeyException {
-        ApiKey apiKeyEntity = apiKeyRepository.findByKeyHash(apiKey)
+        ApiKey apiKeyEntity = apiKeyRepository.findByKeyCode(apiKey)
                 .orElseThrow(() -> new InvalidApiKeyException("Invalid API Key!"));
         return userRepository.findByApiKey(apiKeyEntity)
                 .orElseThrow(() -> new InvalidApiKeyException("Invalid API Key!"));

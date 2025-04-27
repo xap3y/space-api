@@ -15,9 +15,11 @@ import java.util.function.Function;
 public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageInfoDto> {
 
     private final ServerInfo serverInfo;
+    private final UserInvitorMapper userInvitorMapper;
 
-    public ImageInfoMapper(ServerInfo serverInfo) {
+    public ImageInfoMapper(ServerInfo serverInfo, UserInvitorMapper userInvitorMapper) {
         this.serverInfo = serverInfo;
+        this.userInvitorMapper = userInvitorMapper;
     }
 
     @Override
@@ -26,11 +28,13 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
         return new ImageInfoDto(
                 imageDto.getFirst(),
                 dto.type(),
+                dto.description(),
                 dto.size(),
                 dto.uploadedAt(),
+                dto.expiresAt(),
                 new UrlSetDto(
                         serverInfo.getBaseUrl() + "/web/image-render/" + imageDto.getFirst(),
-                        serverInfo.getFrontEndUrl() + "/image/" + imageDto.getFirst(),
+                        serverInfo.getFrontEndUrl() + "/i/" + imageDto.getFirst(),
                         serverInfo.getBaseUrl() + "/v1/image/get/" + imageDto.getFirst(),
                     serverInfo.getShortImageUrl() + "/" + imageDto.getFirst(),
                         null
@@ -41,12 +45,10 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
                         dto.uploader().getRole(),
                         dto.uploader().getAvatar(),
                         dto.uploader().getCreatedAt(),
-                        dto.uploader().getInvitedBy() != null ? new UserInviter(
-                                dto.uploader().getInvitedBy().getId(),
-                                dto.uploader().getInvitedBy().getUsername(),
-                                dto.uploader().getInvitedBy().getRole()
-                        ) : null
-                )
+                        dto.uploader().getInvitedBy() != null ? userInvitorMapper.apply(dto.uploader().getInvitedBy()) : null
+                ),
+                dto.password() != null,
+                dto.isPublic()
         );
     }
 }

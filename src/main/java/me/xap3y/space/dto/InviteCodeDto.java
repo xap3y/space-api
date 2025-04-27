@@ -7,7 +7,7 @@ public record InviteCodeDto(
         boolean used,
         LocalDateTime createdAt,
         LocalDateTime usedAt,
-        Long createdBy,
-        Long usedBy
+        ShortUserDto createdBy,
+        ShortUserDto usedBy
 ) {
 }

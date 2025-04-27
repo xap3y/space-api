@@ -5,10 +5,13 @@ import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UrlDto;
+import me.xap3y.space.dto.UrlLogDto;
 import me.xap3y.space.entity.Url;
+import me.xap3y.space.entity.UrlLogs;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ShortUrlMapper;
 import me.xap3y.space.mapper.UrlMapper;
@@ -17,6 +20,7 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.repository.UrlRepository;
 import me.xap3y.space.service.MetricService;
+import me.xap3y.space.service.UrlLogsService;
 import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.WebhookService;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +30,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @RestController
@@ -39,14 +47,16 @@ public class UrlController {
     private final MetricService metricService;
     private final WebhookService webhookService;
     private final ShortUrlMapper shortUrlMapper;
+    private final UrlLogsService urlLogsService;
 
-    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper) {
+    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper, UrlLogsService urlLogsService) {
         this.urlService = urlService;
         this.urlMapper = urlMapper;
         this.serverInfo = serverInfo;
         this.metricService = metricService;
         this.webhookService = webhookService;
         this.shortUrlMapper = shortUrlMapper;
+        this.urlLogsService = urlLogsService;
     }
 
     @PostMapping(
@@ -98,14 +108,25 @@ public class UrlController {
             value = "/r/{uniqueId}"
     )
     public ResponseEntity<?> redirectUrl(
+            HttpServletRequest request,
             @PathVariable String uniqueId
     ) {
-        UrlDto urlDto = urlService.getUrlByUniqueId(uniqueId)
-                .map(urlMapper)
-                .orElseThrow(() -> new ResourceNotFoundException("Url not found"));
+        Url url = urlService.getUrlByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Url not found"));
+        UrlDto urlDto = urlMapper.apply(url);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create(urlDto.url()));
+        headers.setLocation(URI.create(URLDecoder.decode(urlDto.url(), StandardCharsets.UTF_8)));
+
+
+        String userAgent = request.getHeader("User-Agent");
+        String ipAddress = request.getRemoteAddr();
+
+        UrlLogs urlLogs = new UrlLogs();
+        urlLogs.setUrl(url);
+        urlLogs.setUserAgent(userAgent);
+        urlLogs.setIpAddress(ipAddress);
+        urlLogs.setTime(LocalDateTime.now());
+        urlLogsService.save(urlLogs);
         return new ResponseEntity<>(headers, HttpStatus.MOVED_PERMANENTLY);
     }
 
@@ -127,7 +148,7 @@ public class UrlController {
         Url urlDto = urlService.getUrlByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Url not found"));
 
         if (!Objects.equals(urlDto.getCreatedBy().getId(), uploader.getId())  &&
-                !(uploader.getRole() == UserRole.USER
+                (uploader.getRole() == UserRole.USER
                         || uploader.getRole() == UserRole.GUEST
                         || uploader.getRole() == UserRole.TESTER
                 )) {
@@ -177,6 +198,40 @@ public class UrlController {
 
         return ResponseEntity.ok()
                 .body(new UIDResponse(false, urlDto.uniqueId(), urlDto));
+    }
+
+    @GetMapping(
+            value = "/get/{uniqueId}/logs",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.TEXT_PLAIN_VALUE
+            }
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getUrlLogs(
+            HttpServletRequest request,
+            @PathVariable String uniqueId
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+
+        ShortUrlDto urlDto = urlService.getUrlByUniqueId(uniqueId)
+                .map(shortUrlMapper)
+                .orElseThrow(() -> new ResourceNotFoundException("Url not found"));
+
+        if (urlDto.uploader().uid() != uploader.getId() && (uploader.getRole() != UserRole.ADMIN && uploader.getRole() != UserRole.OWNER)) {
+            throw new InvalidApiKeyException();
+        }
+
+        List<UrlLogDto> logs = urlLogsService.getByUrlUniqueId(uniqueId);
+
+        if (logs.isEmpty()) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No logs found"), HttpStatus.NOT_FOUND);
+        }
+
+
+        return ResponseEntity.ok()
+                .body(new UIDResponse(false, uniqueId, logs));
     }
 
 

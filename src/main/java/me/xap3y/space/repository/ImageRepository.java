@@ -40,6 +40,35 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     @Query("SELECT COUNT(e.id) FROM Image e WHERE e.uploadTime >= :startDate")
     long countByUploadTimeAfter(@Param("startDate") LocalDateTime startDate);
 
+    @Query("SELECT COUNT(e.id) " +
+            "FROM Image e " +
+            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "AND e.uploader.id = :uploaderId " +
+            "ORDER BY e.uploadTime DESC")
+    long countByUploadTimeBetweenAndUploaderId(@Param("startDate") LocalDateTime startDate,
+                                               @Param("endDate") LocalDateTime endDate,
+                                               @Param("uploaderId") Long uploaderId);
+
+    // Accept start and end date, get total of images each day
+    @Query("SELECT DATE(e.uploadTime) as date, COUNT(e.id) as count " +
+            "FROM Image e " +
+            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "GROUP BY DATE(e.uploadTime) " +
+            "ORDER BY DATE(e.uploadTime) ASC")
+    List<Object[]> findTotalImagesPerDay(@Param("startDate") LocalDateTime startDate,
+                                          @Param("endDate") LocalDateTime endDate);
+
+    // Accept start and end date, get total of images each day filter by user
+    @Query("SELECT DATE(e.uploadTime) as date, COUNT(e.id) as count " +
+            "FROM Image e " +
+            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "AND e.uploader.id = :uploaderId " +
+            "GROUP BY DATE(e.uploadTime) " +
+            "ORDER BY DATE(e.uploadTime) ASC")
+    List<Object[]> findTotalImagesPerDayByUser(@Param("startDate") LocalDateTime startDate,
+                                                @Param("endDate") LocalDateTime endDate,
+                                                @Param("uploaderId") Long uploaderId);
+
     @Query("SELECT MAX(e.size) as largest, MIN(e.size) as smallest, AVG(e.size) as average, SUM(e.size) as total " +
             "FROM Image e " +
             "WHERE e.uploadTime BETWEEN :startDate AND :endDate")

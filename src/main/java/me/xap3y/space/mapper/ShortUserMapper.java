@@ -10,6 +10,12 @@ import java.util.function.Function;
 @Service
 public class ShortUserMapper implements Function<User, ShortUserDto> {
 
+    private final UserInvitorMapper userInvitorMapper;
+
+    public ShortUserMapper(UserInvitorMapper userInvitorMapper) {
+        this.userInvitorMapper = userInvitorMapper;
+    }
+
     @Override
     public ShortUserDto apply(User user) {
         return new ShortUserDto(
@@ -18,11 +24,7 @@ public class ShortUserMapper implements Function<User, ShortUserDto> {
                 user.getRole(),
                 user.getAvatar(),
                 user.getCreatedAt(),
-                (user.getInvitedBy() != null) ? new UserInviter(
-                        user.getInvitedBy().getId(),
-                        user.getInvitedBy().getUsername(),
-                        user.getInvitedBy().getRole()
-                ) : null
+                (user.getInvitedBy() != null) ? userInvitorMapper.apply(user.getInvitedBy()) : null
         );
     }
 }

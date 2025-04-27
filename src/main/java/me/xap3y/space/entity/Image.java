@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +25,12 @@ public class Image {
     @ColumnDefault("'png'")
     private String fileType;
 
+    @Column(nullable = true)
+    private String description;
+
+    @Column(nullable = true)
+    private String password;
+
     @Column(nullable = false)
     private long size;
 
@@ -31,8 +38,12 @@ public class Image {
     @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime uploadTime;
 
-    @Column
-    private String description;
+    @Column(nullable = true)
+    private LocalDateTime expirationTime;
+
+    @Column(nullable = false)
+    @ColumnDefault("true")
+    private Boolean isPublic;
 
     @ManyToOne
     @JoinColumn(name = "uploader_id")

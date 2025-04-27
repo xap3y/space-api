@@ -2,6 +2,7 @@ package me.xap3y.space.entity;
 
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
@@ -10,8 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "urls")
-@Getter
-@Setter
+@Data
 public class Url {
 
     @Id
@@ -36,7 +36,7 @@ public class Url {
     @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    @Column
+    @Column(nullable = true)
     private LocalDateTime expiresAt;
 
     @ManyToOne

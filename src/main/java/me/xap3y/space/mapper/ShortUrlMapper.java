@@ -4,6 +4,7 @@ import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UrlSetDto;
 import me.xap3y.space.entity.Url;
+import me.xap3y.space.service.UrlLogsService;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Function;
@@ -13,14 +14,20 @@ public class ShortUrlMapper implements Function<Url, ShortUrlDto> {
 
     private final ServerInfo serverInfo;
     private final ShortUserMapper shortUserMapper;
+    private final UrlLogsService urlLogsService;
 
-    public ShortUrlMapper(ServerInfo serverInfo, ShortUserMapper shortUserMapper) {
+    public ShortUrlMapper(ServerInfo serverInfo, ShortUserMapper shortUserMapper, UrlLogsService urlLogsService) {
         this.serverInfo = serverInfo;
         this.shortUserMapper = shortUserMapper;
+        this.urlLogsService = urlLogsService;
     }
 
     @Override
     public ShortUrlDto apply(Url url) {
+        return applyWithLogs(url, false);
+    }
+
+    public ShortUrlDto applyWithLogs(Url url, boolean logs) {
         return new ShortUrlDto(
                 url.getShortCode(),
                 url.getOriginalUrl(),
@@ -35,7 +42,9 @@ public class ShortUrlMapper implements Function<Url, ShortUrlDto> {
                         serverInfo.getShortShortenerUrl() + "/" + url.getShortCode(),
                         null
                 ),
-                shortUserMapper.apply(url.getCreatedBy())
+                shortUserMapper.apply(url.getCreatedBy()),
+                logs ? urlLogsService.getByUrlId(url.getId()) : null
         );
     }
+
 }

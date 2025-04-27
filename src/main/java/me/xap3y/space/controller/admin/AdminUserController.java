@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UrlDto;
 import me.xap3y.space.model.UserImagesRequest;
 import me.xap3y.space.model.response.DefaultResponse;
@@ -85,10 +86,11 @@ public class AdminUserController {
     )
     @RequiresSpecialApiKey
     public ResponseEntity<?> getUserUrls(
+            @RequestParam(value = "logs", required = false, defaultValue = "false") boolean logs,
             @PathVariable Long uid
     ) {
 
-        List<UrlDto> urlsDtos = urlService.getAllUrlsByCreatorId(uid);
+        List<ShortUrlDto> urlsDtos = urlService.getAllShortUrlsByCreatorId(uid, logs);
         if (urlsDtos.isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "No short urls found for this UID"), HttpStatus.NOT_FOUND);
         }

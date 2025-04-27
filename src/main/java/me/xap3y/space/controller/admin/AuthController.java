@@ -1,25 +1,25 @@
 package me.xap3y.space.controller.admin;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.api.enums.Environment;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.dto.UserDto;
+import me.xap3y.space.entity.Sessions;
+import me.xap3y.space.entity.User;
+import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.AuthLoginRequest;
 import me.xap3y.space.model.AuthRegisterRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.InviteCodeService;
+import me.xap3y.space.service.SessionService;
 import me.xap3y.space.service.UserService;
 import me.xap3y.space.util.ConfigDb;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.regex.Pattern;
 
@@ -28,16 +28,32 @@ import java.util.regex.Pattern;
 @RequestMapping("/v1/auth")
 public class AuthController {
 
+    private static final Boolean secure = false;
+
     private final UserService userService;
     private final InviteCodeService inviteCodeService;
     private final PasswordEncoder passwordEncoder;
     private final ServerInfo serverInfo;
+    private final SessionService sessionService;
+    private final UserMapper userMapper;
 
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo) {
+    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper) {
         this.userService = userService;
         this.inviteCodeService = inviteCodeService;
         this.passwordEncoder = passwordEncoder;
         this.serverInfo = serverInfo;
+        this.sessionService = sessionService;
+        this.userMapper = userMapper;
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@CookieValue("session_token") String token) {
+        Sessions session = sessionService.getSession(token);
+        if (session == null || !session.getIsValid()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        UserDto user = userMapper.apply(session.getUserId());
+        return ResponseEntity.ok(new DefaultResponse(false, user));
     }
 
     @PostMapping(
@@ -45,20 +61,79 @@ public class AuthController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> tryLogin(
+            HttpServletRequest request,
             @RequestBody AuthLoginRequest loginRequest
     ) {
 
-        UserDto user = userService.findByEmail(loginRequest.getEmail());
+        User user = userService.findByEmailRaw(loginRequest.getEmail());
 
         if (user == null) {
             throw new ResourceNotFoundException("User not found");
         }
 
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.password())) {
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Invalid password"), HttpStatus.FORBIDDEN);
         }
 
-        return ResponseEntity.ok(new DefaultResponse(false, user));
+        String userAgent = request.getHeader("User-Agent");
+        String ipAddress = request.getRemoteAddr();
+
+        if (userAgent.contains("Postman") || userAgent.contains("curl") || userAgent.contains("Insomnia")) {
+            return ResponseEntity.ok()
+                    .body(new DefaultResponse(false, user));
+        }
+
+        String sessionToken = sessionService.createSession(user, userAgent, ipAddress);
+
+        ResponseCookie cookie = ResponseCookie.from("session_token", sessionToken)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .sameSite("Lax")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new DefaultResponse(false, user));
+    }
+
+    @PostMapping(
+            value = "/logout",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<?> tryLogout(
+            HttpServletRequest request,
+            @CookieValue("session_token") String token
+    ) {
+        if (token == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No session token provided"), HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            sessionService.invalidateSession(token);
+        } catch (Exception e) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Failed to delete session"), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        String userAgent = request.getHeader("User-Agent");
+
+        if (userAgent.contains("Postman") || userAgent.contains("curl")) {
+            return ResponseEntity.ok(new DefaultResponse(false, "Logged out"));
+        }
+
+        ResponseCookie expiredCookie = ResponseCookie.from("session_token", "")
+                .path("/")
+                .maxAge(0)
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
+                .body("Logged out");
+
     }
 
     @PostMapping(

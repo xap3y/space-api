@@ -7,8 +7,10 @@ import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.repository.PasteRepository;
 import me.xap3y.space.util.Utils;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -90,5 +92,10 @@ public class PasteService {
             pasteDtos.add(pasteMapper.apply(paste));
         }
         return pasteDtos;
+    }
+
+    public List<Pair<LocalDate, Long>> findTotalImagesPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {
+        List<Object[]> results = pasteRepository.findTotalPastesPerDayByUser(startDate, endDate, uploaderId);
+        return Utils.convertToPairList(startDate, endDate, results, fillMissingDates);
     }
 }

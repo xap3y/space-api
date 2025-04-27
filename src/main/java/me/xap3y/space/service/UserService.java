@@ -42,7 +42,7 @@ public class UserService {
         User user = new User(req.getEmail(), req.getUsername(), encodedPassword);
         ApiKey apiKey = new ApiKey();
         apiKey.setCreatedAt(LocalDateTime.now());
-        apiKey.setKeyHash(Utils.generateApiKey());
+        apiKey.setKeyCode(Utils.generateApiKey());
         apiKey.setMaxUploadSize(-1);
         apiKeyRepository.save(apiKey);
         user.setApiKey(apiKey);
@@ -92,7 +92,7 @@ public class UserService {
 
         ApiKey apiKey = new ApiKey();
         apiKey.setCreatedAt(LocalDateTime.now());
-        apiKey.setKeyHash(Utils.generateApiKey());
+        apiKey.setKeyCode(Utils.generateApiKey());
         apiKey.setMaxUploadSize(-1);
         apiKeyRepository.save(apiKey);
 
@@ -121,12 +121,20 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    public User findByEmailRaw(String email) throws ResourceNotFoundException {
+        return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
     }
 
     public boolean existsByUsername(String username) {
         return userRepository.existsByUsername(username);
+    }
+
+    public User saveUser(User user) {
+        return userRepository.save(user);
     }
 
 }

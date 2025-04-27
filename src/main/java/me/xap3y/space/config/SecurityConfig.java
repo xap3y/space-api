@@ -68,6 +68,7 @@ public class SecurityConfig {
                                 "https://space1.xap3y.tech",
                                 serverInfo.getTestCorsUrl()
                         )
+                        .allowCredentials(true)
                         .allowedMethods("GET", "POST", "PUT", "DELETE")
                         .allowedHeaders("*");
             }

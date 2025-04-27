@@ -39,10 +39,10 @@ public class User {
     private String apiKey;*/
 
     @ManyToOne
+    @JoinColumn(unique = true, nullable = false)
     private ApiKey apiKey;
 
-    @Column(nullable = false)
-    @ColumnDefault("'default'")
+    @Column(nullable = true)
     private String avatar;
 
     @Column(nullable = false)

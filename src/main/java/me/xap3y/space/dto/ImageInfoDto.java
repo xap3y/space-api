@@ -5,9 +5,13 @@ import java.time.LocalDateTime;
 public record ImageInfoDto(
         String uniqueId,
         String type,
+        String description,
         long size,
         LocalDateTime uploadedAt,
+        LocalDateTime expiresAt,
         UrlSetDto urlSet,
-        ShortUserDto uploader
+        ShortUserDto uploader,
+        boolean requiresPassword,
+        boolean isPublic
 ) {
 }

@@ -12,9 +12,11 @@ import java.util.function.Function;
 public class UserMapper implements Function<User, UserDto> {
 
     private final HelperService helperService;
+    private final UserInvitorMapper userInvitorMapper;
 
-    public UserMapper(HelperService helperService) {
+    public UserMapper(HelperService helperService, UserInvitorMapper userInvitorMapper) {
         this.helperService = helperService;
+        this.userInvitorMapper = userInvitorMapper;
     }
 
     @Override
@@ -22,11 +24,7 @@ public class UserMapper implements Function<User, UserDto> {
 
         UserInviter inviter = null;
         if (user.getInvitedBy() != null) {
-            inviter = new UserInviter(
-                    user.getInvitedBy().getId(),
-                    user.getInvitedBy().getUsername(),
-                    user.getInvitedBy().getRole()
-            );
+            inviter = userInvitorMapper.apply(user.getInvitedBy());
         }
         return new UserDto(
                 user.getId(),
@@ -39,7 +37,7 @@ public class UserMapper implements Function<User, UserDto> {
                 inviter,
                 helperService.getUserStats(user.getId()),
                 user.getSocials(),
-                user.getApiKey().getKeyHash()
+                user.getApiKey().getKeyCode()
         );
     }
 }

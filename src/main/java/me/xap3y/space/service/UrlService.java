@@ -9,11 +9,14 @@ import me.xap3y.space.mapper.ShortUrlMapper;
 import me.xap3y.space.mapper.UrlMapper;
 import me.xap3y.space.repository.UrlRepository;
 import me.xap3y.space.util.Utils;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +42,18 @@ public class UrlService {
                 .collect(Collectors.toList());
     }
 
+    public List<ShortUrlDto> getAllShortUrlsByCreatorId(Long id) {
+        return urlRepository.findByCreatedById(id).stream()
+                .map(shortUrlMapper)
+                .collect(Collectors.toList());
+    }
+
+    public List<ShortUrlDto> getAllShortUrlsByCreatorId(Long id, boolean logs) {
+        return urlRepository.findByCreatedById(id).stream()
+                .map((url) -> shortUrlMapper.applyWithLogs(url, logs))
+                .collect(Collectors.toList());
+    }
+
     public int countUrlsByUserId(Long uid) {
         return urlRepository.countAllByCreatedById(uid);
     }
@@ -51,8 +66,12 @@ public class UrlService {
             throw new InvalidUniqueIdException();
         }
 
+        if (urlRepository.existsByShortCode(uniqueId)) {
+            throw new InvalidUniqueIdException();
+        }
+
         Url urlDto = new Url();
-        urlDto.setOriginalUrl(url);
+        urlDto.setOriginalUrl(URLEncoder.encode(url, StandardCharsets.UTF_8));
         urlDto.setCreatedAt(LocalDateTime.now());
         urlDto.setExpiresAt(LocalDateTime.now().plusDays(7));
         urlDto.setShortCode(uniqueId);
@@ -69,5 +88,10 @@ public class UrlService {
 
     public boolean existByShortCode(String shortCode) {
         return urlRepository.existsByShortCode(shortCode);
+    }
+
+    public List<Pair<LocalDate, Long>> findTotalUrlsPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {
+        List<Object[]> results = urlRepository.findTotalUrlsPerDayByUser(startDate, endDate, uploaderId);
+        return Utils.convertToPairList(startDate, endDate, results, fillMissingDates);
     }
 }

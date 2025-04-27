@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -54,7 +55,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler({InvalidInviteCodeException.class, InvalidUniqueIdException.class})
+    @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class, InvalidInviteCodeException.class, InvalidUniqueIdException.class, MissingRequestCookieException.class, MissingCredentialsException.class})
     public ResponseEntity<?> handleInvalidApiKeyException(
             RuntimeException ex
     ) {
@@ -71,5 +72,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler({ResourceExpiredException.class, ResourceVisibilityException.class})
+    public ResponseEntity<?> handleNoAuthorizedException(
+            RuntimeException ex
+    ) {
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
 
+        return new ResponseEntity<>(defaultResponse, HttpStatus.FORBIDDEN);
+    }
 }

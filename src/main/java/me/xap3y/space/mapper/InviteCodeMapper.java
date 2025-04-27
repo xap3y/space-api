@@ -9,6 +9,12 @@ import java.util.function.Function;
 @Service
 public class InviteCodeMapper implements Function<InviteCode, InviteCodeDto> {
 
+    private final ShortUserMapper shortUserMapper;
+
+    public InviteCodeMapper(ShortUserMapper shortUserMapper) {
+        this.shortUserMapper = shortUserMapper;
+    }
+
     @Override
     public InviteCodeDto apply(InviteCode inviteCode) {
         return new InviteCodeDto(
@@ -16,8 +22,8 @@ public class InviteCodeMapper implements Function<InviteCode, InviteCodeDto> {
                 inviteCode.isUsed(),
                 inviteCode.getCreatedAt(),
                 inviteCode.getUsedAt(),
-                inviteCode.getCreatedBy() != null ? inviteCode.getCreatedBy().getId() : null,
-                inviteCode.getUsedBy() != null ? inviteCode.getUsedBy().getId() : null
+                inviteCode.getCreatedBy() != null ? shortUserMapper.apply(inviteCode.getCreatedBy()) : null,
+                inviteCode.getUsedBy() != null ? shortUserMapper.apply(inviteCode.getUsedBy()) : null
         );
     }
 }

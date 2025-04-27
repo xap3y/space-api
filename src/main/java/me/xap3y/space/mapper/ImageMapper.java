@@ -15,9 +15,11 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
 
 
     private final ServerInfo serverInfo;
+    private final UserInvitorMapper userInvitorMapper;
 
-    public ImageMapper(ServerInfo serverInfo) {
+    public ImageMapper(ServerInfo serverInfo, UserInvitorMapper userInvitorMapper) {
         this.serverInfo = serverInfo;
+        this.userInvitorMapper = userInvitorMapper;
     }
 
     @Override
@@ -25,11 +27,13 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
         return new ImageInfoDto(
                 image.getUniqueId(),
                 image.getFileType(),
+                image.getDescription(),
                 image.getSize(),
                 image.getUploadTime(),
+                image.getExpirationTime(),
                 new UrlSetDto(
                         serverInfo.getBaseUrl() + "/web/image-render/" + image.getUniqueId(),
-                        serverInfo.getFrontEndUrl() + "/image/" + image.getUniqueId(),
+                        serverInfo.getFrontEndUrl() + "/i/" + image.getUniqueId(),
                         serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId(),
                         serverInfo.getShortImageUrl() + "/" + image.getUniqueId(),
                         null
@@ -40,12 +44,10 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
                         image.getUploader().getRole(),
                         image.getUploader().getAvatar(),
                         image.getUploader().getCreatedAt(),
-                        image.getUploader().getInvitedBy() != null ? new UserInviter(
-                                image.getUploader().getInvitedBy().getId(),
-                                image.getUploader().getInvitedBy().getUsername(),
-                                image.getUploader().getInvitedBy().getRole()
-                        ) : null
-                )
+                        image.getUploader().getInvitedBy() != null ? userInvitorMapper.apply(image.getUploader().getInvitedBy()) : null
+                ),
+                image.getPassword() != null,
+                image.getIsPublic()
         );
     }
 }
