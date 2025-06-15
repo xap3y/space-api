@@ -1,0 +1,12 @@
+{
+    "name": "profile",
+    "description": "Get your profile information",
+    "options": [
+        {
+            "name": "username",
+            "description": "Find user by username",
+            "type": 3,
+            "required": false
+        }
+    ]
+}

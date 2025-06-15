@@ -47,7 +47,10 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@CookieValue("session_token") String token) {
+    public ResponseEntity<?> getCurrentUser(@CookieValue(value = "session_token", required = false) String token) {
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         Sessions session = sessionService.getSession(token);
         if (session == null || !session.getIsValid()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -90,7 +93,8 @@ public class AuthController {
                 .secure(false)
                 .path("/")
                 .maxAge(7 * 24 * 60 * 60)
-                .sameSite("Lax")
+                .sameSite("None")
+                .secure(true)
                 .build();
 
         return ResponseEntity.ok()

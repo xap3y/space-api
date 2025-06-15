@@ -1,13 +1,15 @@
 package me.xap3y.space.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.SegmentType;
+import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.model.StatsRequest;
+import me.xap3y.space.model.TotalStatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
-import me.xap3y.space.service.ImageService;
-import me.xap3y.space.service.PasteService;
-import me.xap3y.space.service.UrlService;
+import me.xap3y.space.service.*;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/v1/stats")
 public class StatsController {
@@ -26,11 +30,48 @@ public class StatsController {
     private final ImageService imageService;
     private final PasteService pasteService;
     private final UrlService urlService;
+    private final StatsService statsService;
+    private final UserService userService;
 
-    public StatsController(ImageService imageService, PasteService pasteService, UrlService urlService) {
+    public StatsController(ImageService imageService, PasteService pasteService, UrlService urlService, StatsService statsService, UserService userService) {
         this.imageService = imageService;
         this.pasteService = pasteService;
         this.urlService = urlService;
+        this.statsService = statsService;
+        this.userService = userService;
+    }
+
+    @PostMapping(
+            value = "/get"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getAllStats(
+            HttpServletRequest request,
+            @RequestBody(required = true) TotalStatsRequest body
+    ) {
+
+        LocalDateTime fromDate;
+        LocalDateTime toDate;
+
+        if (body.getPreset() == null && (body.getFromDate() == null || body.getToDate() == null)) {
+            throw new BadRequestException("Fill all required fields");
+        } else if (body.getPreset() != null) {
+            fromDate = body.getPreset().getFrom();
+            toDate = body.getPreset().getTo();
+        } else {
+            fromDate = body.getFromDate();
+            toDate = body.getToDate();
+        }
+
+        final Map<String, Object> allStats = new HashMap<>();
+
+        for (SegmentType type : SegmentType.values()) {
+            allStats.put(type.name().toLowerCase(), statsService.getTotalStats(fromDate, toDate, type));
+        }
+
+        allStats.put("storageUsed", imageService.getStorageUsedInRange(fromDate, toDate));
+
+        return new ResponseEntity<>(new DefaultResponse(false, allStats), HttpStatus.OK);
     }
 
     @PostMapping(
@@ -72,12 +113,16 @@ public class StatsController {
                 uploader.getId()
         );
 
+        log.info("Total images uploaded by user {}: {}", uploader.getId(), totalImages);
+
         final List<Pair<LocalDate, Long>> imagesPerDay = imageService.findTotalImagesPerDayByUser(
                 requestFilter.getFromDate(),
                 requestFilter.getToDate(),
                 uploader.getId(),
                 requestFilter.getFillMissing() != null ? requestFilter.getFillMissing() : false
         );
+
+        log.info("Images per day for user {}: {}", uploader.getId(), imagesPerDay);
 
         final List<Pair<LocalDate, Long>> pastesPerDay = pasteService.findTotalImagesPerDayByUser(
                 requestFilter.getFromDate(),

@@ -37,16 +37,16 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
                         serverInfo.getFrontEndUrl() + "/i/" + imageDto.getFirst(),
                         serverInfo.getBaseUrl() + "/v1/image/get/" + imageDto.getFirst(),
                     serverInfo.getShortImageUrl() + "/" + imageDto.getFirst(),
-                        null
+                        "https://api0.xap3y.tech/v1/image/get/" + imageDto.getFirst()
                 ),
-                new ShortUserDto(
+                (dto.uploader() != null) ? new ShortUserDto(
                         dto.uploader().getId(),
                         dto.uploader().getUsername(),
                         dto.uploader().getRole(),
                         dto.uploader().getAvatar(),
                         dto.uploader().getCreatedAt(),
                         dto.uploader().getInvitedBy() != null ? userInvitorMapper.apply(dto.uploader().getInvitedBy()) : null
-                ),
+                ): null,
                 dto.password() != null,
                 dto.isPublic()
         );

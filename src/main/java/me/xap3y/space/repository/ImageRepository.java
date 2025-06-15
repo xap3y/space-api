@@ -18,7 +18,7 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     @Query("SELECT e FROM Image e " +
                     "WHERE e.uploader.id = :uploaderId " +
-                    "AND e.uploadTime BETWEEN :from AND :to " +
+                    "AND e.uploadTime >= :from AND e.uploadTime <= :to " +
                     "ORDER BY e.uploadTime DESC " +
                     "LIMIT :amount"
     )
@@ -33,16 +33,30 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     @Query("SELECT COUNT(e.id) " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate ")
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate ")
     long countByUploadTimeBetween(@Param("startDate") LocalDateTime startDate,
                                   @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT SUM(e.size) " +
+            "FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate")
+    Long sumByUploadTimeBetween(@Param("startDate") LocalDateTime startDate,
+                                 @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT e.uploader.id as uid, COUNT(e) as uploadCount " +
+            "FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
+            "GROUP BY e.uploader.id " +
+            "ORDER BY uploadCount DESC LIMIT 1")
+    Optional<List<Object[]>> findBestUploader(@Param("startDate") LocalDateTime startDate,
+                                                @Param("endDate") LocalDateTime endDate);
 
     @Query("SELECT COUNT(e.id) FROM Image e WHERE e.uploadTime >= :startDate")
     long countByUploadTimeAfter(@Param("startDate") LocalDateTime startDate);
 
     @Query("SELECT COUNT(e.id) " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "AND e.uploader.id = :uploaderId " +
             "ORDER BY e.uploadTime DESC")
     long countByUploadTimeBetweenAndUploaderId(@Param("startDate") LocalDateTime startDate,
@@ -52,7 +66,7 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     // Accept start and end date, get total of images each day
     @Query("SELECT DATE(e.uploadTime) as date, COUNT(e.id) as count " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "GROUP BY DATE(e.uploadTime) " +
             "ORDER BY DATE(e.uploadTime) ASC")
     List<Object[]> findTotalImagesPerDay(@Param("startDate") LocalDateTime startDate,
@@ -61,7 +75,7 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     // Accept start and end date, get total of images each day filter by user
     @Query("SELECT DATE(e.uploadTime) as date, COUNT(e.id) as count " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "AND e.uploader.id = :uploaderId " +
             "GROUP BY DATE(e.uploadTime) " +
             "ORDER BY DATE(e.uploadTime) ASC")
@@ -71,13 +85,13 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     @Query("SELECT MAX(e.size) as largest, MIN(e.size) as smallest, AVG(e.size) as average, SUM(e.size) as total " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate")
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate")
     Object findTopSizesInRange(@Param("startDate") LocalDateTime startDate,
                                @Param("endDate") LocalDateTime endDate);
 
     @Query("SELECT e.fileType, COUNT(e) as fileCount " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "GROUP BY e.fileType " +
             "ORDER BY fileCount DESC")
     List<Object[]> findFileTypeLeaderboardInRange(@Param("startDate") LocalDateTime startDate,
@@ -86,7 +100,7 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     @Query("SELECT e.uploader.id as uid, u.username, u.avatar, COUNT(e) as uploadCount " +
             "FROM Image e " +
             "INNER JOIN User u ON u.id = e.uploader.id " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "GROUP BY e.uploader.id " +
             "ORDER BY uploadCount DESC")
     List<Object[]> findBiggestUploaderInRange(@Param("startDate") LocalDateTime startDate,
@@ -94,7 +108,7 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     @Query("SELECT e.uploader.id as uid, COUNT(e) as uploadCount, SUM(e.size) as totalSize " +
             "FROM Image e " +
-            "WHERE e.uploadTime BETWEEN :startDate AND :endDate " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "AND e.uploader.id = :uid " +
             "GROUP BY e.uploader.id")
     Object findTopUserStats(@Param("startDate") LocalDateTime startDate,

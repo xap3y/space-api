@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
 
 @Component
 public class ServerInfo {
@@ -53,6 +54,30 @@ public class ServerInfo {
         return environment.getProperty("DISCORD_BOT");
     }
 
+    public String getTelegramBotToken() {
+        return environment.getProperty("TELEGRAM_BOT_TOKEN");
+    }
+
+    public String getDiscordClientId() {
+        return environment.getProperty("DISCORD_BOT_ID");
+    }
+
+    public String getDiscordAuthBotToken() {
+        return environment.getProperty("DISCORD_CLIENT_SECRET");
+    }
+
+    public String getRemoteDiscordBotToken() {
+        return environment.getProperty("REMOTE_DISCORD_BOT_TOKEN");
+    }
+
+    public Long getRemoteDiscordBotGuildId() {
+        return Long.valueOf(Objects.requireNonNull(environment.getProperty("REMOTE_DISCORD_BOT_GUILD_ID")));
+    }
+
+    public Long getRemoteDiscordBotChannelId() {
+        return Long.valueOf(Objects.requireNonNull(environment.getProperty("REMOTE_DISCORD_BOT_CHANNEL_ID")));
+    }
+
     public String getNamespaceName() {
         return environment.getProperty("NAMESPACE_TAG", "local");
     }
@@ -67,6 +92,18 @@ public class ServerInfo {
 
     public String getShortPasteUrl() {
         return environment.getProperty("SHORT_PASTE_URL", "https://p.xap3y.tech");
+    }
+
+    public Boolean getUseDiscordWebhook() {
+        return environment.getProperty("USE_DISCORD_WEBHOOK", Boolean.class, false);
+    }
+
+    public Boolean getUseDiscordBot() {
+        return environment.getProperty("USE_DISCORD_BOT", Boolean.class, false);
+    }
+
+    public Boolean getUseTelegramBot() {
+        return environment.getProperty("USE_TELEGRAM_BOT", Boolean.class, false);
     }
 
     public String getShortShortenerUrl() {

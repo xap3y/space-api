@@ -52,6 +52,10 @@ public class User {
     @ManyToOne
     private User invitedBy;
 
+    /*@ManyToOne
+    @JoinColumn(name = "discord_connection_id", nullable = true)
+    private DiscordConnection discordConnection;*/
+
     @Column(columnDefinition = "json")
     @Convert(converter = UserSocialsConverter.class)
     private UserSocials socials;
@@ -84,5 +88,4 @@ public class User {
         this.invitedBy = null;
         this.avatar = "https://gravatar.com/avatar/" + Utils.sha256hex(email);
     }
-
 }

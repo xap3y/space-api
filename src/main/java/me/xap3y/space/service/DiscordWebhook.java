@@ -2,7 +2,6 @@ package me.xap3y.space.service;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.stereotype.Service;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.Color;

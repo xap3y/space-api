@@ -2,11 +2,14 @@ package me.xap3y.space.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.ArchiveType;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
+import me.xap3y.space.dto.FoundImageDto;
 import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
@@ -19,7 +22,9 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.MetricService;
+import me.xap3y.space.service.TelegramService;
 import me.xap3y.space.service.WebhookService;
+import me.xap3y.space.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
@@ -37,16 +42,14 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.zip.ZipException;
+import java.util.zip.ZipInputStream;
 
+@Slf4j
 @RestController
 @RequestMapping("/v1/image")
 public class ImageController {
-
-    private static final Logger log = LoggerFactory.getLogger(ImageController.class);
 
     private final ImageService imageService;
     private final ServerInfo serverInfo;
@@ -54,14 +57,57 @@ public class ImageController {
     private final MetricService metricService;
     private final ImageInfoMapper imageInfoMapper;
     private final PasswordEncoder passwordEncoder;
+    private final TelegramService telegramService;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, ImageInfoMapper imageInfoMapper, PasswordEncoder passwordEncoder) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, ImageInfoMapper imageInfoMapper, PasswordEncoder passwordEncoder, TelegramService telegramService) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
         this.metricService = metricService;
         this.imageInfoMapper = imageInfoMapper;
         this.passwordEncoder = passwordEncoder;
+        this.telegramService = telegramService;
+    }
+
+    @PostMapping("/upload/zip")
+    @RequiresApiKey
+    public ResponseEntity<?> uploadArchive(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+        if (file.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
+
+        try (InputStream is = file.getInputStream()) {
+            byte[] magic = new byte[4];
+            if (is.read(magic) != 4 || !(magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04)) {
+                throw new BadRequestException("File is not a valid ZIP archive");
+            }
+        } catch (IOException e) {
+            throw new InternalServerException("Failed to read uploaded archive file");
+        }
+
+        List<FoundImageDto> foundImages;
+
+        try {
+            foundImages = Utils.extractFoundImages(file, ArchiveType.ZIP);
+        } catch (ZipException e) {
+            return ResponseEntity.badRequest().body("Uploaded file is not a valid ZIP archive");
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("Error processing archive: " + e.getMessage());
+        }
+
+        if (foundImages.isEmpty()) {
+            return ResponseEntity.ok("No supported media files found in the archive");
+        }
+
+        // Upload each found image
+        /*for (FoundImageDto dto : foundImages) {
+
+        }*/
+
+        return ResponseEntity.ok("Found image files:\n" + foundImages);
     }
 
     @PostMapping("/upload")
@@ -130,6 +176,7 @@ public class ImageController {
             metricService.setDatabaseUpdated(true);
             metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() + 1);
             webhookService.postImageUpload( imageInfoDto.uniqueId(), imageInfoDto);
+            telegramService.sendImageUrl("5759660343", imageInfoDto);
             return new ResponseEntity<>(new UIDResponse(false, imageInfoDto.uniqueId(), imageInfoDto), HttpStatus.OK);
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -169,6 +216,7 @@ public class ImageController {
         if (!deleted) {
             throw new InternalServerException("Falied to delete image file");
         }
+        webhookService.postImageDeleted(uniqueId, image);
         imageService.deleteByUniqueId(uniqueId);
         metricService.setDatabaseUpdated(true);
         //metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() - 1);
@@ -274,13 +322,25 @@ public class ImageController {
         }
 
         if (download) {
-            Resource video = new FileSystemResource(image.path());
+            Resource resource = new FileSystemResource(image.path());
+            String contentType = switch (image.type().toLowerCase(Locale.ROOT)) {
+                case "png" -> "image/png";
+                case "jpg", "jpeg" -> "image/jpeg";
+                case "gif" -> "image/gif";
+                case "mp4" -> "video/mp4";
+                case "heif" -> "image/heif";
+                case "heic" -> "image/heic";
+                default -> "application/octet-stream";
+            };
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + uniqueId + "." + image.type().toLowerCase(Locale.ROOT) + "\"");
-            return new ResponseEntity<>(video, headers, HttpStatus.OK);
+            return new ResponseEntity<>(resource, headers, HttpStatus.OK);
         }
 
-        data.put("uploader", image.uploader().getUsername());
-        headers.add("X-Uploader", image.uploader().getUsername());
+        if (image.uploader() != null) {
+            data.put("uploader", image.uploader().getUsername());
+            headers.add("X-Uploader", image.uploader().getUsername());
+        }
 
         if (imageInfo) {
             data.put("image_size", image.size());

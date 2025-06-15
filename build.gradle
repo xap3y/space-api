@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'me.xap3y'
-version = '1.0-beta.15'
+version = '1.0-beta.17'
 
 java {
     toolchain {
@@ -31,6 +31,11 @@ dependencies {
     implementation 'net.coobird:thumbnailator:0.4.1'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.3.5'
+    implementation 'org.telegram:telegrambots-longpolling:8.3.0'
+    implementation 'org.telegram:telegrambots-client:8.3.0'
+    implementation 'com.discord4j:discord4j-core:3.2.7'
+    implementation 'org.apache.commons:commons-compress:1.27.1'
+    implementation "com.github.junrar:junrar:7.5.5"
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'

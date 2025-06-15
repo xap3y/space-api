@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import me.xap3y.space.util.CustomLocalDateTimeDeserializer;
 import org.springframework.lang.Nullable;
 
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StatsRequest {
 
@@ -27,7 +29,4 @@ public class StatsRequest {
 
     @Nullable
     private Boolean fillMissing;
-
-    public StatsRequest() {}
-
 }

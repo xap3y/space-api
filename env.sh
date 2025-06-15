@@ -3,7 +3,7 @@
 # Spring boot application properties
 export SPRING_SERVER_PORT=8012
 export SPRING_SERVER_PROTOCOL=http
-export SPRING_SERVER_BASEURL=127.0.0.1:$SPRING_SERVER_PORT
+export SPRING_SERVER_BASEURL=192.168.100.100:$SPRING_SERVER_PORT
 #export SPRING_SERVER_BASEURL=api.xap3y.tech
 
 # Database
@@ -24,10 +24,18 @@ export SPRING_MAX_FILE_SIZE=5000MB
 export SPRING_DEBUG=false
 export SPRING_ENV=dev
 export CORS_TESTING_URL=http://127.0.0.1
-export FRONTEND_URL=https://ext-space.xap3y.tech
+export FRONTEND_URL=http://localhost:3000
+
+export USE_DISCORD_WEBHOOK=false
+export USE_DISCORD_BOT=true
+export USE_TELEGRAM_BOT=false
 
 export SHORT_IMAGE_URL=https://i1.xap3y.tech
 export SHORT_PASTE_URL=https://p1.xap3y.tech
 export SHORT_SHORTENER_URL=https://r1.xap3y.tech
+
+export DISCORD_BOT_ID=1367593639152455792
+export REMOTE_DISCORD_BOT_GUILD_ID=1218647784119599255
+export REMOTE_DISCORD_BOT_CHANNEL_ID=1383182173670215766
 
 export NAMESPACE_TAG=local_xap

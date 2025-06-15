@@ -3,25 +3,28 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UserDto;
+import me.xap3y.space.dto.UserSettingsDto;
 import me.xap3y.space.dto.UserSocialsPatchDto;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.entity.UserSettings;
 import me.xap3y.space.mapper.UserMapper;
+import me.xap3y.space.mapper.UserSettingsMapper;
 import me.xap3y.space.model.UserSocials;
+import me.xap3y.space.model.UserWebhookSettings;
 import me.xap3y.space.model.response.DefaultResponse;
-import me.xap3y.space.service.ImageService;
-import me.xap3y.space.service.PasteService;
-import me.xap3y.space.service.UrlService;
-import me.xap3y.space.service.UserService;
+import me.xap3y.space.service.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/v1/user")
@@ -35,14 +38,18 @@ public class UserController {
     private final ServerInfo serverInfo;
     private final UrlService urlService;
     private final PasteService pasteService;
+    private final UserSettingsService userSettingsService;
+    private final UserSettingsMapper userSettingsMapper;
 
-    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService) {
+    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper) {
         this.userService = userService;
         this.imageService = imageService;
         this.userMapper = userMapper;
         this.serverInfo = serverInfo;
         this.urlService = urlService;
         this.pasteService = pasteService;
+        this.userSettingsService = userSettingsService;
+        this.userSettingsMapper = userSettingsMapper;
     }
 
     @PostMapping("/create")
@@ -105,6 +112,47 @@ public class UserController {
         userService.saveUser(uploader);
 
         return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.OK);
+    }
+
+    @GetMapping(
+            value = "/get/@me",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getCurrentUser(
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+        log.info("Getting current user: {}", uploader.getUsername());
+
+        UserDto userDto = userMapper.apply(uploader);
+        return ResponseEntity.ok()
+                .body(new DefaultResponse(false, userDto));
+    }
+
+    @GetMapping(
+            value = "/get/@me/settings",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getCurrentUserSettings(
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+        log.info("Getting current user: {}", uploader.getUsername());
+
+        Optional<UserSettings> userSettings = userSettingsService.getUserSettingsByUserId(uploader.getId());
+        if (userSettings.isEmpty()) {
+            UserSettings newSettings = new UserSettings();
+            newSettings.setUserId(uploader);
+            newSettings.setEmbedSettings(new UserWebhookSettings());
+            userSettings = Optional.of(userSettingsService.saveUserSettings(newSettings));
+        }
+        UserSettingsDto userSettingsDto = userSettingsMapper.apply(userSettings.get());
+        return ResponseEntity.ok()
+                .body(new DefaultResponse(false, userSettingsDto));
     }
 
     @GetMapping(

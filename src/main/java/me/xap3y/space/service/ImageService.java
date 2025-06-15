@@ -4,18 +4,17 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.ImageDto;
-import me.xap3y.space.dto.ImageInfoDto;
-import me.xap3y.space.dto.NewImageDto;
-import me.xap3y.space.dto.StatImageDto;
+import me.xap3y.space.dto.*;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ImageInfoMapper;
 import me.xap3y.space.mapper.ImageMapper;
+import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.repository.ImageRepository;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.ImageCompressor;
 import me.xap3y.space.util.Utils;
+import org.springframework.cglib.core.Local;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -43,15 +42,11 @@ public class ImageService {
 
     private final ImageRepository imageRepository;
     private final ImageCompressor imageCompressor;
-    private final ServerInfo serverInfo;
-    private final ImageInfoMapper imageInfoMapper;
     private final ImageMapper imageMapper;
 
-    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ServerInfo serverInfo, ImageInfoMapper imageInfoMapper, ImageMapper imageMapper) {
+    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper) {
         this.imageRepository = imageRepository;
         this.imageCompressor = imageCompressor;
-        this.serverInfo = serverInfo;
-        this.imageInfoMapper = imageInfoMapper;
         this.imageMapper = imageMapper;
     }
 
@@ -213,6 +208,10 @@ public class ImageService {
         return imageRepository.countByUploadTimeBetween(startDate, endDate);
     }
 
+    public Long getStorageUsedInRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return imageRepository.sumByUploadTimeBetween(startDate, endDate);
+    }
+
     public long getImageCountByDate(LocalDateTime fromDate, LocalDateTime toDate) {
         return imageRepository.countByUploadTimeBetween(fromDate, toDate);
     }
@@ -328,7 +327,7 @@ public class ImageService {
     }
 
     public List<Pair<LocalDate, Long>> findTotalImagesPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {
-        List<Object[]> results = imageRepository.findTotalImagesPerDayByUser(startDate, endDate, uploaderId);
+        List<Object[]> results = imageRepository.findTotalImagesPerDayByUser(startDate.with(LocalTime.MIN), endDate.with(LocalTime.MAX), uploaderId);
         return Utils.convertToPairList(startDate, endDate, results, fillMissingDates);
     }
 
@@ -357,5 +356,10 @@ public class ImageService {
             imagesPerDay.add(Pair.of(date, count));
         }
         return imagesPerDay;
+    }
+
+    public Optional<Pair<Long, Long>> findBestUploader(LocalDateTime startDate, LocalDateTime endDate) {
+        List<Object[]> result = imageRepository.findBestUploader(startDate, endDate).orElse(null);
+        return Utils.parseBestUploader(result);
     }
 }

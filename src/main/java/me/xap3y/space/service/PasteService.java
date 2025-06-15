@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -95,7 +96,16 @@ public class PasteService {
     }
 
     public List<Pair<LocalDate, Long>> findTotalImagesPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {
-        List<Object[]> results = pasteRepository.findTotalPastesPerDayByUser(startDate, endDate, uploaderId);
+        List<Object[]> results = pasteRepository.findTotalPastesPerDayByUser(startDate.with(LocalTime.MIN), endDate.with(LocalTime.MAX), uploaderId);
         return Utils.convertToPairList(startDate, endDate, results, fillMissingDates);
+    }
+
+    public Optional<Pair<Long, Long>> findBestUploader(LocalDateTime startDate, LocalDateTime endDate) {
+        List<Object[]> result = pasteRepository.findBiggestCreatorInRangeWithId(startDate, endDate).orElse(null);
+        return Utils.parseBestUploader(result);
+    }
+
+    public long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate) {
+        return pasteRepository.countByCreatedAtBetween(startDate, endDate);
     }
 }

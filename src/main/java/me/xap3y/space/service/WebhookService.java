@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 import static me.xap3y.space.SpaceApplication.startedAt;
@@ -24,28 +25,30 @@ public class WebhookService {
     }
 
     public void init() {
-        postMessage("Space-API started at " + startedAt.toString() + " running on " + serverInfo.getBaseUrl() + " ENV:**" + SpaceApplication.env + "** | VER:**" + SpaceApplication.VERSION + "**");
+        postMessage("Space-API started at " + startedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " running on " + serverInfo.getBaseUrl() + " ENV:**" + SpaceApplication.env + "** | VER:**" + SpaceApplication.VERSION + "**");
     }
 
     private DiscordWebhook getHook() {
+        if (!serverInfo.getUseDiscordWebhook()) return null;
         DiscordWebhook hook = new DiscordWebhook(serverInfo.getDiscordBotToken());
         hook.setUsername("Space-API");
         return hook;
     }
 
     public void postMessage(String message) {
-        return;
-        /*DiscordWebhook hook = getHook();
+        if (!serverInfo.getUseDiscordWebhook()) return;
+        DiscordWebhook hook = getHook();
         hook.setContent(message);
         try {
             hook.execute();
         } catch (IOException e) {
             log.error(e.getMessage());
-        }*/
+        }
     }
 
     public void postImageUpload(String id, ImageInfoDto imageDto) {
         DiscordWebhook hook = getHook();
+        if (hook == null) return;
         DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
         embedObject.setColor(Color.GREEN);
         embedObject.setTitle("Image Uploaded! (" + id + "." + imageDto.type().toLowerCase(Locale.ROOT) + ")");
@@ -71,6 +74,7 @@ public class WebhookService {
 
     public void postUrlShorten(ShortUrlDto urlDto) {
         DiscordWebhook hook = getHook();
+        if (hook == null) return;
         DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
         embedObject.setColor(Color.ORANGE);
         embedObject.setTitle("URL Shortened! (" + urlDto.uniqueId() + ")");
@@ -88,6 +92,7 @@ public class WebhookService {
 
     public void postPasteCreated(PasteDto pasteDto) {
         DiscordWebhook hook = getHook();
+        if (hook == null) return;
         DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
         embedObject.setColor(Color.ORANGE);
         embedObject.setTitle("Paste Created! (" + pasteDto.uniqueId() + ")");
@@ -95,6 +100,22 @@ public class WebhookService {
         embedObject.addField("shortURL", "https://p0.xap3y.tech/" + pasteDto.uniqueId(), false);
         embedObject.addField("creator", pasteDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
+        hook.addEmbed(embedObject);
+        try {
+            hook.execute();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    public void postImageDeleted(String uniqueId, ImageDto img) {
+        DiscordWebhook hook = getHook();
+        if (hook == null) return;
+        DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
+        embedObject.setColor(Color.RED);
+        embedObject.setTitle("Image Deleted! (" + uniqueId + ")");
+        embedObject.addField("| SIZE", "**|** " + img.size() / 1024 + " KiB", true);
+        embedObject.addField("| UPLOADER", "**|** [" + img.uploader().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + img.uploader().getUsername() + ")" , true);
         hook.addEmbed(embedObject);
         try {
             hook.execute();

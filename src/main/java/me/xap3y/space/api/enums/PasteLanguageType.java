@@ -1,0 +1,26 @@
+package me.xap3y.space.api.enums;
+
+public enum PasteLanguageType {
+    HTML,
+    JAVA,
+    JAVASCRIPT,
+    PYTHON,
+    C,
+    CPLUSPLUS,
+    CSHARP,
+    PHP,
+    RUBY,
+    GO,
+    TYPESCRIPT,
+    SWIFT,
+    KOTLIN,
+    RUST,
+    PERL,
+    BASH,
+    SQL,
+    LUA,
+    SCALA,
+    HASKELL,
+    OBJECTIVEC,
+    GROOVY,
+}

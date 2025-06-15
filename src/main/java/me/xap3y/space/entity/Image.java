@@ -46,6 +46,6 @@ public class Image {
     private Boolean isPublic;
 
     @ManyToOne
-    @JoinColumn(name = "uploader_id")
+    @JoinColumn(nullable = true, name = "uploader_id")
     private User uploader;
 }

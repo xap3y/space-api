@@ -16,6 +16,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -91,7 +92,16 @@ public class UrlService {
     }
 
     public List<Pair<LocalDate, Long>> findTotalUrlsPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {
-        List<Object[]> results = urlRepository.findTotalUrlsPerDayByUser(startDate, endDate, uploaderId);
+        List<Object[]> results = urlRepository.findTotalUrlsPerDayByUser(startDate.with(LocalTime.MIN), endDate.with(LocalTime.MAX), uploaderId);
         return Utils.convertToPairList(startDate, endDate, results, fillMissingDates);
+    }
+
+    public long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate) {
+        return urlRepository.countByCreatedAtBetween(startDate, endDate);
+    }
+
+    public Optional<Pair<Long, Long>> findBiggestCreatorInRangeWithId(LocalDateTime startDate, LocalDateTime endDate) {
+        List<Object[]> result = urlRepository.findBiggestCreatorInRangeWithId(startDate, endDate).orElse(null);
+        return Utils.parseBestUploader(result);
     }
 }

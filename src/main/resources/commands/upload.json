@@ -1,0 +1,12 @@
+{
+    "name": "upload",
+    "description": "Upload an image to the server",
+    "options": [
+        {
+            "name": "image",
+            "description": "The image to upload",
+            "type": 11,
+            "required": true
+        }
+    ]
+}
