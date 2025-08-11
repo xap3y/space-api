@@ -176,6 +176,12 @@ public class DiscordController {
 
         DiscordMeDto connectionDto = discordConnectionService.fetchDiscordMe(body.getAccessToken());
 
+        discordConnectionService.findByDiscordId(connectionDto.id()).ifPresent(
+                existingConnection -> {
+                    throw new BadRequestException("You already have a Discord connection with this ID: " + connectionDto.id());
+                }
+        );
+
         DiscordConnection discordConnection = new DiscordConnection();
         discordConnection.setUserId(uploader);
         discordConnection.setDiscordId(connectionDto.id());

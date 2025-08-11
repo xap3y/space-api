@@ -3,6 +3,7 @@ package me.xap3y.space.repository;
 import jakarta.transaction.Transactional;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.User;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

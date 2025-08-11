@@ -4,11 +4,13 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.converter.UserSocialsConverter;
 import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.util.Utils;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
 
@@ -33,10 +35,15 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @Comment("OWNER=0,ADMIN=1,USER=2,MODERATOR=3,GUEST=4,TESTER=5,BANNED=6,DELETED=7")
     private UserRole role;
 
     /*@Column(unique = true, nullable = false)
     private String apiKey;*/
+
+    @Column(nullable = true)
+    @Comment("ACTIVE=0,INACTIVE=1,SUSPENDED=2,WAITING_VERIFICATION=3")
+    private UserAccountStatus status;
 
     @ManyToOne
     @JoinColumn(unique = true, nullable = false)
@@ -71,6 +78,7 @@ public class User {
         this.password = password;
         this.role = role;
         this.apiKey = key;
+        this.status = UserAccountStatus.WAITING_VERIFICATION;
         this.createdAt = LocalDateTime.now();
         /*this.stats = new UserStats(0, 0, 0, 0, 0);*/
         this.socials = null;
@@ -82,6 +90,7 @@ public class User {
         this.password = password;
         this.email = email;
         this.role = UserRole.USER;
+        this.status = UserAccountStatus.WAITING_VERIFICATION;
         this.createdAt = LocalDateTime.now();
         /*this.stats = new UserStats(0, 0, 0, 0, 0);*/
         this.socials = null;

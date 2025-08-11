@@ -32,14 +32,10 @@ public class ImagePlaylistController {
 
 
     @GetMapping("/get/{identifier}")
-    @RequiresApiKey
     public ResponseEntity<?> getImagePlaylist(
             HttpServletRequest request,
             @PathVariable(value = "identifier") String identifier
     ) {
-        User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
-
         ImagePlaylist playlist = imagePlaylistService.getPlaylistByUniqueId(identifier)
                 .orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
 
@@ -57,7 +53,7 @@ public class ImagePlaylistController {
             ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) throw new InvalidApiKeyException();
-        else if (body.getImageUid() == null || body.getImageUid().isEmpty()) {
+        else if (body.getImagesUids() == null || body.getImagesUids().isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "Image UID is required"), HttpStatus.BAD_REQUEST);
         }
 
@@ -66,15 +62,17 @@ public class ImagePlaylistController {
             return new ResponseEntity<>(new DefaultResponse(true, "Playlist not found"), HttpStatus.NOT_FOUND);
         }
 
-        boolean exists = imagePlaylistService.existsImageInPlaylistByUids(identifier, body.getImageUid());
+        for (String imageUid : body.getImagesUids()) {
+            boolean exists = imagePlaylistService.existsImageInPlaylistByUids(identifier, imageUid);
 
-        if (exists) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Image already exists in playlist"), HttpStatus.BAD_REQUEST);
+            if (exists) {
+                return new ResponseEntity<>(new DefaultResponse(true, "Image with UID " + imageUid + " is already exists in playlist"), HttpStatus.BAD_REQUEST);
+            }
+
+            imagePlaylistService.addImageToPlaylist(identifier, imageUid);
         }
 
-        imagePlaylistService.addImageToPlaylist(identifier, body.getImageUid());
-
-        return new ResponseEntity<>(new DefaultResponse(false, "Image added to playlist"), HttpStatus.OK);
+        return new ResponseEntity<>(new DefaultResponse(false, body.getImagesUids().size() + " Images added to playlist"), HttpStatus.OK);
     }
 
     @DeleteMapping("/get/{identifier}/images/{imageUid}")

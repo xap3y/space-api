@@ -3,6 +3,7 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import me.xap3y.space.api.enums.ImageLocation;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
 
@@ -44,6 +45,10 @@ public class Image {
     @Column(nullable = false)
     @ColumnDefault("true")
     private Boolean isPublic;
+
+    @Column(nullable = false)
+    @Comment("R2=0,LOCAL=1,UNKNOWN=2")
+    private ImageLocation location;
 
     @ManyToOne
     @JoinColumn(nullable = true, name = "uploader_id")

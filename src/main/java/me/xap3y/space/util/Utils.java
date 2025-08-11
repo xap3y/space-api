@@ -45,14 +45,24 @@ public class Utils {
     }
 
     public static String generateRandomId() {
+        return generateRandomId(8);
+    }
+
+    public static String generateRandomId(int length) {
         String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         StringBuilder salt = new StringBuilder();
         Random rnd = new Random();
-        while (salt.length() < 8) {
+        while (salt.length() < length) {
             int index = (int) (rnd.nextFloat() * SALTCHARS.length());
             salt.append(SALTCHARS.charAt(index));
         }
         return salt.toString();
+    }
+
+    public static String generateRandom6DigitNumber() {
+        Random random = new Random();
+        int number = 100000 + random.nextInt(900000);
+        return String.valueOf(number);
     }
 
     public static boolean containsText(MultipartFile file) {

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 public class TelegramService {
 
     private final ServerInfo serverInfo;
+
     @Setter
     private TelegramBot telegramBot;
 

@@ -3,6 +3,8 @@ package me.xap3y.space.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.iface.RequiresApiKey;
@@ -21,7 +23,9 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
+@Slf4j
 @Component
 public class ApiKeyInterceptor implements HandlerInterceptor {
 
@@ -63,6 +67,14 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                     logsService.logFile(" --- - UPLOADER == " + uploader.getUsername());
                 } catch (InvalidApiKeyException e) {
                     this.writeErrorResponse(response, new DefaultResponse(true, e.getMessage()), HttpStatus.UNAUTHORIZED);
+                    return false;
+                }
+
+                String route = request.getRequestURI();
+                log.info("API Key used by user: {} on route: {}", uploader.getUsername(), route);
+
+                if (uploader.getStatus() != UserAccountStatus.ACTIVE && !Objects.equals(route, "/v1/auth/verify/email")) {
+                    this.writeErrorResponse(response, new DefaultResponse(true, "Your account is not active! Please contact support."), HttpStatus.FORBIDDEN);
                     return false;
                 }
 

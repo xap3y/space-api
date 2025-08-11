@@ -80,4 +80,12 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.FORBIDDEN);
     }
+
+    @ExceptionHandler(EmailVerifyCodeExpired.class)
+    public ResponseEntity<?> handleEmailVerifyCodeExpired(
+            EmailVerifyCodeExpired ex
+    ) {
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        return new ResponseEntity<>(defaultResponse, HttpStatus.GONE);
+    }
 }

@@ -3,10 +3,12 @@ package me.xap3y.space.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AddPlaylistImageRequest {
-    List<String> imagesUids;
+public class EmailRequest {
+    private String from;
+    private String subject;
+    private String to;
+    private String content;
+
 }

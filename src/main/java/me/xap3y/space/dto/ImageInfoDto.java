@@ -1,5 +1,7 @@
 package me.xap3y.space.dto;
 
+import me.xap3y.space.api.enums.ImageLocation;
+
 import java.time.LocalDateTime;
 
 public record ImageInfoDto(
@@ -12,6 +14,7 @@ public record ImageInfoDto(
         UrlSetDto urlSet,
         ShortUserDto uploader,
         boolean requiresPassword,
-        boolean isPublic
+        boolean isPublic,
+        ImageLocation location
 ) {
 }

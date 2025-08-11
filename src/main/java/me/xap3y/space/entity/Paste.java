@@ -31,8 +31,9 @@ public class Paste {
     @Column
     private String language;
 
-    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
-    private String content;
+    @Lob
+    @Column(nullable = false, columnDefinition = "LONGBLOB")
+    private byte[] content;
 
     @Column(nullable = false)
     @ColumnDefault("CURRENT_TIMESTAMP")

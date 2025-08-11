@@ -2,11 +2,9 @@ package me.xap3y.space.listener;
 
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.service.DiscordBotService;
-import me.xap3y.space.service.RemoteMessageService;
-import me.xap3y.space.service.TelegramService;
-import me.xap3y.space.service.WebhookService;
+import me.xap3y.space.service.*;
 import me.xap3y.space.util.TelegramBot;
+import me.xap3y.space.util.TelegramVerifyBot;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -28,13 +26,21 @@ public class ApplicationListener {
     private final ServerInfo serverInfo;
     private final RemoteMessageService remoteMessageService;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final TelegramVerifyService telegramVerifyService;
+    private final EmailVerifyCodeService emailVerifyCodeService;
+    private final TelegramConnectionService telegramConnectionService;
+    private final TelegramVerifyBot telegramVerifyBot;
 
 
-    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, RemoteMessageService remoteMessageService) {
+    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, RemoteMessageService remoteMessageService, TelegramVerifyService telegramVerifyService, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, TelegramVerifyBot telegramVerifyBot) {
         this.webhookService = webhookService;
         this.telegramService = telegramService;
         this.serverInfo = serverInfo;
         this.remoteMessageService = remoteMessageService;
+        this.telegramVerifyService = telegramVerifyService;
+        this.emailVerifyCodeService = emailVerifyCodeService;
+        this.telegramConnectionService = telegramConnectionService;
+        this.telegramVerifyBot = telegramVerifyBot;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -52,6 +58,19 @@ public class ApplicationListener {
                 telegramService.sendMessage("5759660343", "Space-API started at " + startedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " running on " + "ENV: *" + env + "* | VER: *" + VERSION + "*");
             } catch (TelegramApiException ex) {
                 log.error("Telegram bot failed to registered!");
+            }
+        }
+
+        String verifyBotToken = serverInfo.getTelegramVerifyBotToken();
+        //TelegramVerifyBot telegramVerifyBot = new TelegramVerifyBot(verifyBotToken, emailVerifyCodeService, telegramConnectionService);
+        //telegramVerifyBot.init();
+
+        if (serverInfo.getUseTelegramVerifyBot()) {
+            try {
+                log.info("Telegram Verify Bot registered successfully.");
+                botsApplication.registerBot(serverInfo.getTelegramVerifyBotToken(), telegramVerifyBot);
+            } catch (TelegramApiException ex) {
+                log.error("Telegram Verify Bot failed to register!", ex);
             }
         }
 

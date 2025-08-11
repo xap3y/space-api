@@ -1,9 +1,11 @@
 package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.entity.ApiKey;
+import me.xap3y.space.entity.EmailVerifyCodes;
 import me.xap3y.space.entity.InviteCode;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.UserMapper;
@@ -28,16 +30,20 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final InviteCodeRepository inviteCodeRepository;
+    private final EmailVerifyCodeService emailVerifyCodeService;
+    private final EmailService emailService;
 
-    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository) {
+    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository, EmailVerifyCodeService emailVerifyCodeService, EmailService emailService) {
         this.userRepository = userRepository;
         this.apiKeyRepository = apiKeyRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.inviteCodeRepository = inviteCodeRepository;
+        this.emailVerifyCodeService = emailVerifyCodeService;
+        this.emailService = emailService;
     }
 
-    public void registerUser(AuthRegisterRequest req) {
+    public User registerUser(AuthRegisterRequest req) {
         String encodedPassword = passwordEncoder.encode(req.getPassword());
         User user = new User(req.getEmail(), req.getUsername(), encodedPassword);
         ApiKey apiKey = new ApiKey();
@@ -52,10 +58,14 @@ public class UserService {
             user.setInvitedBy(code.getCreatedBy());
         }
 
-        userRepository.save(user);
+        User registeredUser = userRepository.save(user);
+
+        EmailVerifyCodes verifyCode = emailVerifyCodeService.generateAndSaveCode(user);
+        emailService.sendVerificationCode(user.getEmail(), verifyCode.getCode(), verifyCode.getUrlCode());
 
         int res = inviteCodeRepository.markAsUsed(req.getInviteCode(), LocalDateTime.now(), user);
         log.info("Marked invite code as used: {}", res);
+        return registeredUser;
     }
 
     public void createUser(String username, String password, String email, boolean test) {
@@ -99,6 +109,15 @@ public class UserService {
         user.setApiKey(apiKey);
         user.setSocials(socials);
         userRepository.save(user);
+    }
+
+    public boolean updateUserStatus(User user, UserAccountStatus status) {
+        if (user == null) {
+            return false;
+        }
+        user.setStatus(status);
+        userRepository.save(user);
+        return true;
     }
 
     public Optional<User> tryFindByUsername(String username) {

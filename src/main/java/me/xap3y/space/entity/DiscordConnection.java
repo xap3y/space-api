@@ -17,10 +17,10 @@ public class DiscordConnection {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User userId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String discordId;
 
     @Column(nullable = false)

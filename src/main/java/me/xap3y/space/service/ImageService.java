@@ -1,6 +1,7 @@
 package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.config.ServerInfo;
@@ -23,9 +24,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -62,6 +65,31 @@ public class ImageService {
 
     public Image saveImage(MultipartFile file, User uploader) throws IOException, RuntimeException {
         return saveImage(file, uploader, null, null, true, null);
+    }
+
+    // register image UID into DB
+    public Image registerImage(User uploader, String uniqueId, String password, boolean isPublic, String description, String fileType, Long size) throws IOException, RuntimeException {
+
+        if (uniqueId == null) {
+            uniqueId = Utils.generateRandomId();
+        } else {
+            if (!uniqueId.matches("^[a-zA-Z0-9]*$")) {
+                throw new InvalidUniqueIdException();
+            }
+        }
+
+        Image imageDto = new Image();
+        imageDto.setUniqueId(uniqueId);
+        imageDto.setIsPublic(isPublic);
+        imageDto.setPassword(password);
+        imageDto.setLocation(ImageLocation.R2);
+        imageDto.setDescription(description);
+        imageDto.setFileType(fileType);
+        imageDto.setSize(size != null ? size : 0L);
+        imageDto.setUploadTime(LocalDateTime.now());
+        imageDto.setUploader(uploader);
+
+        return imageRepository.save(imageDto);
     }
 
 
@@ -115,14 +143,16 @@ public class ImageService {
             imageCompressor.compressImage(file.getInputStream(), compressedImageFile, scale, quality);
         } else {
             log.info("Saving image with id: {}", uniqueId);
-            byte[] bytes = file.getBytes();
             Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
-            Files.write(filePath, bytes);
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
 
         log.info("Saving image with file name: {}", file.getOriginalFilename());
         Image imageDto = new Image();
         imageDto.setUniqueId(uniqueId);
+        imageDto.setLocation(ImageLocation.LOCAL);
         imageDto.setIsPublic(isPublic);
         imageDto.setPassword(password);
         imageDto.setDescription(description);
@@ -170,7 +200,7 @@ public class ImageService {
         if (image == null) {
             throw new ResourceNotFoundException("Image not found");
         }
-        byte[] imageBytes = null;
+        /*byte[] imageBytes = null;
         String imageBase64 = null;
         Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType());
         if (info) {
@@ -180,19 +210,20 @@ public class ImageService {
                 throw new ResourceNotFoundException("Image not found");
             }
             imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
-        }
+        }*/
 
         return new ImageDto(
-                imageBytes,
+                null,
                 userInfo ? image.getUploader() : null,
                 image.getDescription(),
                 image.getFileType(),
                 image.getPassword(),
-                Files.size(filePath) / 1024,
-                base64 ? imageBase64 : null,
+                image.getSize(),
+                null,
                 image.getUploadTime(),
                 image.getExpirationTime(),
-                image.getIsPublic()
+                image.getIsPublic(),
+                image.getLocation()
         );
     }
 

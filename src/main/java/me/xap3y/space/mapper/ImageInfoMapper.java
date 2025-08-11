@@ -24,6 +24,21 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
 
     @Override
     public ImageInfoDto apply(Pair<String, ImageDto> imageDto) {
+
+        String imageUrl = switch (imageDto.getSecond().location()) {
+            case R2 -> "https://r3.xap3y.space/media/" + imageDto.getFirst();
+            case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/" + imageDto.getFirst();
+            default -> serverInfo.getBaseUrl() + "/web/image-render/" + imageDto.getFirst();
+        };
+
+        UrlSetDto urlSet = new UrlSetDto(
+                serverInfo.getBaseUrl() + "/web/image-render/" + imageDto.getFirst(),
+                serverInfo.getFrontEndUrl() + "/i/" + imageDto.getFirst(),
+                imageUrl,
+                serverInfo.getShortImageUrl() + "/" + imageDto.getFirst(),
+                null
+        );
+
         ImageDto dto = imageDto.getSecond();
         return new ImageInfoDto(
                 imageDto.getFirst(),
@@ -32,13 +47,7 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
                 dto.size(),
                 dto.uploadedAt(),
                 dto.expiresAt(),
-                new UrlSetDto(
-                        serverInfo.getBaseUrl() + "/web/image-render/" + imageDto.getFirst(),
-                        serverInfo.getFrontEndUrl() + "/i/" + imageDto.getFirst(),
-                        serverInfo.getBaseUrl() + "/v1/image/get/" + imageDto.getFirst(),
-                    serverInfo.getShortImageUrl() + "/" + imageDto.getFirst(),
-                        "https://api0.xap3y.tech/v1/image/get/" + imageDto.getFirst()
-                ),
+                urlSet,
                 (dto.uploader() != null) ? new ShortUserDto(
                         dto.uploader().getId(),
                         dto.uploader().getUsername(),
@@ -48,7 +57,8 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
                         dto.uploader().getInvitedBy() != null ? userInvitorMapper.apply(dto.uploader().getInvitedBy()) : null
                 ): null,
                 dto.password() != null,
-                dto.isPublic()
+                dto.isPublic(),
+                dto.location()
         );
     }
 }

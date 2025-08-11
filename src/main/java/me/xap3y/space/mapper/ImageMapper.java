@@ -24,6 +24,13 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
 
     @Override
     public ImageInfoDto apply(Image image) {
+
+        String imageUrl = switch (image.getLocation()) {
+            case R2 -> "https://r3.xap3y.space/media/" + image.getUniqueId();
+            case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId();
+            default -> serverInfo.getBaseUrl() + "/web/image-render/" + image.getUniqueId();
+        };
+
         return new ImageInfoDto(
                 image.getUniqueId(),
                 image.getFileType(),
@@ -34,7 +41,7 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
                 new UrlSetDto(
                         serverInfo.getBaseUrl() + "/web/image-render/" + image.getUniqueId(),
                         serverInfo.getFrontEndUrl() + "/i/" + image.getUniqueId(),
-                        serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId(),
+                        imageUrl,
                         serverInfo.getShortImageUrl() + "/" + image.getUniqueId(),
                         null
                 ),
@@ -47,7 +54,8 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
                         image.getUploader().getInvitedBy() != null ? userInvitorMapper.apply(image.getUploader().getInvitedBy()) : null
                 ),
                 image.getPassword() != null,
-                image.getIsPublic()
+                image.getIsPublic(),
+                image.getLocation()
         );
     }
 }

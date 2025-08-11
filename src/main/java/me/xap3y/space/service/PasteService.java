@@ -1,10 +1,12 @@
 package me.xap3y.space.service;
 
+import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.repository.PasteRepository;
+import me.xap3y.space.util.HuffmanEncoder;
 import me.xap3y.space.util.Utils;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.util.Pair;
@@ -16,15 +18,18 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class PasteService {
 
     private final PasteRepository pasteRepository;
     private final PasteMapper pasteMapper;
+    private final HuffmanEncoder huffmanEncoder;
 
-    public PasteService(PasteRepository pasteRepository, PasteMapper pasteMapper) {
+    public PasteService(PasteRepository pasteRepository, PasteMapper pasteMapper, HuffmanEncoder huffmanEncoder) {
         this.pasteRepository = pasteRepository;
         this.pasteMapper = pasteMapper;
+        this.huffmanEncoder = huffmanEncoder;
     }
 
     public Optional<Paste> getPasteByUniqueId(String id) {
@@ -54,9 +59,12 @@ public class PasteService {
     }
 
     public PasteDto savePaste(String title, String text, User uploader) throws IllegalArgumentException, OptimisticLockingFailureException {
+        log.info("DECODING TEXT: {}", text);
+        byte[] encodedText =  huffmanEncoder.encode(text);
+        log.info("DECODING TEXT: {}", text);
         Paste pasteDto = new Paste();
         pasteDto.setTitle(title);
-        pasteDto.setContent(text);
+        pasteDto.setContent(encodedText);
         pasteDto.setCreatedBy(uploader);
         pasteDto.setPublic(true);
         pasteDto.setCreatedAt(LocalDateTime.now());

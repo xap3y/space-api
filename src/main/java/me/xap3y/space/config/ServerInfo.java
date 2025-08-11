@@ -58,6 +58,10 @@ public class ServerInfo {
         return environment.getProperty("TELEGRAM_BOT_TOKEN");
     }
 
+    public String getTelegramVerifyBotToken() {
+        return environment.getProperty("TELEGRAM_VERIFY_BOT_TOKEN");
+    }
+
     public String getDiscordClientId() {
         return environment.getProperty("DISCORD_BOT_ID");
     }
@@ -104,6 +108,10 @@ public class ServerInfo {
 
     public Boolean getUseTelegramBot() {
         return environment.getProperty("USE_TELEGRAM_BOT", Boolean.class, false);
+    }
+
+    public Boolean getUseTelegramVerifyBot() {
+        return environment.getProperty("USE_TELEGRAM_VERIFY_BOT", Boolean.class, false);
     }
 
     public String getShortShortenerUrl() {
