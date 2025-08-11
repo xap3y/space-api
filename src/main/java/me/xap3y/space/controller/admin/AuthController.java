@@ -227,6 +227,27 @@ public class AuthController {
     }
 
     @PostMapping(
+            value = "/verify/sendemail",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<?> sendVerifyEmail(
+            HttpServletRequest request,
+            @CookieValue(value = "verify_token", required = false) String token
+    ) {
+        if (token == null || token.isEmpty()) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No verification token provided"), HttpStatus.BAD_REQUEST);
+        }
+
+        User uploader = apiKeyService.validateApiKey(token);
+
+        EmailVerifyCodes verifyCode = emailVerifyCodeService.findTopByUserStrict(uploader);
+
+        emailService.sendVerificationCode(verifyCode.getEmail(), verifyCode.getCode(), verifyCode.getUrlCode());
+
+        return ResponseEntity.ok(new DefaultResponse(false, "Verification email sent successfully"));
+    }
+
+    @PostMapping(
             value = "/verify/email",
             produces = MediaType.APPLICATION_JSON_VALUE
     )

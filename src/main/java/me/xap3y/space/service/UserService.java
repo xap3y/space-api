@@ -61,7 +61,7 @@ public class UserService {
         User registeredUser = userRepository.save(user);
 
         EmailVerifyCodes verifyCode = emailVerifyCodeService.generateAndSaveCode(user);
-        emailService.sendVerificationCode(user.getEmail(), verifyCode.getCode(), verifyCode.getUrlCode());
+
 
         int res = inviteCodeRepository.markAsUsed(req.getInviteCode(), LocalDateTime.now(), user);
         log.info("Marked invite code as used: {}", res);

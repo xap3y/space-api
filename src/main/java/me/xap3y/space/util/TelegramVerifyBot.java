@@ -97,7 +97,7 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
             return;
         }
 
-        String userId = code.getUser().getId().toString();
+        String userId = msg.getFrom().getId().toString();
 
         telegramConnectionService.findByTelegramId(userId).ifPresent(connection -> {
             if (connection.getUserId().getStatus() == UserAccountStatus.ACTIVE)
