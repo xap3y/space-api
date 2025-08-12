@@ -117,4 +117,8 @@ public class ServerInfo {
     public String getShortShortenerUrl() {
         return environment.getProperty("SHORT_SHORTENER_URL", "https://r.xap3y.tech");
     }
+
+    public String getInboundEmailToken() {
+        return environment.getProperty("INBOUND_EMAIL_TOKEN", "local");
+    }
 }

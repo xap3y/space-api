@@ -41,6 +41,8 @@ public class RequestFilter implements Filter {
             userAgent = "curl";
         }
 
+        log.info("[{}] Request from: {}, User-Agent: {}", httpRequest.getMethod(), remoteIp, userAgent);
+
         if (userAgent.contains("curl") || userAgent.contains("wget") || userAgent.contains("Custom-")) {
             servletResponse.setContentType("application/json");
             servletResponse.getWriter().write("{\"error\": \"You are in blacklist!\"}");

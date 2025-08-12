@@ -69,6 +69,9 @@ public class SecurityConfig {
                                 "https://ext-space.xap3y.tech",
                                 "https://space0.xap3y.tech",
                                 "https://space1.xap3y.tech",
+                                "https://temp-mail-space.xap3y.space",
+                                "https://temp-mail.xap3y.space",
+                                "https://cf-email-temp.xap3y.space",
                                 serverInfo.getTestCorsUrl()
                         )
                         .allowCredentials(true)
