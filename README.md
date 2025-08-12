@@ -1,14 +1,14 @@
 ## Space API
 
-API for an image/file hosting service, pastebin host and URL shortener.
+API for an image/file hosting service, pastebin host, temp email and URL shortener.
 
 ## Links
 
-- [API Docs](https://space.xap3y.tech/docs)
-- [Frontend](https://space.xap3y.tech)
+- [API Docs](https://docs.xap3y.space)
+- [Frontend](https://xap3y.space)
 - [Frontend-source](https://github.com/xap3y/front-space-v2/)
-- [Public API](https://call.xap3y.tech/)
-- [Status](https://status.xap3y.tech/status/space)
+- [Public API](https://call.xap3y.space/)
+- [Status](https://uptime.xap3y.tech/status/space)
 
 <br>
 
