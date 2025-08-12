@@ -3,6 +3,7 @@ package me.xap3y.space.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import me.xap3y.space.entity.EmailVerifyCodes;
 import me.xap3y.space.service.EmailVerifyCodeService;
+import me.xap3y.space.util.Utils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -37,7 +38,7 @@ public class VerifyWebSocketHandler extends TextWebSocketHandler {
             session.close(CloseStatus.BAD_DATA);
             return;
         }
-        String telCode = extractQueryParam(uri.getQuery(), "telCode");
+        String telCode = Utils.extractQueryParam(uri.getQuery(), "telCode");
         if (telCode == null || telCode.isBlank()) {
             session.close(new CloseStatus(4001, "Missing telCode"));
             return;
@@ -81,16 +82,5 @@ public class VerifyWebSocketHandler extends TextWebSocketHandler {
 
     private void sendJson(WebSocketSession session, Object obj) throws IOException {
         session.sendMessage(new TextMessage(mapper.writeValueAsString(obj)));
-    }
-
-    private String extractQueryParam(String query, String name) {
-        if (query == null) return null;
-        for (String pair : query.split("&")) {
-            String[] kv = pair.split("=", 2);
-            if (kv.length == 2 && kv[0].equals(name)) {
-                return URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
-            }
-        }
-        return null;
     }
 }

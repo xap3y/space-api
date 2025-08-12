@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -116,6 +117,17 @@ public class Utils {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    public static String extractQueryParam(String query, String name) {
+        if (query == null) return null;
+        for (String pair : query.split("&")) {
+            String[] kv = pair.split("=", 2);
+            if (kv.length == 2 && kv[0].equals(name)) {
+                return URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+            }
+        }
+        return null;
     }
 
     public static List<Pair<LocalDate, Long>> convertToPairList(LocalDateTime startDate, LocalDateTime endDate, List<Object[]> results, boolean fillMissingDates) {
