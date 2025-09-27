@@ -43,4 +43,8 @@ public class TelegramConnectionService {
     public TelegramConnection save(TelegramConnection connection) {
         return telegramConnectionRepository.save(connection);
     }
+
+    public void revokeByUserId(Long userId) {
+        telegramConnectionRepository.deleteByUserId_Id(userId);
+    }
 }

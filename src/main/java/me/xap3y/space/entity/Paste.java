@@ -3,6 +3,7 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 @Table(name = "pastes")
 @Getter
 @Setter
-public class Paste {
+public class Paste implements ApiResource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,4 +46,8 @@ public class Paste {
 
     @ManyToOne
     private User createdBy;
+
+    public User getUploader() {
+        return this.createdBy;
+    }
 }

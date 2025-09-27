@@ -4,21 +4,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ArchiveType;
+import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.RequiresApiKey;
-import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.FoundImageDto;
-import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.mapper.ImageInfoMapper;
 import me.xap3y.space.mapper.ImageMapper;
-import me.xap3y.space.model.ImageGetRequest;
-import me.xap3y.space.model.StatsRequest;
+import me.xap3y.space.mapper.ShortUserMapper;
+import me.xap3y.space.model.request.ImageGetRequest;
+import me.xap3y.space.model.request.StatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.ImageService;
@@ -26,18 +25,20 @@ import me.xap3y.space.service.MetricService;
 import me.xap3y.space.service.TelegramService;
 import me.xap3y.space.service.WebhookService;
 import me.xap3y.space.util.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +53,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipException;
-import java.util.zip.ZipInputStream;
 
 @Slf4j
 @RestController
@@ -63,21 +63,26 @@ public class ImageController {
     private final ServerInfo serverInfo;
     private final WebhookService webhookService;
     private final MetricService metricService;
-    private final ImageInfoMapper imageInfoMapper;
     private final PasswordEncoder passwordEncoder;
     private final TelegramService telegramService;
     private final ImageMapper imageMapper;
+    private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, ImageInfoMapper imageInfoMapper, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
         this.metricService = metricService;
-        this.imageInfoMapper = imageInfoMapper;
         this.passwordEncoder = passwordEncoder;
         this.telegramService = telegramService;
         this.imageMapper = imageMapper;
+        this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
     }
+
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
 
     @PostMapping("/upload/zip")
     @RequiresApiKey
@@ -144,7 +149,7 @@ public class ImageController {
         log.info("Size is {}", size);
 
         try {
-            Image savedImage = imageService.registerImage(uploader, uniqueId, pass, isPublic, description, fileType, size);
+            Image savedImage = imageService.registerImage(uploader, uniqueId, pass, isPublic, description, fileType, size, ImageLocation.R2);
 
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
@@ -153,7 +158,75 @@ public class ImageController {
             log.error("Error registering image: {}", e.getMessage());
             return new ResponseEntity<>(new DefaultResponse(true, "Failed to register image"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
 
+    @PostMapping("/upload/cloud")
+    @RequiresApiKey
+    public ResponseEntity<?> uploadImageToCloud(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "uniqueId", required = false) String uniqueId,
+            @RequestParam(value = "private", required = false) Boolean isPrivate,
+            @RequestParam(value = "password", required = false) String password,
+            @RequestParam(value = "desc", required = false) String description
+    ) throws IOException {
+        User uploader = (User) request.getAttribute("uploader");
+
+        if (file.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
+
+        String key = (uniqueId != null ? uniqueId : Utils.generateRandomId());
+
+        String[] fileExtension = Objects.requireNonNull(file.getOriginalFilename()).split("\\.");
+
+        PutObjectResponse res = s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key("media/" + key)
+                        .contentType(file.getContentType())
+                        .build(),
+                software.amazon.awssdk.core.sync.RequestBody.fromInputStream(
+                        file.getInputStream(), file.getSize()
+                )
+        );
+
+        Image savedImage = imageService.registerImage(uploader, key, password, isPrivate == null || !isPrivate, description, fileExtension[fileExtension.length - 1], file.getSize(), ImageLocation.R2);
+
+        ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
+
+        return new ResponseEntity<>(new UIDResponse(false, imageInfoDto.uniqueId(), imageInfoDto), HttpStatus.OK);
+    }
+
+    @PostMapping("/generate-upload-url")
+    @RequiresApiKey
+    public Map<String, String> generatePresignedUrl(
+            HttpServletRequest request,
+            @RequestParam(required = false) String contentType
+    ) throws IOException {
+        User uploader = (User) request.getAttribute("uploader");
+
+        String key = Utils.generateRandomId();
+
+        if (uploader == null) throw new InvalidApiKeyException();
+        var putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key("media/" + key)
+                .contentType(contentType)
+                .build();
+
+        var presignedRequest = s3Presigner.presignPutObject(builder -> builder
+                .signatureDuration(Duration.ofMinutes(10))
+                .putObjectRequest(putObjectRequest)
+        );
+
+        Image savedImage = imageService.registerImage(uploader, key, null, true, null, "png", 0L, ImageLocation.UNKNOWN);
+
+
+
+        return Map.of(
+                "uid", key,
+                "url", presignedRequest.url().toString(),
+                "method", "PUT"
+        );
     }
 
     @PostMapping("/upload")
@@ -196,21 +269,7 @@ public class ImageController {
 
         try {
             Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description);
-            ImageDto imgDto = new ImageDto(
-                    null,
-                    savedImage.getUploader(),
-                    savedImage.getDescription(),
-                    savedImage.getFileType(),
-                    savedImage.getPassword(),
-                    savedImage.getSize(),
-                    null,
-                    savedImage.getUploadTime(),
-                    savedImage.getExpirationTime(),
-                    savedImage.getIsPublic(),
-                    savedImage.getLocation()
-            );
-
-            ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(savedImage.getUniqueId(), imgDto));
+            ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
             /*String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             Map<String, Object> data = new HashMap<>() {{
                 put("raw_url", url);
@@ -243,12 +302,12 @@ public class ImageController {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) throw new InvalidApiKeyException();
 
-        ImageDto image = imageService.getImage(uniqueId, false, true, false);
-        if (image.uploader() == null) {
+        Image image = imageService.getImage(uniqueId);
+        if (image.getUploader() == null) {
             throw new RuntimeException("Invalid uploader!");
         }
 
-        if (!Objects.equals(image.uploader().getId(), uploader.getId()) &&
+        if (!Objects.equals(image.getUploader().getId(), uploader.getId()) &&
                 (uploader.getRole() == UserRole.USER
                         || uploader.getRole() == UserRole.GUEST
                         || uploader.getRole() == UserRole.TESTER
@@ -257,10 +316,10 @@ public class ImageController {
             throw new InvalidApiKeyException();
         }
 
-        boolean deleted = imageService.deleteImageFile(uniqueId + "." + image.type().toLowerCase(Locale.ROOT));
-        if (!deleted) {
+        boolean deleted = imageService.deleteImageFile(uniqueId + "." + image.getFileType().toLowerCase(Locale.ROOT));
+        /*if (!deleted) {
             throw new InternalServerException("Falied to delete image file");
-        }
+        }*/
         webhookService.postImageDeleted(uniqueId, image);
         imageService.deleteByUniqueId(uniqueId);
         metricService.setDatabaseUpdated(true);
@@ -279,11 +338,11 @@ public class ImageController {
             @PathVariable String uniqueId
     ) {
 
-        ImageDto image = imageService.getImage(uniqueId, false, true, false);
-        ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(uniqueId, image));
+        Image image = imageService.getImage(uniqueId);
+        ImageInfoDto imageInfoDto = imageMapper.apply(image);
 
         return ResponseEntity.ok()
-                .body(new UIDResponse(false, uniqueId,imageInfoDto));
+                .body(new UIDResponse(false, uniqueId, imageInfoDto));
     }
 
     @SneakyThrows
@@ -301,20 +360,20 @@ public class ImageController {
     ) {
         User uploader = (User) request.getAttribute("uploader");
 
-        ImageDto image = imageService.getImage(uniqueId, false, true, false);
+        Image image = imageService.getImage(uniqueId);
 
-        if (image.password() != null && body.getPassword() == null) {
+        if (image.getPassword() != null && body.getPassword() == null) {
             throw new MissingCredentialsException();
         }
-        else if (image.password() != null && !passwordEncoder.matches(image.password(), body.getPassword())) {
+        else if (image.getPassword() != null && !passwordEncoder.matches(image.getPassword(), body.getPassword())) {
             throw new BadCredentialsException("Invalid password");
-        } else if (!image.isPublic() && (uploader == null || !Objects.equals(image.uploader().getId(), uploader.getId()))) {
+        } else if (!image.getIsPublic() && (uploader == null || !Objects.equals(image.getUploader().getId(), uploader.getId()))) {
             throw new ResourceVisibilityException();
-        } else if (image.expiresAt() != null && LocalDateTime.now().isAfter(image.expiresAt())) {
+        } else if (image.getExpirationTime() != null && LocalDateTime.now().isAfter(image.getExpirationTime())) {
             throw new ResourceExpiredException();
         }
 
-        ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(uniqueId, image));
+        ImageInfoDto imageInfoDto = imageMapper.apply(image);
 
         return new ResponseEntity<>(new DefaultResponse(false, imageInfoDto), HttpStatus.OK);
     }
@@ -419,7 +478,7 @@ public class ImageController {
         MediaType contentType = MediaType.parseMediaType(mimeType != null ? mimeType : "application/octet-stream");
         headers.setContentType(contentType);
         log.info("MIME type for {}: {}", image.path(), mimeType);
-        log.info("MIME type for {}: {}", image.path(), mimeType);
+        //log.info("MIME type for {}: {}", image.path(), mimeType);
 
         if (contentType.getType().toLowerCase(Locale.ROOT).startsWith("video")) {
             log.info("Redirecting to video endpoint for {}", uniqueId);

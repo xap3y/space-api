@@ -3,6 +3,9 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "telegram_connections")
@@ -28,10 +31,18 @@ public class TelegramConnection {
     @JoinColumn(name = "email_verify_code_id", nullable = true)
     private EmailVerifyCodes emailVerifyCode;
 
+    @Column(nullable = true)
+    private LocalDateTime connectedAt;
+
     public TelegramConnection(User user, String telegramId, String accessToken) {
         this.userId = user;
         this.telegramId = telegramId;
         this.accessToken = accessToken;
+    }
+
+    public TelegramConnection(User user, String telegramId) {
+        this.userId = user;
+        this.telegramId = telegramId;
     }
 
     public TelegramConnection(User user, String telegramId, EmailVerifyCodes emailVerifyCode) {

@@ -1,5 +1,6 @@
 package me.xap3y.space.repository;
 
+import jakarta.transaction.Transactional;
 import me.xap3y.space.entity.TelegramConnection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -18,4 +19,7 @@ public interface TelegramConnectionRepository extends JpaRepository<TelegramConn
     Optional<TelegramConnection> findByAccessToken(String accessToken);
 
     Optional<TelegramConnection> findByUserId_Id(Long userId);
+
+    @Transactional
+    void deleteByUserId_Id(Long userId);
 }

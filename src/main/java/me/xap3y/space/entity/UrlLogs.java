@@ -2,6 +2,8 @@ package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -14,8 +16,9 @@ public class UrlLogs {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "url_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Url url;
 
     @Column(nullable = true)

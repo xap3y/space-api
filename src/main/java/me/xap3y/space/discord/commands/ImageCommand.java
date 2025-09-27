@@ -9,14 +9,13 @@ import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
 import lombok.SneakyThrows;
 import me.xap3y.space.discord.Emoji;
-import me.xap3y.space.dto.ImageDto;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.entity.DiscordConnection;
-import me.xap3y.space.mapper.ImageInfoMapper;
+import me.xap3y.space.entity.Image;
+import me.xap3y.space.mapper.ImageMapper;
 import me.xap3y.space.service.DiscordConnectionService;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.util.Utils;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -28,15 +27,15 @@ import java.util.Optional;
 public class ImageCommand implements SlashCommand{
 
     private final ImageService imageService;
-    private final ImageInfoMapper imageInfoMapper;
     private final Utils utils;
     private final DiscordConnectionService discordConnectionService;
+    private final ImageMapper imageMapper;
 
-    public ImageCommand(ImageService imageService, ImageInfoMapper imageInfoMapper, Utils utils, DiscordConnectionService discordConnectionService) {
+    public ImageCommand(ImageService imageService, Utils utils, DiscordConnectionService discordConnectionService, ImageMapper imageMapper) {
         this.imageService = imageService;
-        this.imageInfoMapper = imageInfoMapper;
         this.utils = utils;
         this.discordConnectionService = discordConnectionService;
+        this.imageMapper = imageMapper;
     }
 
     @Override
@@ -53,9 +52,9 @@ public class ImageCommand implements SlashCommand{
                 .map(ApplicationCommandInteractionOptionValue::asString)
                 .orElseThrow(() -> new IllegalArgumentException("No UID provided"));
 
-        ImageDto imgDto;
+        Image image;
         try {
-            imgDto = imageService.getImage(uniqueId, false, true, false);
+            image = imageService.getImage(uniqueId);
         } catch (Exception e) {
             return event.reply()
                     .withEphemeral(false)
@@ -63,7 +62,7 @@ public class ImageCommand implements SlashCommand{
                     .then();
         }
 
-        ImageInfoDto imageInfoDto = imageInfoMapper.apply(Pair.of(uniqueId, imgDto));
+        ImageInfoDto imageInfoDto = imageMapper.apply(image);
 
         if (imageInfoDto == null) {
             return event.reply()
@@ -79,7 +78,7 @@ public class ImageCommand implements SlashCommand{
 
         String uploaderDiscord = "";
 
-        Optional<DiscordConnection> discordConnection = discordConnectionService.findByUserId(imgDto.uploader());
+        Optional<DiscordConnection> discordConnection = discordConnectionService.findByUserId(image.getUploader());
 
         if (discordConnection.isPresent()) {
             uploaderDiscord = " (" + Utils.structDiscordUserTag(discordConnection.get().getDiscordId()) + ")";
@@ -87,9 +86,9 @@ public class ImageCommand implements SlashCommand{
 
         EmbedCreateSpec embed = EmbedCreateSpec.builder()
                 .color(Color.YELLOW)
-                .title(uniqueId + "." + imgDto.type() + " (" + imageInfoDto.size() + " KB)")
+                .title(uniqueId + "." + image.getFileType() + " (" + imageInfoDto.size() + " KB)")
                 /*.url(imageInfoDto.urlSet().portalUrl())*/
-                .image(imageInfoDto.urlSet().customUrl()) // TODO
+                .image(imageInfoDto.urlSet().rawUrl()) // TODO
                 .addField("Uploaded by  ", utils.structDiscordProfileLink(imageInfoDto.uploader().username())  + uploaderDiscord, true)
                 .addField("Uploaded at", imageInfoDto.uploadedAt().format(DateTimeFormatter.ofPattern("yyyy/MM/d HH:mm:ss")), true)
                 /*.addField("\u200b", "\u200b", true)*/

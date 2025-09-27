@@ -2,9 +2,9 @@ package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import me.xap3y.space.converter.UserUrlPreferenceConverter;
 import me.xap3y.space.converter.UserWebhookSettingsConverter;
+import me.xap3y.space.model.UserUrlPreferenceSettings;
 import me.xap3y.space.model.UserWebhookSettings;
 
 @Entity
@@ -23,4 +23,8 @@ public class UserSettings {
     @Column(name = "embed_settings", nullable = false)
     @Convert(converter = UserWebhookSettingsConverter.class)
     private UserWebhookSettings embedSettings;
+
+    @Column(name = "url_preferences", nullable = false)
+    @Convert(converter = UserUrlPreferenceConverter.class)
+    private UserUrlPreferenceSettings urlSettings;
 }

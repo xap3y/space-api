@@ -10,13 +10,14 @@ import me.xap3y.space.dto.InboundEmailDto;
 import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.handler.TempEmailWebSocketHandler;
-import me.xap3y.space.model.AuthRegisterRequest;
-import me.xap3y.space.model.EmailRequest;
+import me.xap3y.space.mapper.InboundEmailMapper;
+import me.xap3y.space.model.request.EmailRequest;
+import me.xap3y.space.model.request.MissingEmailsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.EmailService;
+import me.xap3y.space.service.InboundMailService;
 import me.xap3y.space.service.TempMailService;
 import me.xap3y.space.util.Utils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -36,6 +38,8 @@ public class EmailController {
     private final ServerInfo serverInfo;
     private final TempMailService tempMailService;
     private final TempEmailWebSocketHandler tempEmailWebSocketHandler;
+    private final InboundMailService inboundMailService;
+    private final InboundEmailMapper inboundEmailMapper;
 
     @PostMapping(
             value = "/send",
@@ -53,6 +57,33 @@ public class EmailController {
         emailService.sendEmail(emailRequest);
 
         return ResponseEntity.ok("Email sent successfully");
+    }
+
+    @PostMapping("/getmissing")
+    @RequiresApiKey
+    public ResponseEntity<?> getMissingMails(
+            @RequestBody MissingEmailsRequest dto
+    ) {
+        if (dto.getMail() == null || dto.getMessageIds() == null || dto.getMessageIds().isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing required fields: mail or messageIds");
+        }
+
+        TempMail tempMail = tempMailService.findByEmail(dto.getMail()).orElse(null);
+        if (tempMail == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Temp mail not found");
+        }
+
+        var emails = inboundMailService.getMissingEmails(tempMail, dto.getMessageIds());
+
+        if (emails.isEmpty()) {
+            return ResponseEntity.ok("No missing emails found");
+        }
+
+        List<InboundEmailDto> emailDtos = emails.stream()
+                .map(inboundEmailMapper)
+                .toList();
+
+        return ResponseEntity.ok(emailDtos);
     }
 
     @PostMapping("/inbound")
@@ -95,7 +126,7 @@ public class EmailController {
     ) {
         User creator = (User) request.getAttribute("uploader");
 
-        String randomAddress = Utils.generateRandomId(8) + "@c.xap3y.fun";
+        String randomAddress = Utils.generateRandomId(8) + "@" + serverInfo.getInboundEmailAddress();
 
         TempMail tempMail = new TempMail(randomAddress, creator);
 

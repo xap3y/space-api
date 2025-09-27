@@ -3,8 +3,7 @@ package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
@@ -12,7 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "urls")
 @Data
-public class Url {
+public class Url implements ApiResource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,4 +41,11 @@ public class Url {
     @ManyToOne
     private User createdBy;
 
+    public User getUploader() {
+        return this.createdBy;
+    }
+
+    public String getUniqueId() {
+        return this.shortCode;
+    }
 }

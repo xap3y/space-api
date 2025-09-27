@@ -7,19 +7,15 @@ import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.dto.ImageAlbumDto;
-import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.ImagePlaylist;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ImageAlbumMapper;
-import me.xap3y.space.model.AddPlaylistImageRequest;
+import me.xap3y.space.model.request.AddPlaylistImageRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImagePlaylistService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @RestController

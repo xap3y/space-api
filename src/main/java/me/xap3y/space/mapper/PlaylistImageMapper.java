@@ -13,9 +13,11 @@ import java.util.function.Function;
 public class PlaylistImageMapper implements Function<Image, PlaylistImageDto> {
 
     private final ServerInfo serverInfo;
+    private final UrlSetMapper urlSetMapper;
 
-    public PlaylistImageMapper(ServerInfo serverInfo) {
+    public PlaylistImageMapper(ServerInfo serverInfo, UrlSetMapper urlSetMapper) {
         this.serverInfo = serverInfo;
+        this.urlSetMapper = urlSetMapper;
     }
 
     @Override
@@ -26,13 +28,7 @@ public class PlaylistImageMapper implements Function<Image, PlaylistImageDto> {
                 image.getDescription(),
                 image.getSize(),
                 image.getUploadTime(),
-                new UrlSetDto(
-                        serverInfo.getBaseUrl() + "/web/image-render/" + image.getUniqueId(),
-                        serverInfo.getFrontEndUrl() + "/i/" + image.getUniqueId(),
-                        serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId(),
-                        serverInfo.getShortImageUrl() + "/" + image.getUniqueId(),
-                        null
-                ),
+                urlSetMapper.apply(image),
                 new LowUserDto(image.getUploader().getId(), image.getUploader().getUsername())
         );
     }

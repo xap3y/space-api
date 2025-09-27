@@ -12,7 +12,7 @@ import me.xap3y.space.discord.Emoji;
 import me.xap3y.space.dto.DiscordMeDto;
 import me.xap3y.space.entity.DiscordConnection;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.model.DiscordConnectionRequest;
+import me.xap3y.space.model.request.DiscordConnectionRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.DiscordConnectionService;
 import me.xap3y.space.service.RemoteMessageService;

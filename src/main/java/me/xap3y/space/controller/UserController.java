@@ -111,7 +111,7 @@ public class UserController {
         uploader.setSocials(socials);
         userService.saveUser(uploader);
 
-        return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.OK);
+        return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.NO_CONTENT);
     }
 
     @GetMapping(
@@ -132,11 +132,11 @@ public class UserController {
     }
 
     @GetMapping(
-            value = "/get/@me/settings",
+            value = "/get/@me/settings/webhook",
             produces = "application/json"
     )
     @RequiresApiKey
-    public ResponseEntity<?> getCurrentUserSettings(
+    public ResponseEntity<?> getCurrentUserSettingsWebhook(
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
@@ -145,14 +145,61 @@ public class UserController {
 
         Optional<UserSettings> userSettings = userSettingsService.getUserSettingsByUserId(uploader.getId());
         if (userSettings.isEmpty()) {
-            UserSettings newSettings = new UserSettings();
-            newSettings.setUserId(uploader);
-            newSettings.setEmbedSettings(new UserWebhookSettings());
-            userSettings = Optional.of(userSettingsService.saveUserSettings(newSettings));
+            userSettings = userSettingsService.createDefaultSettingsForUser(uploader);
         }
-        UserSettingsDto userSettingsDto = userSettingsMapper.apply(userSettings.get());
+        UserSettingsDto userSettingsDto = userSettingsMapper.apply(userSettings.orElseThrow(() -> new ResourceNotFoundException("User settings not found")));
+
         return ResponseEntity.ok()
-                .body(new DefaultResponse(false, userSettingsDto));
+                .body(new DefaultResponse(false, userSettingsDto.webhookSettings()));
+    }
+
+    @PatchMapping(
+            value = "/get/@me/settings/webhook",
+            consumes = "application/json",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> patchCurrentUserSettingsWebhook(
+            HttpServletRequest request,
+            @RequestBody UserWebhookSettings body
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+
+        Optional<UserSettings> existingSettings = userSettingsService.getUserSettingsByUserId(uploader.getId());
+
+        log.info("uploader is :: {}", uploader.getUsername());
+        log.info("exists? :: {}", existingSettings.isPresent());
+
+        log.info("PATH body is :: {}", body);
+        log.info("body.getColor() is :: {}", body.getColor());
+
+        if (existingSettings.isEmpty()) {
+            existingSettings = userSettingsService.createDefaultSettingsForUser(uploader);
+        }
+
+        UserSettings userSettings = existingSettings.orElseThrow(() -> new ResourceNotFoundException("User settings not found"));
+
+
+        if (body.getColor() != null)
+            userSettings.getEmbedSettings().setColor(body.getColor());
+
+        if (body.getDescription() != null)
+            userSettings.getEmbedSettings().setDescription(body.getDescription());
+
+        if (body.getTitle() != null)
+            userSettings.getEmbedSettings().setTitle(body.getTitle());
+
+        if (body.getEnabled() != null)
+            userSettings.getEmbedSettings().setEnabled(body.getEnabled());
+
+        if (body.getTimestamp() != null)
+            userSettings.getEmbedSettings().setTimestamp(body.getTimestamp());
+
+        userSettingsService.saveUserSettings(userSettings);
+
+
+        return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.NO_CONTENT);
     }
 
     @GetMapping(
@@ -179,7 +226,7 @@ public class UserController {
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new DefaultResponse(true, e.getMessage(), LocalDateTime.now()));
+                    .body(new DefaultResponse(true, e.getMessage()));
         }
 
         return ResponseEntity.ok()
@@ -207,5 +254,4 @@ public class UserController {
         }
         return true;
     }
-
 }

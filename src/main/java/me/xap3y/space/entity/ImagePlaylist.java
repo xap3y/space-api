@@ -3,6 +3,8 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,5 +42,6 @@ public class ImagePlaylist {
             joinColumns = @JoinColumn(name = "playlist_id"),
             inverseJoinColumns = @JoinColumn(name = "image_id")
     )
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private List<Image> images = new ArrayList<>();
 }

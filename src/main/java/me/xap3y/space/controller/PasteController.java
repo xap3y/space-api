@@ -11,8 +11,7 @@ import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.PasteMapper;
-import me.xap3y.space.mapper.ShortUserMapper;
-import me.xap3y.space.model.PasteRequest;
+import me.xap3y.space.model.request.PasteRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.MetricService;
@@ -27,7 +26,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;

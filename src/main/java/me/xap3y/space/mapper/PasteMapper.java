@@ -15,11 +15,13 @@ public class PasteMapper implements Function<Paste, PasteDto> {
     private final ShortUserMapper shortUserMapper;
     private final ServerInfo serverInfo;
     private final HuffmanEncoder huffmanEncoder;
+    private final UrlSetMapper urlSetMapper;
 
-    public PasteMapper(ShortUserMapper shortUserMapper, ServerInfo serverInfo, HuffmanEncoder huffmanEncoder) {
+    public PasteMapper(ShortUserMapper shortUserMapper, ServerInfo serverInfo, HuffmanEncoder huffmanEncoder, UrlSetMapper urlSetMapper) {
         this.shortUserMapper = shortUserMapper;
         this.serverInfo = serverInfo;
         this.huffmanEncoder = huffmanEncoder;
+        this.urlSetMapper = urlSetMapper;
     }
 
     @Override
@@ -31,13 +33,7 @@ public class PasteMapper implements Function<Paste, PasteDto> {
                 paste.isPublic(),
                 paste.getCreatedAt(),
                 paste.getUniqueId(),
-                new UrlSetDto(
-                        null,
-                        serverInfo.getFrontEndUrl() + "/p/" + paste.getUniqueId(),
-                        serverInfo.getBaseUrl() + "/v1/paste/get/" + paste.getUniqueId(),
-                        serverInfo.getShortPasteUrl() + "/" + paste.getUniqueId(),
-                        null
-                ),
+                urlSetMapper.apply(paste),
                 shortUserMapper.apply(paste.getCreatedBy())
         );
     }

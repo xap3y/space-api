@@ -52,6 +52,6 @@ public class EmailVerifyCodes {
         this.email = user.getEmail();
         this.user = user;
         this.createdAt = LocalDateTime.now();
-        this.expiresAt = LocalDateTime.now().plusMinutes(15);
+        this.expiresAt = LocalDateTime.now().plusHours(8);
     }
 }

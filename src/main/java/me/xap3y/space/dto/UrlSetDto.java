@@ -2,6 +2,7 @@ package me.xap3y.space.dto;
 
 import org.springframework.lang.Nullable;
 
+
 public record UrlSetDto(
         String webUrl,
         String portalUrl,
@@ -11,6 +12,11 @@ public record UrlSetDto(
         String shortUrl,
 
         @Nullable
-        String customUrl
+        String customUrl,
+
+        @Nullable
+        String deleteUrl,
+
+        String userPreference
 ) {
 }

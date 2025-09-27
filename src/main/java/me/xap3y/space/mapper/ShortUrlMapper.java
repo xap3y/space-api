@@ -15,11 +15,13 @@ public class ShortUrlMapper implements Function<Url, ShortUrlDto> {
     private final ServerInfo serverInfo;
     private final ShortUserMapper shortUserMapper;
     private final UrlLogsService urlLogsService;
+    private final UrlSetMapper urlSetMapper;
 
-    public ShortUrlMapper(ServerInfo serverInfo, ShortUserMapper shortUserMapper, UrlLogsService urlLogsService) {
+    public ShortUrlMapper(ServerInfo serverInfo, ShortUserMapper shortUserMapper, UrlLogsService urlLogsService, UrlSetMapper urlSetMapper) {
         this.serverInfo = serverInfo;
         this.shortUserMapper = shortUserMapper;
         this.urlLogsService = urlLogsService;
+        this.urlSetMapper = urlSetMapper;
     }
 
     @Override
@@ -35,13 +37,7 @@ public class ShortUrlMapper implements Function<Url, ShortUrlDto> {
                 url.getMaxUses(),
                 url.getCreatedAt(),
                 url.getExpiresAt(),
-                new UrlSetDto(
-                        null,
-                        serverInfo.getFrontEndUrl() + "/r0/" + url.getShortCode(),
-                        serverInfo.getBaseUrl() + "/v1/url/r/" + url.getShortCode(),
-                        serverInfo.getShortShortenerUrl() + "/" + url.getShortCode(),
-                        null
-                ),
+                urlSetMapper.apply(url),
                 shortUserMapper.apply(url.getCreatedBy()),
                 logs ? urlLogsService.getByUrlId(url.getId()) : null
         );

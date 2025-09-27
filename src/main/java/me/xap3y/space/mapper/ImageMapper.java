@@ -5,7 +5,9 @@ import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.ShortUserDto;
 import me.xap3y.space.dto.UrlSetDto;
 import me.xap3y.space.entity.Image;
+import me.xap3y.space.entity.UserSettings;
 import me.xap3y.space.model.UserInviter;
+import me.xap3y.space.service.UserSettingsService;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Function;
@@ -16,20 +18,26 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
 
     private final ServerInfo serverInfo;
     private final UserInvitorMapper userInvitorMapper;
+    private final UserSettingsService userSettingsService;
+    private final UrlSetMapper urlSetMapper;
+    private final ShortUserMapper shortUserMapper;
 
-    public ImageMapper(ServerInfo serverInfo, UserInvitorMapper userInvitorMapper) {
+    public ImageMapper(ServerInfo serverInfo, UserInvitorMapper userInvitorMapper, UserSettingsService userSettingsService, UrlSetMapper urlSetMapper, ShortUserMapper shortUserMapper) {
         this.serverInfo = serverInfo;
         this.userInvitorMapper = userInvitorMapper;
+        this.userSettingsService = userSettingsService;
+        this.urlSetMapper = urlSetMapper;
+        this.shortUserMapper = shortUserMapper;
     }
 
     @Override
     public ImageInfoDto apply(Image image) {
 
-        String imageUrl = switch (image.getLocation()) {
+        /*String imageUrl = switch (image.getLocation()) {
             case R2 -> "https://r3.xap3y.space/media/" + image.getUniqueId();
             case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId();
             default -> serverInfo.getBaseUrl() + "/web/image-render/" + image.getUniqueId();
-        };
+        };*/
 
         return new ImageInfoDto(
                 image.getUniqueId(),
@@ -38,24 +46,12 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
                 image.getSize(),
                 image.getUploadTime(),
                 image.getExpirationTime(),
-                new UrlSetDto(
-                        serverInfo.getBaseUrl() + "/web/image-render/" + image.getUniqueId(),
-                        serverInfo.getFrontEndUrl() + "/i/" + image.getUniqueId(),
-                        imageUrl,
-                        serverInfo.getShortImageUrl() + "/" + image.getUniqueId(),
-                        null
-                ),
-                new ShortUserDto(
-                        image.getUploader().getId(),
-                        image.getUploader().getUsername(),
-                        image.getUploader().getRole(),
-                        image.getUploader().getAvatar(),
-                        image.getUploader().getCreatedAt(),
-                        image.getUploader().getInvitedBy() != null ? userInvitorMapper.apply(image.getUploader().getInvitedBy()) : null
-                ),
+                urlSetMapper.apply(image),
+                shortUserMapper.apply(image.getUploader()),
                 image.getPassword() != null,
                 image.getIsPublic(),
-                image.getLocation()
+                image.getLocation(),
+                userSettingsService.getUserSettingsByUserId(image.getUploader().getId()).map(UserSettings::getEmbedSettings).orElse(null)
         );
     }
 }

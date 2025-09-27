@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import me.xap3y.space.dto.InboundEmailDto;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -21,6 +23,7 @@ import java.time.ZonedDateTime;
 @Data
 @NoArgsConstructor
 public class InboundEmail {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,6 +33,7 @@ public class InboundEmail {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "temp_mail_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private TempMail tempMail;
 
     @Column(name = "from_address", length = 512, nullable = false)

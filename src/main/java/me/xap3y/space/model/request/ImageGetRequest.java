@@ -1,10 +1,9 @@
-package me.xap3y.space.model;
+package me.xap3y.space.model.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 @Data

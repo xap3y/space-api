@@ -26,7 +26,7 @@ public class Sessions {
     @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    @Column
+    @Column(nullable = true)
     private LocalDateTime lastUsedAt;
 
     @Column(nullable = false)

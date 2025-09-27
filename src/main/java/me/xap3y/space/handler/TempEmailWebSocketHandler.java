@@ -3,6 +3,7 @@ package me.xap3y.space.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.dto.InboundEmailDto;
+import me.xap3y.space.entity.InboundEmail;
 import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.service.InboundMailService;
 import me.xap3y.space.service.TempMailService;
@@ -17,6 +18,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -77,6 +79,15 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
         }
 
         sessions.put(email, session);
+
+        /*List<InboundEmail> newMails = inboundMailService.findTop20ByTempMailOrderBySentDateDesc(mail);
+
+        if (newMails.isEmpty()) return;
+
+        for (InboundEmail emailObj : newMails) {
+            InboundEmailDto emailDto = new InboundEmailDto(emailObj);
+            pushEmail(emailDto);
+        }*/
     }
 
     @Override
@@ -91,6 +102,7 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
 
         try {
             sendJson(session, Map.of(
+                    "messageId", email.messageId,
                     "from", email.from,
                     "subject", email.subject,
                     "content", email.text,

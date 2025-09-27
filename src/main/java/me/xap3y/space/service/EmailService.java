@@ -4,7 +4,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.model.EmailRequest;
+import me.xap3y.space.model.request.EmailRequest;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;

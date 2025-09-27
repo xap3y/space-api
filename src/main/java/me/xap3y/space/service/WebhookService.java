@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.*;
+import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.Sessions;
 import org.springframework.stereotype.Service;
 
@@ -108,14 +109,14 @@ public class WebhookService {
         }
     }
 
-    public void postImageDeleted(String uniqueId, ImageDto img) {
+    public void postImageDeleted(String uniqueId, Image img) {
         DiscordWebhook hook = getHook();
         if (hook == null) return;
         DiscordWebhook.EmbedObject embedObject = new DiscordWebhook.EmbedObject();
         embedObject.setColor(Color.RED);
         embedObject.setTitle("Image Deleted! (" + uniqueId + ")");
-        embedObject.addField("| SIZE", "**|** " + img.size() / 1024 + " KiB", true);
-        embedObject.addField("| UPLOADER", "**|** [" + img.uploader().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + img.uploader().getUsername() + ")" , true);
+        embedObject.addField("| SIZE", "**|** " + img.getSize() / 1024 + " KiB", true);
+        embedObject.addField("| UPLOADER", "**|** [" + img.getUploader().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + img.getUploader().getUsername() + ")" , true);
         hook.addEmbed(embedObject);
         try {
             hook.execute();

@@ -6,8 +6,7 @@ import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.dto.ShortUrlDto;
-import me.xap3y.space.dto.UrlDto;
-import me.xap3y.space.model.UserImagesRequest;
+import me.xap3y.space.model.request.UserImagesRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
@@ -44,19 +43,19 @@ public class AdminUserController {
     public ResponseEntity<?> getUserImages(
             HttpServletRequest request,
             @PathVariable("uid") Long uid,
-            @RequestBody(required = false) UserImagesRequest body
+/*            @RequestBody(required = false) UserImagesRequest body,*/
+            @RequestParam(value = "from", required = false) Long from,
+            @RequestParam(value = "to", required = false) Long to,
+            @RequestParam(value = "limit", required = false) Integer limit
     ) {
-
-        if (body == null) {
-            body = new UserImagesRequest();
-        }
-        List<ImageInfoDto> imageDtos = imageService.getAllImagesByUser(uid, body.getFrom(), body.getTo(), body.getAmount());
+        List<ImageInfoDto> imageDtos = imageService.getAllImagesByUser(uid, from, to, limit);
+        int count = imageService.countByUploaderId(uid);
 
         if (imageDtos.isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "No images found for this user UID"), HttpStatus.NOT_FOUND);
         }
 
-        return ResponseEntity.ok(new DefaultResponse(false, imageDtos));
+        return ResponseEntity.ok(new DefaultResponse(false, imageDtos, count));
     }
 
     @GetMapping(

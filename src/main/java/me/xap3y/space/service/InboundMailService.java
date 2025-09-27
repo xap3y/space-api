@@ -7,6 +7,7 @@ import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.repository.InboundMailRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,5 +35,25 @@ public class InboundMailService {
     public InboundEmail save(TempMail mail, InboundEmailDto dto) {
         InboundEmail email = new InboundEmail(mail, dto);
         return inboundMailRepository.save(email);
+    }
+
+    public List<InboundEmail> findTop20ByTempMailOrderBySentDateDesc(TempMail tempMail) {
+        return inboundMailRepository.findTop20ByTempMailOrderBySentDateDesc(tempMail);
+    }
+
+    public List<InboundEmail> getMissingEmails(TempMail tempMail, List<String> messageIds) {
+        List<InboundEmail> emails = inboundMailRepository.findAllByTempMail(tempMail);
+        if (emails.isEmpty()) {
+            return List.of();
+        }
+        return emails.stream()
+                .filter(email -> !messageIds.contains(email.getMessageId()))
+                .toList();
+    }
+
+    public Optional<InboundEmail> findLatestByTempMail(TempMail tempMail) {
+        return inboundMailRepository.findTop20ByTempMailOrderBySentDateDesc(tempMail)
+                .stream()
+                .findFirst();
     }
 }

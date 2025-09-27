@@ -5,10 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.api.enums.Environment;
 import me.xap3y.space.api.enums.UserAccountStatus;
+import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.EmailVerifyCodeExpired;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.iface.RequiresApiKey;
-import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.UserDto;
@@ -16,8 +16,8 @@ import me.xap3y.space.entity.EmailVerifyCodes;
 import me.xap3y.space.entity.Sessions;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.UserMapper;
-import me.xap3y.space.model.AuthLoginRequest;
-import me.xap3y.space.model.AuthRegisterRequest;
+import me.xap3y.space.model.request.AuthLoginRequest;
+import me.xap3y.space.model.request.AuthRegisterRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.*;
 import me.xap3y.space.util.ConfigDb;
@@ -46,8 +46,9 @@ public class AuthController {
     private final ApiKeyService apiKeyService;
     private final EmailService emailService;
     private final EmailVerifyCodeService emailVerifyCodeService;
+    private final LogsService logsService;
 
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, EmailService emailService, EmailVerifyCodeService emailVerifyCodeService) {
+    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, EmailService emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService) {
         this.userService = userService;
         this.inviteCodeService = inviteCodeService;
         this.passwordEncoder = passwordEncoder;
@@ -57,6 +58,7 @@ public class AuthController {
         this.apiKeyService = apiKeyService;
         this.emailService = emailService;
         this.emailVerifyCodeService = emailVerifyCodeService;
+        this.logsService = logsService;
     }
 
     @GetMapping("/me")
@@ -224,6 +226,33 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, "Verification token is valid for user: " + uploader.getUsername()));
+    }
+
+    @PostMapping(
+            value = "/verify/resendemail",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    //@RequiresApiKey
+    public ResponseEntity<?> resendVerifyEmail(
+            HttpServletRequest request,
+            @CookieValue(value = "verify_token", required = false) String token,
+            @CookieValue(value = "new_email", required = false) String newMail
+    ) {
+        if (token == null || token.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "No verification token provided"), HttpStatus.BAD_REQUEST);
+
+        //User uploaderFromReq = (User) request.getAttribute("uploader"); //
+        User uploader = apiKeyService.validateApiKey(token);
+        EmailVerifyCodes verifyCode = emailVerifyCodeService.findTopByUserStrict(uploader);
+
+        if (verifyCode.isUsed()) throw new ResourceNotFoundException();
+        else if (verifyCode.getExpiresAt().isBefore(LocalDateTime.now())) throw new EmailVerifyCodeExpired();
+        if (newMail != null && !isValidEmailAddress(newMail)) throw new BadRequestException("Invalid newMail");
+
+        emailService.sendVerificationCode(newMail == null ? verifyCode.getEmail() : newMail, verifyCode.getCode(), verifyCode.getUrlCode());
+
+        logsService.logFile("-- resendVerifyEmail - " + uploader.getUsername() + " - " + (newMail == null ? verifyCode.getEmail() : newMail));
+        
+        return new ResponseEntity<>(new DefaultResponse(true, "Email sent"), HttpStatus.OK);
     }
 
     @PostMapping(

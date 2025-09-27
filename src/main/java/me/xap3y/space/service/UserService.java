@@ -9,7 +9,7 @@ import me.xap3y.space.entity.EmailVerifyCodes;
 import me.xap3y.space.entity.InviteCode;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.UserMapper;
-import me.xap3y.space.model.AuthRegisterRequest;
+import me.xap3y.space.model.request.AuthRegisterRequest;
 import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.repository.ApiKeyRepository;
 import me.xap3y.space.repository.InviteCodeRepository;
@@ -32,8 +32,9 @@ public class UserService {
     private final InviteCodeRepository inviteCodeRepository;
     private final EmailVerifyCodeService emailVerifyCodeService;
     private final EmailService emailService;
+    private final UserSettingsService userSettingsService;
 
-    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository, EmailVerifyCodeService emailVerifyCodeService, EmailService emailService) {
+    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository, EmailVerifyCodeService emailVerifyCodeService, EmailService emailService, UserSettingsService userSettingsService) {
         this.userRepository = userRepository;
         this.apiKeyRepository = apiKeyRepository;
         this.passwordEncoder = passwordEncoder;
@@ -41,6 +42,7 @@ public class UserService {
         this.inviteCodeRepository = inviteCodeRepository;
         this.emailVerifyCodeService = emailVerifyCodeService;
         this.emailService = emailService;
+        this.userSettingsService = userSettingsService;
     }
 
     public User registerUser(AuthRegisterRequest req) {
@@ -60,8 +62,9 @@ public class UserService {
 
         User registeredUser = userRepository.save(user);
 
-        EmailVerifyCodes verifyCode = emailVerifyCodeService.generateAndSaveCode(user);
+        userSettingsService.createDefaultSettingsForUser(registeredUser);
 
+        EmailVerifyCodes verifyCode = emailVerifyCodeService.generateAndSaveCode(user);
 
         int res = inviteCodeRepository.markAsUsed(req.getInviteCode(), LocalDateTime.now(), user);
         log.info("Marked invite code as used: {}", res);

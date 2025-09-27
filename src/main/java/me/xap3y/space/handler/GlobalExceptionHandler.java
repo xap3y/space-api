@@ -10,6 +10,7 @@ import org.springframework.security.authentication.InsufficientAuthenticationExc
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.FileNotFoundException;
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<DefaultResponse> handleBadCredentialsExceptions(
             BadCredentialsException ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.UNAUTHORIZED);
     }
@@ -31,7 +32,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<DefaultResponse> handleUnauthorizedExceptions(
             Exception ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.UNAUTHORIZED);
     }
@@ -41,16 +42,16 @@ public class GlobalExceptionHandler {
             Exception ex
     ) {
         log.error("Exception: ", ex);
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler({FileNotFoundException.class, ResourceNotFoundException.class})
+    @ExceptionHandler({FileNotFoundException.class, ResourceNotFoundException.class, NoResourceFoundException.class})
     public ResponseEntity<?> handleResourceNotFoundException(
             Exception ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
     }
@@ -59,7 +60,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleInvalidApiKeyException(
             RuntimeException ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.BAD_REQUEST);
     }
@@ -68,7 +69,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleInternalServerException(
             InternalServerException ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -76,7 +77,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleNoAuthorizedException(
             RuntimeException ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.FORBIDDEN);
     }
@@ -85,7 +86,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleEmailVerifyCodeExpired(
             EmailVerifyCodeExpired ex
     ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage(), LocalDateTime.now());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
         return new ResponseEntity<>(defaultResponse, HttpStatus.GONE);
     }
 }

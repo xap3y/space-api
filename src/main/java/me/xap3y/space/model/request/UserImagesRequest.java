@@ -1,4 +1,4 @@
-package me.xap3y.space.model;
+package me.xap3y.space.model.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;

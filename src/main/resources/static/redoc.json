@@ -1,0 +1,723 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Space API",
+        "description": "- [API](https://call.xap3y.space)\n- [GitHub Repository](https://github.com/xap3y/space-api)",
+        "version": "1.0-beta.15"
+    },
+    "servers": [
+        {
+            "url": "https://call.xap3y.space/v1"
+        }
+    ],
+    "paths": {
+        "/image/get/{uniqueId}": {
+            "get": {
+                "summary": "Get an image by unique ID",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "image/png": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete an image by unique ID",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "security": [{ "apiKeyAuth": [] }],
+                "responses": {
+                    "200": { "$ref": "#/components/responses/StandardResponse" }
+                }
+            }
+        },
+        "/image/upload": {
+            "post": {
+                "summary": "Upload an image",
+                "security": [{ "apiKeyAuth": [] }],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": { "type": "string", "format": "binary" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResource" }
+                }
+            }
+        },
+        "/paste/get/{uniqueId}": {
+            "get": {
+                "summary": "Get a paste by unique ID",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResourcePaste" }
+                }
+            },
+            "delete": {
+                "summary": "Delete a paste by unique ID",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "security": [{ "apiKeyAuth": [] }],
+                "responses": {
+                    "200": { "$ref": "#/components/responses/StandardResponse" }
+                }
+            }
+        },
+        "/paste/create": {
+            "post": {
+                "summary": "Create a paste",
+                "security": [{ "apiKeyAuth": [] }],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "text": { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResourcePaste" }
+                }
+            }
+        },
+        "/url/get/{uniqueId}": {
+            "get": {
+                "summary": "Get a shortened URL by unique ID",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResourceShortUrl" }
+                }
+            },
+            "delete": {
+                "summary": "Delete a shortened URL by unique ID",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "security": [{ "apiKeyAuth": [] }],
+                "responses": {
+                    "200": { "$ref": "#/components/responses/StandardResponse" }
+                }
+            }
+        },
+        "/url/r/{uniqueId}": {
+            "get": {
+                "summary": "Redirect to the original URL",
+                "parameters": [{ "name": "uniqueId", "in": "path", "required": true, "schema": { "type": "string" } }],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to the original URL"
+                    }
+                }
+            }
+        },
+        "/url/create": {
+            "post": {
+                "summary": "Create a shortened URL",
+                "security": [{ "apiKeyAuth": [] }],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "url": { "type": "string", "format": "uri" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResourceShortUrl" }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "summary": "Login",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": { "type": "string", "format": "email" },
+                                    "password": { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResourceShortUrl" }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "summary": "Register",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "username": { "type": "string" },
+                                    "email": { "type": "string", "format": "email" },
+                                    "password": { "type": "string" },
+                                    "inviteCode": { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "$ref": "#/components/responses/UploadedResourceShortUrl" }
+                }
+            }
+        },
+        "/user/me/socials": {
+            "patch": {
+                "summary": "Update user's social links",
+                "security": [{ "apiKeyAuth": [] }],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "website": { "type": ["string", "null"] },
+                                    "twitter": { "type": ["string", "null"] },
+                                    "github": { "type": ["string", "null"] },
+                                    "gitlab": { "type": ["string", "null"] },
+                                    "discord": { "type": ["string", "null"] },
+                                    "telegram": { "type": ["string", "null"] },
+                                    "vk": { "type": ["string", "null"] },
+                                    "facebook": { "type": ["string", "null"] },
+                                    "instagram": { "type": ["string", "null"] },
+                                    "youtube": { "type": ["string", "null"] },
+                                    "twitch": { "type": ["string", "null"] },
+                                    "steam": { "type": ["string", "null"] },
+                                    "reddit": { "type": ["string", "null"] },
+                                    "linkedin": { "type": ["string", "null"] },
+                                    "tiktok": { "type": ["string", "null"] },
+                                    "snapchat": { "type": ["string", "null"] },
+                                    "whatsapp": { "type": ["string", "null"] },
+                                    "soundcloud": { "type": ["string", "null"] },
+                                    "spotify": { "type": ["string", "null"] },
+                                    "threads": { "type": ["string", "null"] },
+                                    "email": { "type": ["string", "null"] },
+                                    "messenger": { "type": ["string", "null"] }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Socials updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": { "type": "boolean" },
+                                        "message": { "type": "string" },
+                                        "timestamp": { "type": "string", "format": "date-time" }
+                                    }
+                                },
+                                "example": {
+                                    "error": false,
+                                    "message": "Updated",
+                                    "timestamp": "2025-07-10T20:36:15.699243446"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/get/@me/settings/webhook": {
+            "get": {
+                "summary": "Get current user's webhook settings",
+                "security": [{ "apiKeyAuth": [] }],
+                "responses": {
+                    "200": {
+                        "description": "User webhook settings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": { "type": "boolean" },
+                                        "message": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uid": { "type": "integer" },
+                                                "username": { "type": "string" },
+                                                "webhookSettings": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "enabled": { "type": "boolean" },
+                                                        "color": { "type": ["string", "null"] },
+                                                        "description": { "type": ["string", "null"] },
+                                                        "title": { "type": ["string", "null"] },
+                                                        "timestamp": { "type": "boolean" }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "timestamp": { "type": "string", "format": "date-time" }
+                                    }
+                                },
+                                "example": {
+                                    "error": false,
+                                    "message": {
+                                        "uid": 1,
+                                        "username": "xap3y",
+                                        "webhookSettings": {
+                                            "enabled": false,
+                                            "color": null,
+                                            "description": null,
+                                            "title": null,
+                                            "timestamp": false
+                                        }
+                                    },
+                                    "timestamp": "2025-07-10T20:36:30.581624625"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "summary": "Update current user's webhook settings",
+                "security": [{ "apiKeyAuth": [] }],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "webhookSettings": {
+                                        "type": "object",
+                                        "properties": {
+                                            "enabled": { "type": "boolean" },
+                                            "color": { "type": ["string", "null"] },
+                                            "description": { "type": ["string", "null"] },
+                                            "title": { "type": ["string", "null"] },
+                                            "timestamp": { "type": "boolean" }
+                                        },
+                                        "additionalProperties": false
+                                    }
+                                },
+                                "additionalProperties": false
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Settings updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": { "type": "boolean" },
+                                        "message": { "type": "string" },
+                                        "timestamp": { "type": "string", "format": "date-time" }
+                                    }
+                                },
+                                "example": {
+                                    "error": false,
+                                    "message": "Updated",
+                                    "timestamp": "2025-07-10T20:36:30.581624625"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/stats/all": {
+            "post": {
+                "summary": "Get all stats for a range of dates",
+                "security": [{ "apiKeyAuth": [] }],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "fromDate": { "type": "string", "format": "date" },
+                                    "toDate": { "type": "string", "format": "date" },
+                                    "fillMissing": { "type": "boolean" }
+                                },
+                                "required": ["fromDate", "toDate", "fillMissing"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Stats for the requested range",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": { "type": "boolean" },
+                                        "message": {
+                                            "type": "object",
+                                            "properties": {
+                                                "totalImages": { "type": "integer" },
+                                                "urlsPerDay": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "pastesPerDay": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "imagesPerDay": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "first": { "type": "string", "format": "date" },
+                                                            "second": { "type": "integer" }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "timestamp": { "type": "string", "format": "date-time" }
+                                    }
+                                },
+                                "example": {
+                                    "error": false,
+                                    "message": {
+                                        "totalImages": 20,
+                                        "urlsPerDay": [],
+                                        "pastesPerDay": [],
+                                        "imagesPerDay": [
+                                            { "first": "2025-03-10", "second": 10 },
+                                            { "first": "2025-03-11", "second": 9 },
+                                            { "first": "2025-03-12", "second": 1 }
+                                        ]
+                                    },
+                                    "timestamp": "2025-07-10T20:33:40.195745915"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "apiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key"
+            }
+        },
+        "responses": {
+            "StandardResponse": {
+                "description": "Standard API response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": { "type": "boolean" },
+                                "message": { "type": "string" },
+                                "timestamp": { "type": "string", "format": "date-time" },
+                                "uniqueId": { "type": "string" }
+                            }
+                        }
+                    }
+                }
+            },
+            "UploadedResource": {
+                "description": "Uploaded resource response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": { "type": "boolean" },
+                                "message": { "type": "object",
+                                    "properties": {
+                                        "uniqueId": {
+                                            "type": "string"
+                                        },
+                                        "url": {
+                                            "type": "string",
+                                            "format": "uri"
+                                        },
+                                        "description": {
+                                            "type": "string"
+                                        },
+                                        "size": {
+                                            "type": "integer"
+                                        },
+                                        "uploadedAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "expiresAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "urlSet": { "$ref": "#/components/schemas/UrlSet" },
+                                        "uploader": { "$ref": "#/components/schemas/Uploader" },
+                                        "requiresPassword": { "type": "boolean" },
+                                        "isPublic": { "type": "boolean" }
+                                    }
+                                },
+                                "timestamp": { "type": "string", "format": "date-time" },
+                                "uniqueId": { "type": "string" }
+                            }
+                        }
+                    }
+                }
+            },
+            "UploadedResourcePaste": {
+                "description": "Uploaded resource response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": { "type": "boolean" },
+                                "message": { "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string"
+                                        },
+                                        "content": {
+                                            "type": "string"
+                                        },
+                                        "createdAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "urlSet": { "$ref": "#/components/schemas/UrlSet" },
+                                        "uploader": { "$ref": "#/components/schemas/Uploader" },
+                                        "requiresPassword": { "type": "boolean" },
+                                        "isPublic": { "type": "boolean" }
+                                    }
+                                },
+                                "timestamp": { "type": "string", "format": "date-time" },
+                                "uniqueId": { "type": "string" }
+                            }
+                        }
+                    }
+                }
+            },
+            "UploadedResourceShortUrl": {
+                "description": "Uploaded resource response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": { "type": "boolean" },
+                                "message": { "type": "object",
+                                    "properties": {
+                                        "uniqueId": {
+                                            "type": "string"
+                                        },
+                                        "originalUrl": {
+                                            "type": "string"
+                                        },
+                                        "visits": {
+                                            "type": "integer"
+                                        },
+                                        "maxUses": {
+                                            "type": "integer",
+                                            "default": -1
+                                        },
+                                        "content": {
+                                            "type": "string"
+                                        },
+                                        "createdAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "expiresAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "urlSet": { "$ref": "#/components/schemas/UrlSet" },
+                                        "uploader": { "$ref": "#/components/schemas/Uploader" }
+                                    }
+                                },
+                                "timestamp": { "type": "string", "format": "date-time" },
+                                "uniqueId": { "type": "string" }
+                            }
+                        }
+                    }
+                }
+            },
+            "LoggedUser": {
+                "description": "User login response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": { "type": "boolean" },
+                                "message": { "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "username": {
+                                            "type": "string"
+                                        },
+                                        "password": {
+                                            "type": "string"
+                                        },
+                                        "email": {
+                                            "type": "string",
+                                            "format": "email"
+                                        },
+                                        "role": {
+                                            "type": "string",
+                                            "enum": ["OWNER", "ADMIN", "USER", "TESTER"]
+                                        },
+                                        "apiKey": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "keyCode": {
+                                                    "type": "string"
+                                                },
+                                                "maxUploadSize": {
+                                                    "type": "integer",
+                                                    "default": "-1"
+                                                }
+                                            }
+                                        },
+                                        "avatar": {
+                                            "type": "string"
+                                        },
+                                        "invitedBy": {
+                                            "$ref": "#/components/schemas/Invitor"
+                                        },
+                                        "createdAt": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    }
+                                },
+                                "timestamp": { "type": "string", "format": "date-time" },
+                                "uniqueId": { "type": "string" }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "schemas": {
+            "UrlSet": {
+                "type": "object",
+                "properties": {
+                    "webUrl": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "portalUrl": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "rawUrl": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "shortUrl": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "customUrl": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                }
+            },
+            "Uploader": {
+                "type": "object",
+                "properties": {
+                    "uid": {
+                        "type": "integer"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": ["OWNER", "ADMIN", "USER", "TESTER"]
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "invitor": {
+                        "$ref": "#/components/schemas/Invitor"
+                    }
+                }
+            },
+            "Invitor": {
+                "type": "object",
+                "properties": {
+                    "uid": {
+                        "type": "integer"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": ["OWNER", "ADMIN", "USER", "TESTER"]
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -26,5 +26,5 @@ public class ApiKey {
 
     @Column(nullable = false)
     @ColumnDefault("-1")
-    private int maxUploadSize;
+    private int maxUploadSize; // TODO -> UserSettings
 }

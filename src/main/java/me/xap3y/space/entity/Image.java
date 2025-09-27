@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import me.xap3y.space.api.enums.ImageLocation;
+import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
 
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "images")
 @Getter
 @Setter
-public class Image {
+public class Image implements ApiResource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,39 +1,38 @@
 package me.xap3y.space.service;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
-import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.dto.*;
+import me.xap3y.space.dto.ImageInfoDto;
+import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.User;
-import me.xap3y.space.mapper.ImageInfoMapper;
 import me.xap3y.space.mapper.ImageMapper;
-import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.repository.ImageRepository;
 import me.xap3y.space.util.ConfigDb;
+import me.xap3y.space.util.DngConverter;
 import me.xap3y.space.util.ImageCompressor;
 import me.xap3y.space.util.Utils;
-import org.springframework.cglib.core.Local;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.sql.Date;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.*;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -41,7 +40,7 @@ public class ImageService {
 
     private final String[] supportedExtensions = {"png", "jpg", "webp", "mp4", "gif", "jpeg", "bmp", "ico", "svg",
             "webm", "mkv", "mov", "avi", "wav", "flv", "wmv", "ogv", "ogg", "avif", "heic", "heif", "jfif", "jpeg", "jif",
-            "tiff", "tif", "cur", "bmp", "vob", "drc", "qt", "3gp", "xbm"};
+            "tiff", "tif", "cur", "bmp", "vob", "drc", "qt", "3gp", "xbm", "dng"};
 
     private final ImageRepository imageRepository;
     private final ImageCompressor imageCompressor;
@@ -68,7 +67,7 @@ public class ImageService {
     }
 
     // register image UID into DB
-    public Image registerImage(User uploader, String uniqueId, String password, boolean isPublic, String description, String fileType, Long size) throws IOException, RuntimeException {
+    public Image registerImage(User uploader, String uniqueId, String password, boolean isPublic, String description, String fileType, Long size, ImageLocation location) throws IOException, RuntimeException {
 
         if (uniqueId == null) {
             uniqueId = Utils.generateRandomId();
@@ -82,7 +81,7 @@ public class ImageService {
         imageDto.setUniqueId(uniqueId);
         imageDto.setIsPublic(isPublic);
         imageDto.setPassword(password);
-        imageDto.setLocation(ImageLocation.R2);
+        imageDto.setLocation(location);
         imageDto.setDescription(description);
         imageDto.setFileType(fileType);
         imageDto.setSize(size != null ? size : 0L);
@@ -92,7 +91,24 @@ public class ImageService {
         return imageRepository.save(imageDto);
     }
 
+    public Image saveImageFromUrl(String url, User uploader) {
+        String uniqueId = Utils.generateRandomId();
+        String fileExtension = url.substring(url.lastIndexOf(".") + 1).toLowerCase();
 
+        // save from URL to file under the generated uniqueId
+        String fileNameWithExtension = uniqueId + "." + fileExtension;
+        File imageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
+        try (InputStream in = new URL(url).openStream()) {
+            Files.copy(in, imageFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            log.info("Image downloaded from URL: {}", url);
+            return registerImage(uploader, uniqueId, null, true, null, fileExtension, imageFile.length(), ImageLocation.LOCAL);
+        } catch (Exception e) {
+            log.error("Failed to download image from URL: {}", url, e);
+            throw new RuntimeException("Failed to download image from URL");
+        }
+    }
+
+    @SneakyThrows
     public Image saveImage(MultipartFile file, User uploader, String uniqueId, String password, boolean isPublic, String description) throws IOException, RuntimeException {
 
         if (uniqueId == null) {
@@ -104,8 +120,9 @@ public class ImageService {
         }
 
         String[] fileExtension = Objects.requireNonNull(file.getOriginalFilename()).split("\\.");
+        String originalExt = fileExtension[fileExtension.length - 1].toLowerCase();
         String fileNameWithExtension = uniqueId + "." + fileExtension[fileExtension.length - 1].toLowerCase();
-        String fElc = fileExtension[fileExtension.length - 1].toLowerCase();
+        String fElc = originalExt;
 
         boolean isSupported = false;
         for (String s : supportedExtensions) {
@@ -122,10 +139,56 @@ public class ImageService {
         log.info("Handling image with id: {}", uniqueId);
         File compressedImageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
 
+        // If HEIC → convert to JPG
+        if (fElc.equals("heic") || fElc.equals("heif")) {
+            log.info("Converting HEIC image with id: {}", uniqueId);
+
+            BufferedImage heicImage = ImageIO.read(file.getInputStream());
+            if (heicImage == null) {
+                throw new IOException("Failed to read HEIC image");
+            }
+
+            log.info("buffered image: {}x {}y", heicImage.getWidth(), heicImage.getHeight());
+
+            // Change extension
+            fElc = "jpg";
+            fileNameWithExtension = uniqueId + ".jpg";
+            compressedImageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
+
+            BufferedImage awtImage = new BufferedImage(heicImage.getWidth(), heicImage.getHeight(), BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = awtImage.createGraphics();
+            g.drawImage(heicImage, 0, 0, null);
+            g.dispose();
+
+            // Save converted JPG
+            try (OutputStream os = new FileOutputStream(compressedImageFile)) {
+                if (!ImageIO.write(awtImage, "jpg", os)) {
+                    throw new IOException("No ImageIO writer found for JPEG format.");
+                }
+            }
+
+            file = null; // mark as already handled
+        } else if (fElc.equals("dng")) {
+            log.info("Converting DNG image with id: {}", uniqueId);
+            // Convert DNG to JPG using ffmpeg
+
+            compressedImageFile = DngConverter.convertDngToJpeg(file, ConfigDb.getIMAGE_DIR(), uniqueId);
+
+            if (!compressedImageFile.exists()) {
+                throw new IOException("Failed to convert DNG to JPG");
+            }
+
+            // Change extension
+            fElc = "jpg";
+            fileNameWithExtension = uniqueId + ".jpg";
+
+            // From now on, work with the converted file instead of MultipartFile
+            file = null; // mark as already handled
+        }
+
         log.info("Checking image type: {}", fElc);
 
-
-        if ((fElc.equals("png") || fElc.equals("jpg") || fElc.equals("webp")) && file.getSize() > 70000) {
+        if (file != null && (fElc.equals("png") || fElc.equals("jpg") || fElc.equals("webp")) && file.getSize() > 70000) {
             log.info("Compressing image with id: {} and size: {}", uniqueId, file.getSize());
             float quality = 0.9f;
             double scale = 1;
@@ -139,25 +202,26 @@ public class ImageService {
             } else {
                 log.info("Using default compression settings");
             }
-
             imageCompressor.compressImage(file.getInputStream(), compressedImageFile, scale, quality);
-        } else {
+        } else if (file != null) {
             log.info("Saving image with id: {}", uniqueId);
             Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
             try (InputStream in = file.getInputStream()) {
                 Files.copy(in, filePath, StandardCopyOption.REPLACE_EXISTING);
             }
+        } else {
+            log.info("Image already handled, skipping saving step.");
         }
 
-        log.info("Saving image with file name: {}", file.getOriginalFilename());
+        log.info("Saving image with file name: {}", fileNameWithExtension);
         Image imageDto = new Image();
         imageDto.setUniqueId(uniqueId);
         imageDto.setLocation(ImageLocation.LOCAL);
         imageDto.setIsPublic(isPublic);
         imageDto.setPassword(password);
         imageDto.setDescription(description);
-        imageDto.setFileType(fileExtension[fileExtension.length - 1]);
-        imageDto.setSize(file.getSize());
+        imageDto.setFileType(fElc);
+        imageDto.setSize(compressedImageFile.length());
         imageDto.setUploadTime(LocalDateTime.now());
         imageDto.setUploader(uploader);
 
@@ -192,39 +256,10 @@ public class ImageService {
     }
 
     @NonNull
-    public ImageDto getImage(String uniqueId, boolean base64, boolean userInfo, boolean info) throws IOException, ResourceNotFoundException {
+    public Image getImage(String uniqueId) throws ResourceNotFoundException {
 
-        Image image = imageRepository.findByUniqueId(uniqueId)
+        return imageRepository.findByUniqueId(uniqueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Image not found"));
-
-        if (image == null) {
-            throw new ResourceNotFoundException("Image not found");
-        }
-        /*byte[] imageBytes = null;
-        String imageBase64 = null;
-        Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType());
-        if (info) {
-            try {
-                imageBytes = Files.readAllBytes(filePath);
-            } catch(Exception e) {
-                throw new ResourceNotFoundException("Image not found");
-            }
-            imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
-        }*/
-
-        return new ImageDto(
-                null,
-                userInfo ? image.getUploader() : null,
-                image.getDescription(),
-                image.getFileType(),
-                image.getPassword(),
-                image.getSize(),
-                null,
-                image.getUploadTime(),
-                image.getExpirationTime(),
-                image.getIsPublic(),
-                image.getLocation()
-        );
     }
 
     public boolean doesImageExist(String uniqueId) {
@@ -324,18 +359,33 @@ public class ImageService {
         return this.getUserStats(LocalDateTime.of(LocalDate.now().minusYears(10), LocalTime.MIN), LocalDateTime.now(), uid);
     }
 
-    public List<ImageInfoDto> getAllImagesByUser(Long uid, LocalDateTime from, LocalDateTime to, Integer limit) {
+    public int countByUploaderId(Long uid) {
+        return imageRepository.countByUploaderId(uid);
+    }
 
+    public List<ImageInfoDto> getAllImagesByUser(Long uid, Long from, Long to, Integer limit) {
+
+        LocalDateTime fromDate = null;
+        LocalDateTime toDate = null;
         if (from == null) {
-            from = LocalDateTime.of(LocalDate.now().minusYears(10), LocalTime.MIN);
+            fromDate = LocalDateTime.of(LocalDate.now().minusYears(10), LocalTime.MIN);
+        } else {
+            // Czechia timezone
+            fromDate = LocalDateTime.ofEpochSecond(from, 0, java.time.ZoneOffset.UTC);
         }
         if (to == null) {
-            to = LocalDateTime.now();
+            toDate = LocalDateTime.now();
+        } else {
+            toDate = Instant.ofEpochMilli(to)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
+            //toDate = LocalDateTime.ofEpochSecond(to, 0, ZoneOffset.of("+02:00"));
         }
+        log.info("To-DATE {}", toDate);
         if (limit == null) {
             limit = 25;
         }
-        List<Image> images = imageRepository.findAllByUploaderIdBetween(uid, from, to, limit);
+        List<Image> images = imageRepository.findAllByUploaderIdBetween(uid, fromDate, toDate, limit);
         if (images.isEmpty()) return List.of();
         List<ImageInfoDto> imageDtos = new ArrayList<>();
         for (Image image : images) {

@@ -7,6 +7,7 @@ import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.repository.TempMailRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service

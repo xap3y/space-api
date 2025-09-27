@@ -15,11 +15,19 @@ public class DefaultResponse {
     private boolean error;
     private Object message;
     private LocalDateTime timestamp;
+    private int count;
 
     public DefaultResponse(boolean error, Object message) {
         this.error = error;
         this.message = message;
         this.timestamp = LocalDateTime.now();
+    }
+
+    public DefaultResponse(boolean error, Object message, int count) {
+        this.error = error;
+        this.message = message;
+        this.timestamp = LocalDateTime.now();
+        this.count = count;
     }
 
     public DefaultResponse() {

@@ -11,11 +11,11 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UserWebhookSettings {
 
-    private boolean enabled;
+    private Boolean enabled;
     private String color;
     private String description;
     private String title;
-    private boolean timestamp;
+    private Boolean timestamp;
 
     public UserWebhookSettings(boolean enabled) {
         this.enabled = enabled;

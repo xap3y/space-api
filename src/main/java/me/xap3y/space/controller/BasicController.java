@@ -105,14 +105,14 @@ public class BasicController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/r/{id}")
     public ResponseEntity<?> handleRoute(
             @PathVariable String id,
             HttpServletRequest request
     ) {
 
         // If the resource exists, return it
-        try {
+        /*try {
             Resource resource = resourceLoader.getResource("classpath:static/" + id);
 
             if (resource.exists()) {
@@ -127,7 +127,7 @@ public class BasicController {
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error handling resource: " + e.getMessage());
-        }
+        }*/
 
         // Otherwise, check if the host matches a redirect
         String host = request.getServerName();
@@ -136,6 +136,7 @@ public class BasicController {
         log.info(" PATH-VARIABLE IS :: {}", id);
         HttpHeaders headers = new HttpHeaders();
 
+        // Migrated to cloudflare redirect rules
         for (Map.Entry<String, String> entry : ConfigDb.getRedirectMapper().entrySet()) {
             if (entry.getKey().equalsIgnoreCase(host)) {
                 log.info(" FOUND MATCHER :: {}", entry.getKey());

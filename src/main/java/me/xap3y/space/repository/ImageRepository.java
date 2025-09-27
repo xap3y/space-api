@@ -27,6 +27,18 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
                                            @Param("to") LocalDateTime to,
                                            @Param("amount") Integer amount);
 
+    @Query("SELECT e FROM Image e " +
+            "WHERE e.uploader.id = :uploaderId " +
+            "AND e.uploadTime < :before " +
+            "ORDER BY e.uploadTime DESC " +
+            "LIMIT :limit"
+    )
+    List<Image> findAllByUploaderIdBefore(@Param("uploaderId") Long uploaderId,
+                                           @Param("before") LocalDateTime to,
+                                           @Param("limit") Integer limit);
+
+    int countByUploaderId(Long uploaderId);
+
     List<Image> findAllByUploaderId(Long uploaderId);
 
     boolean existsByUniqueId(String uniqueId);

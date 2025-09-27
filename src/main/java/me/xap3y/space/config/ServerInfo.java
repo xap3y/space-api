@@ -36,7 +36,7 @@ public class ServerInfo {
         return environment.getProperty("server.protocol", "test");
     }
 
-    public String getBaseUrl() {
+    public String  getBaseUrl() {
         return environment.getProperty("server.protocol", "http") +
                 "://" +
                 environment.getProperty("server.baseurl", "127.0.0.1");
@@ -119,6 +119,10 @@ public class ServerInfo {
     }
 
     public String getInboundEmailToken() {
-        return environment.getProperty("INBOUND_EMAIL_TOKEN", "local");
+        return environment.getProperty("INBOUND_EMAIL_TOKEN", "password");
+    }
+
+    public String getInboundEmailAddress() {
+        return environment.getProperty("INBOUND_EMAIL_ADDRESS", "xap3y.space");
     }
 }

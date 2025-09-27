@@ -1,4 +1,4 @@
-package me.xap3y.space.model;
+package me.xap3y.space.model.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -10,5 +10,4 @@ public class EmailRequest {
     private String subject;
     private String to;
     private String content;
-
 }
