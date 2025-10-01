@@ -1,6 +1,7 @@
 package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.UserDto;
@@ -31,18 +32,20 @@ public class UserService {
     private final UserMapper userMapper;
     private final InviteCodeRepository inviteCodeRepository;
     private final EmailVerifyCodeService emailVerifyCodeService;
-    private final EmailService emailService;
+    //private final EmailService emailService;
     private final UserSettingsService userSettingsService;
+    private final PrometheusMetricService prometheusMetricService;
 
-    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository, EmailVerifyCodeService emailVerifyCodeService, EmailService emailService, UserSettingsService userSettingsService) {
+    public UserService(UserRepository userRepository, ApiKeyRepository apiKeyRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, InviteCodeRepository inviteCodeRepository, EmailVerifyCodeService emailVerifyCodeService, UserSettingsService userSettingsService, PrometheusMetricService prometheusMetricService) {
         this.userRepository = userRepository;
         this.apiKeyRepository = apiKeyRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.inviteCodeRepository = inviteCodeRepository;
         this.emailVerifyCodeService = emailVerifyCodeService;
-        this.emailService = emailService;
+        //this.emailService = emailService;
         this.userSettingsService = userSettingsService;
+        this.prometheusMetricService = prometheusMetricService;
     }
 
     public User registerUser(AuthRegisterRequest req) {
@@ -68,6 +71,7 @@ public class UserService {
 
         int res = inviteCodeRepository.markAsUsed(req.getInviteCode(), LocalDateTime.now(), user);
         log.info("Marked invite code as used: {}", res);
+        prometheusMetricService.recordEvent(MetricRecordType.USER_SIGNUP);
         return registeredUser;
     }
 

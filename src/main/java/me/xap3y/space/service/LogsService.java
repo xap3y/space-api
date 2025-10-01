@@ -38,7 +38,8 @@ public class LogsService {
     @SneakyThrows
     public void logFile(String content) {
         FileWriter fw = new FileWriter(ConfigDb.LOG_FILE, true);
-        fw.write(content + "\n");
+        LocalDateTime now = LocalDateTime.now();
+        fw.write(now + " " + content + "\n");
         fw.close();
     }
 }

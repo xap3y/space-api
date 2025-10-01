@@ -75,7 +75,7 @@ public class SecurityConfig {
                                 serverInfo.getTestCorsUrl()
                         )
                         .allowCredentials(true)
-                        .allowedMethods("GET", "POST", "PUT", "DELETE")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                         .allowedHeaders("*");
             }
 

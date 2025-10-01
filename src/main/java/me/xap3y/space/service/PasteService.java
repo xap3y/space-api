@@ -60,7 +60,8 @@ public class PasteService {
 
     public PasteDto savePaste(String title, String text, User uploader) throws IllegalArgumentException, OptimisticLockingFailureException {
         log.info("DECODING TEXT: {}", text);
-        byte[] encodedText =  huffmanEncoder.encode(text);
+        //byte[] encodedText =  huffmanEncoder.encode(text);
+        String encodedText =  huffmanEncoder.encode(text);
         log.info("DECODING TEXT: {}", text);
         Paste pasteDto = new Paste();
         pasteDto.setTitle(title);

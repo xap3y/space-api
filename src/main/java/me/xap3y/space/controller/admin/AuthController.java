@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.api.enums.Environment;
+import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.EmailVerifyCodeExpired;
@@ -21,6 +22,7 @@ import me.xap3y.space.model.request.AuthRegisterRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.*;
 import me.xap3y.space.util.ConfigDb;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -47,8 +49,9 @@ public class AuthController {
     private final EmailService emailService;
     private final EmailVerifyCodeService emailVerifyCodeService;
     private final LogsService logsService;
+    private final PrometheusMetricService prometheusMetricService;
 
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, EmailService emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService) {
+    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService) {
         this.userService = userService;
         this.inviteCodeService = inviteCodeService;
         this.passwordEncoder = passwordEncoder;
@@ -56,9 +59,10 @@ public class AuthController {
         this.sessionService = sessionService;
         this.userMapper = userMapper;
         this.apiKeyService = apiKeyService;
-        this.emailService = emailService;
+        this.emailService = emailService.getIfAvailable();
         this.emailVerifyCodeService = emailVerifyCodeService;
         this.logsService = logsService;
+        this.prometheusMetricService = prometheusMetricService;
     }
 
     @GetMapping("/me")
@@ -101,22 +105,18 @@ public class AuthController {
 
         User user = userService.findByEmailRaw(loginRequest.getEmail());
 
-        if (user == null) {
-            throw new ResourceNotFoundException("User not found");
-        }
-
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Invalid password"), HttpStatus.FORBIDDEN);
-        }
-
-        if (user.getStatus() != UserAccountStatus.ACTIVE) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Your account is not active! Check your email and activate it."), HttpStatus.FORBIDDEN);
+        } else if (user.getStatus() != UserAccountStatus.ACTIVE) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Your account is not active!"), HttpStatus.FORBIDDEN);
+        } else if (user.getApiKey() == null) {
+            throw new InvalidApiKeyException();
         }
 
         String userAgent = request.getHeader("User-Agent");
         String ipAddress = request.getRemoteAddr();
 
-        if (userAgent.contains("Postman") || userAgent.contains("curl") || userAgent.contains("Insomnia")) {
+        if (isUserAgentBot(userAgent)) {
             return ResponseEntity.ok()
                     .body(new DefaultResponse(false, user));
         }
@@ -125,14 +125,15 @@ public class AuthController {
 
         //String code = String.valueOf((int)(Math.random() * 900000) + 100000);
         //emailService.sendVerificationCode(user.getEmail(), code, );
+        prometheusMetricService.recordEvent(MetricRecordType.USER_LOGIN);
 
         ResponseCookie cookie = ResponseCookie.from("session_token", sessionToken)
                 .httpOnly(true)
-                .secure(false)
+                //.secure(false)
                 .path("/")
-                .maxAge(7 * 24 * 60 * 60)
-                .sameSite("None")
-                .secure(true)
+                .maxAge(serverInfo.getAuthCookieMaxAge())
+                .sameSite(serverInfo.getAuthCookieSameSite())
+                .secure(serverInfo.getAuthCookieSecure())
                 .build();
 
         return ResponseEntity.ok()
@@ -171,6 +172,8 @@ public class AuthController {
                 .secure(false)
                 .sameSite("Lax")
                 .build();
+
+        prometheusMetricService.recordEvent(MetricRecordType.USER_LOGOUT);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
@@ -405,5 +408,9 @@ public class AuthController {
             }
         }
         return true;
+    }
+
+    private boolean isUserAgentBot(String userAgent) {
+        return userAgent.contains("Postman") || userAgent.contains("curl") || userAgent.contains("Insomnia");
     }
 }

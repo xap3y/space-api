@@ -14,3 +14,19 @@ API for an image/file hosting service, pastebin host, temp email and URL shorten
 
 #### API Status
 <img src="https://uptime.xap3y.tech/api/badge/22/status" alt="Uptime" />
+
+## Dependencies
+
+- [dcraw](https://archlinux.org/packages/extra/x86_64/dcraw/)
+- [imagemagick](https://archlinux.org/packages/extra/x86_64/imagemagick/)
+- Have S3 or R2 bucket
+- MariaDB or MySQL database
+- SMTP server
+- [this cf worker to receive emails](https://github.com/xap3y/space-temp-mail-cf-worker)
+- Telegram bot (optional)
+- Discord bot (optional)
+- [Tempo server](https://github.com/grafana/tempo) (for tracing, optional)
+- [Loki server](https://github.com/grafana/loki) (for logging, optional)
+- [OpenTelemetry Instrumentation for Java](https://github.com/open-telemetry/opentelemetry-java-instrumentation) (optional)
+- [Prometheus](https://prometheus.io/) (for metrics, optional)
+- [Grafana](https://grafana.com/) (for metrics, optional)

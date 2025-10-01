@@ -3,6 +3,7 @@ package me.xap3y.space.service;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ImageLocation;
+import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.ImageInfoDto;
@@ -45,11 +46,13 @@ public class ImageService {
     private final ImageRepository imageRepository;
     private final ImageCompressor imageCompressor;
     private final ImageMapper imageMapper;
+    private final PrometheusMetricService prometheusMetricService;
 
-    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper) {
+    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService) {
         this.imageRepository = imageRepository;
         this.imageCompressor = imageCompressor;
         this.imageMapper = imageMapper;
+        this.prometheusMetricService = prometheusMetricService;
     }
 
     public boolean deleteImageFile(String fileName) {
@@ -72,9 +75,7 @@ public class ImageService {
         if (uniqueId == null) {
             uniqueId = Utils.generateRandomId();
         } else {
-            if (!uniqueId.matches("^[a-zA-Z0-9]*$")) {
-                throw new InvalidUniqueIdException();
-            }
+            if (!uniqueId.matches("^[a-zA-Z0-9]*$")) throw new InvalidUniqueIdException();
         }
 
         Image imageDto = new Image();
@@ -87,6 +88,8 @@ public class ImageService {
         imageDto.setSize(size != null ? size : 0L);
         imageDto.setUploadTime(LocalDateTime.now());
         imageDto.setUploader(uploader);
+
+        prometheusMetricService.recordEvent(MetricRecordType.IMAGE_UPLOAD);
 
         return imageRepository.save(imageDto);
     }
@@ -139,7 +142,7 @@ public class ImageService {
         log.info("Handling image with id: {}", uniqueId);
         File compressedImageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
 
-        // If HEIC → convert to JPG
+        // If HEIC > convert to JPG
         if (fElc.equals("heic") || fElc.equals("heif")) {
             log.info("Converting HEIC image with id: {}", uniqueId);
 
@@ -167,23 +170,25 @@ public class ImageService {
                 }
             }
 
+            prometheusMetricService.recordEvent(MetricRecordType.IMAGE_CONVERT);
+
             file = null; // mark as already handled
         } else if (fElc.equals("dng")) {
             log.info("Converting DNG image with id: {}", uniqueId);
-            // Convert DNG to JPG using ffmpeg
-
+            // Convert DNG to JPG using dcraw
             compressedImageFile = DngConverter.convertDngToJpeg(file, ConfigDb.getIMAGE_DIR(), uniqueId);
 
             if (!compressedImageFile.exists()) {
                 throw new IOException("Failed to convert DNG to JPG");
             }
 
+            prometheusMetricService.recordEvent(MetricRecordType.IMAGE_CONVERT);
+
             // Change extension
             fElc = "jpg";
             fileNameWithExtension = uniqueId + ".jpg";
 
-            // From now on, work with the converted file instead of MultipartFile
-            file = null; // mark as already handled
+            file = null;
         }
 
         log.info("Checking image type: {}", fElc);
@@ -224,6 +229,8 @@ public class ImageService {
         imageDto.setSize(compressedImageFile.length());
         imageDto.setUploadTime(LocalDateTime.now());
         imageDto.setUploader(uploader);
+
+        prometheusMetricService.recordEvent(MetricRecordType.IMAGE_UPLOAD);
 
         try {
             return imageRepository.save(imageDto);
@@ -267,6 +274,7 @@ public class ImageService {
     }
 
     public void deleteByUniqueId(String uniqueId) {
+        prometheusMetricService.recordEvent(MetricRecordType.IMAGE_DELETE);
         imageRepository.deleteByUniqueId(uniqueId);
     }
 

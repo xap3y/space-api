@@ -49,3 +49,5 @@ zscripts/up.sh
 zscripts/
 
 zscripts/env_dev.sh
+
+opentelemetry-javaagent.jar

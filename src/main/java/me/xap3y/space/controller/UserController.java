@@ -3,6 +3,8 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.SegmentType;
+import me.xap3y.space.api.enums.UrlSetPreference;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
@@ -23,7 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -190,14 +192,60 @@ public class UserController {
         if (body.getTitle() != null)
             userSettings.getEmbedSettings().setTitle(body.getTitle());
 
+        if (body.getTitleUrl() != null)
+            userSettings.getEmbedSettings().setTitleUrl(body.getTitleUrl());
+
         if (body.getEnabled() != null)
             userSettings.getEmbedSettings().setEnabled(body.getEnabled());
 
-        if (body.getTimestamp() != null)
-            userSettings.getEmbedSettings().setTimestamp(body.getTimestamp());
+        if (body.getAuthorName() != null)
+            userSettings.getEmbedSettings().setAuthorName(body.getAuthorName());
 
         userSettingsService.saveUserSettings(userSettings);
 
+
+        return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping(
+            value = "/get/@me/settings/url",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getCurrentUserSettingsUrlPreferences(
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+
+        UserSettings settings = userSettingsService.getUserSettingsByUserIdSafe(uploader);
+
+        return new ResponseEntity<>(new DefaultResponse(false, settings.getUrlSettings()), HttpStatus.OK);
+    }
+
+    @PatchMapping(
+            value = "/get/@me/settings/url",
+            consumes = "application/json",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> patchCurrentUserSettingsUrlPreferences(
+            HttpServletRequest request,
+            @RequestBody Map<SegmentType, UrlSetPreference> body
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null) throw new InvalidApiKeyException();
+
+        UserSettings settings = userSettingsService.getUserSettingsByUserIdSafe(uploader);
+
+        if (body.containsKey(SegmentType.IMAGE)) settings.getUrlSettings().setImage(body.get(SegmentType.IMAGE));
+        if (body.containsKey(SegmentType.PASTE)) settings.getUrlSettings().setPaste(body.get(SegmentType.PASTE));
+        if (body.containsKey(SegmentType.URL)) settings.getUrlSettings().setUrl(body.get(SegmentType.URL));
+
+        if (body.isEmpty()) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No settings to update"), HttpStatus.NOT_MODIFIED);
+        }
+
+        userSettingsService.saveUserSettings(settings);
 
         return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.NO_CONTENT);
     }

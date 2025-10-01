@@ -220,8 +220,6 @@ public class ImageController {
 
         Image savedImage = imageService.registerImage(uploader, key, null, true, null, "png", 0L, ImageLocation.UNKNOWN);
 
-
-
         return Map.of(
                 "uid", key,
                 "url", presignedRequest.url().toString(),

@@ -1,12 +1,17 @@
 package me.xap3y.space.handler;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.service.PrometheusMetricService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +23,12 @@ import java.time.LocalDateTime;
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final PrometheusMetricService prometheusMetricService;
+
+    public GlobalExceptionHandler(PrometheusMetricService prometheusMetricService) {
+        this.prometheusMetricService = prometheusMetricService;
+    }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<DefaultResponse> handleBadCredentialsExceptions(
@@ -41,6 +52,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<DefaultResponse> handleAllExceptions(
             Exception ex
     ) {
+        prometheusMetricService.recordEvent(MetricRecordType.ERROR_OCCURRED);
         log.error("Exception: ", ex);
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
@@ -56,7 +68,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class, InvalidInviteCodeException.class, InvalidUniqueIdException.class, MissingRequestCookieException.class, MissingCredentialsException.class})
+    @ExceptionHandler({InvalidFormatException.class, BadRequestException.class, IllegalArgumentException.class, InvalidInviteCodeException.class, InvalidUniqueIdException.class, MissingRequestCookieException.class, MissingCredentialsException.class, HttpMediaTypeNotSupportedException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<?> handleInvalidApiKeyException(
             RuntimeException ex
     ) {

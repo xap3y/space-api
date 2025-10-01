@@ -125,4 +125,16 @@ public class ServerInfo {
     public String getInboundEmailAddress() {
         return environment.getProperty("INBOUND_EMAIL_ADDRESS", "xap3y.space");
     }
+
+    public Integer getAuthCookieMaxAge() {
+        return Integer.valueOf(environment.getProperty("AUTH_COOKIE_MAXAGE", "604800"));
+    }
+
+    public String getAuthCookieSameSite() {
+        return environment.getProperty("AUTH_COOKIE_SAMESITE", "None");
+    }
+
+    public Boolean getAuthCookieSecure() {
+        return environment.getProperty("AUTH_COOKIE_SECURE", Boolean.class, true);
+    }
 }

@@ -3,8 +3,10 @@ package me.xap3y.space.service;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.model.request.EmailRequest;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -12,9 +14,11 @@ import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
+@ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
 public class EmailService {
 
     private final ServerInfo serverInfo;
+    private final PrometheusMetricService prometheusMetricService;
     private JavaMailSender mailSender;
 
     public void sendVerificationCode(String to, String code, String urlCode) {
@@ -44,6 +48,8 @@ public class EmailService {
         message.setTo(emailRequest.getTo());
         message.setSubject(emailRequest.getSubject());
         message.setText(emailRequest.getContent());
+
+        prometheusMetricService.recordEvent(MetricRecordType.EMAIL_SENT);
 
         mailSender.send(message);
     }

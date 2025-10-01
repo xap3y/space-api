@@ -3,17 +3,15 @@ package me.xap3y.space.util;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
-import me.xap3y.space.api.FileMultipartFile;
+import me.xap3y.space.api.wrapper.FileMultipartFile;
 import me.xap3y.space.api.enums.ArchiveType;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.FoundImageDto;
-import me.xap3y.space.model.UserStats;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.util.Pair;
-import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,7 +31,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
 @Service

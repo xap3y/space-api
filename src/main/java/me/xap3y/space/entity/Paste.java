@@ -32,9 +32,13 @@ public class Paste implements ApiResource {
     @Column
     private String language;
 
-    @Lob
+    /*@Lob
     @Column(nullable = false, columnDefinition = "LONGBLOB")
-    private byte[] content;
+    private byte[] content;*/
+
+    @Lob
+    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
+    private String content;
 
     @Column(nullable = false)
     @ColumnDefault("CURRENT_TIMESTAMP")

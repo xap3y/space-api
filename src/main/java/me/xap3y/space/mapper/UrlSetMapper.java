@@ -1,6 +1,7 @@
 package me.xap3y.space.mapper;
 
 import lombok.AllArgsConstructor;
+import me.xap3y.space.api.enums.UrlSetPreference;
 import me.xap3y.space.api.iface.ApiResource;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UrlSetDto;
@@ -31,6 +32,8 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
         String deleteUrl = null;
         String userUrl = null;
 
+        UrlSetPreference preference = null;
+
         UserSettings userSettings = userSettingsService.getUserSettingsByUserId(resource.getUploader().getId()).orElse(null);
 
         switch (resource) {
@@ -45,6 +48,9 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
                 portalUrl = serverInfo.getFrontEndUrl() + "/i/" + resource.getUniqueId();
                 shortUrl = serverInfo.getShortImageUrl() + "/" + resource.getUniqueId();
                 deleteUrl = serverInfo.getBaseUrl() + "/v1/image/get/" + resource.getUniqueId();
+                if (userSettings != null && userSettings.getUrlSettings() != null && userSettings.getUrlSettings().getImage() != null) {
+                    preference = userSettings.getUrlSettings().getImage();
+                }
             }
             case Paste paste -> {
                 rawUrl = serverInfo.getBaseUrl() + "/v1/paste/get/" + resource.getUniqueId();
@@ -52,15 +58,28 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
                 portalUrl = serverInfo.getFrontEndUrl() + "/p/" + resource.getUniqueId();
                 shortUrl = serverInfo.getShortPasteUrl() + "/" + resource.getUniqueId();
                 deleteUrl = rawUrl;
+                if (userSettings != null && userSettings.getUrlSettings() != null && userSettings.getUrlSettings().getPaste() != null) {
+                    preference = userSettings.getUrlSettings().getPaste();
+                }
             }
             case Url url -> {
                 rawUrl = serverInfo.getBaseUrl() + "/v1/url/r/" + resource.getUniqueId();
                 portalUrl = serverInfo.getFrontEndUrl() + "/r/" + resource.getUniqueId();
                 shortUrl = serverInfo.getShortShortenerUrl() + "/" + resource.getUniqueId();
                 deleteUrl = rawUrl;
+                if (userSettings != null && userSettings.getUrlSettings() != null && userSettings.getUrlSettings().getUrl() != null) {
+                    preference = userSettings.getUrlSettings().getUrl();
+                }
             }
             default -> {
             }
+        }
+
+        switch (preference) {
+            case RAW -> userUrl = rawUrl;
+            case SHORT -> userUrl = shortUrl;
+            case null -> {}
+            default -> userUrl = portalUrl;
         }
 
         return new UrlSetDto(

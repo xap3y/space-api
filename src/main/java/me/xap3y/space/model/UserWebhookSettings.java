@@ -15,13 +15,15 @@ public class UserWebhookSettings {
     private String color;
     private String description;
     private String title;
-    private Boolean timestamp;
+    private String titleUrl;
+    private String authorName;
 
     public UserWebhookSettings(boolean enabled) {
         this.enabled = enabled;
         this.color = "RANDOM";
         this.description = null;
         this.title = null;
-        this.timestamp = false;
+        this.titleUrl = null;
+        this.authorName = null;
     }
 }

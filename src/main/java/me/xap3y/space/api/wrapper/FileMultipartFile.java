@@ -1,4 +1,4 @@
-package me.xap3y.space.api;
+package me.xap3y.space.api.wrapper;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.io.*;

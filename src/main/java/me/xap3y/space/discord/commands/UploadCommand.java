@@ -8,7 +8,6 @@ import discord4j.core.object.component.Button;
 import discord4j.core.object.entity.Attachment;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
-import me.xap3y.space.api.FileMultipartFile;
 import me.xap3y.space.api.enums.ArchiveType;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.discord.Emoji;
@@ -25,12 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 

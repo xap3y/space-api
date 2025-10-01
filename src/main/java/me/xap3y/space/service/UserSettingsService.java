@@ -26,6 +26,16 @@ public class UserSettingsService {
         return userSettingsRepository.findByUserId(userId);
     }
 
+    public UserSettings getUserSettingsByUserIdSafe(User uploader) {
+        return userSettingsRepository.findByUserId(uploader.getId()).orElseGet(() -> {
+            try {
+                return createDefaultSettingsForUser(uploader).orElseThrow(() -> new ResourceNotFoundException("User settings not found"));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
     public UserSettings getUserSettingsByUserIdStrict(Long userId) {
         return userSettingsRepository.findByUserId(userId).orElseThrow(() -> new ResourceNotFoundException("User settings not found"));
     }

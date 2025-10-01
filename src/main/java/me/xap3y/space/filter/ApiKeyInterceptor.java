@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
@@ -13,6 +14,7 @@ import me.xap3y.space.entity.User;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ApiKeyService;
 import me.xap3y.space.service.LogsService;
+import me.xap3y.space.service.PrometheusMetricService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
@@ -35,12 +37,14 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
     private final String API_KEY_HEADER_NAME = "X-API-Key";
     private final String API_KEY_FORM_NAME = "key";
     private final LogsService logsService;
+    private final PrometheusMetricService prometheusMetricService;
 
 
-    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService) {
+    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService, PrometheusMetricService prometheusMetricService) {
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
         this.logsService = logsService;
+        this.prometheusMetricService = prometheusMetricService;
     }
 
     @Override
@@ -65,7 +69,9 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                 try {
                     uploader = apiKeyService.validateApiKey(apiKey);
                     logsService.logFile(" --- - UPLOADER == " + uploader.getUsername());
+                    prometheusMetricService.recordEvent(MetricRecordType.VALID_API_KEY_REQUEST_MADE);
                 } catch (InvalidApiKeyException e) {
+                    prometheusMetricService.recordEvent(MetricRecordType.INVALID_API_KEY_REQUEST_MADE);
                     this.writeErrorResponse(response, new DefaultResponse(true, e.getMessage()), HttpStatus.UNAUTHORIZED);
                     return false;
                 }
@@ -84,8 +90,11 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                 }
 
                 if (specialKeyAnnotation != null && (!uploader.getRole().equals(UserRole.ADMIN) && !uploader.getRole().equals(UserRole.OWNER))) {
+                    prometheusMetricService.recordEvent(MetricRecordType.INVALID_SPECIAL_API_KEY_REQUEST_MADE);
                     this.writeErrorResponse(response, new DefaultResponse(true, "You are not allowed to access this resource (KEY)"), HttpStatus.FORBIDDEN);
                     return false;
+                } else {
+                    prometheusMetricService.recordEvent(MetricRecordType.VALID_SPECIAL_API_KEY_REQUEST_MADE);
                 }
 
                 request.setAttribute("uploader", uploader);
