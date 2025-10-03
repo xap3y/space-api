@@ -48,6 +48,10 @@ public class UserService {
         this.prometheusMetricService = prometheusMetricService;
     }
 
+    public void deleteById(Long uid) {
+        userRepository.deleteById(uid);
+    }
+
     public User registerUser(AuthRegisterRequest req) {
         String encodedPassword = passwordEncoder.encode(req.getPassword());
         User user = new User(req.getEmail(), req.getUsername(), encodedPassword);

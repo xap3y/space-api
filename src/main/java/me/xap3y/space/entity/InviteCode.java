@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -32,6 +34,7 @@ public class InviteCode {
     private LocalDateTime usedAt;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User createdBy;
 
     @ManyToOne

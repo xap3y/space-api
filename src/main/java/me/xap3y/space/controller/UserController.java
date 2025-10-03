@@ -23,6 +23,7 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -42,8 +43,9 @@ public class UserController {
     private final PasteService pasteService;
     private final UserSettingsService userSettingsService;
     private final UserSettingsMapper userSettingsMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper) {
+    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.imageService = imageService;
         this.userMapper = userMapper;
@@ -52,6 +54,7 @@ public class UserController {
         this.pasteService = pasteService;
         this.userSettingsService = userSettingsService;
         this.userSettingsMapper = userSettingsMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/create")
@@ -205,6 +208,26 @@ public class UserController {
 
 
         return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.NO_CONTENT);
+    }
+
+    @DeleteMapping(
+            value = "/get/@me",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> deleteUser(
+            HttpServletRequest request,
+            @RequestParam(required = true) String password
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        boolean matches = passwordEncoder.matches(password, uploader.getPassword());
+        if (!matches) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Invalid password"), HttpStatus.UNAUTHORIZED);
+        }
+
+        userService.deleteById(uploader.getId());
+
+        return new ResponseEntity<>(new DefaultResponse(false, "User deleted"), HttpStatus.OK);
     }
 
     @GetMapping(

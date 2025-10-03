@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ImageRepository extends JpaRepository<Image, Long> {
@@ -26,6 +27,9 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
                                            @Param("from") LocalDateTime from,
                                            @Param("to") LocalDateTime to,
                                            @Param("amount") Integer amount);
+
+    @Query("SELECT e FROM Image e WHERE e.fileType IN :fileTypes")
+    List<Image> findAllByFileTypeIn(Set<String> fileTypes);
 
     @Query("SELECT e FROM Image e " +
             "WHERE e.uploader.id = :uploaderId " +

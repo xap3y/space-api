@@ -68,9 +68,10 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                 User uploader;
                 try {
                     uploader = apiKeyService.validateApiKey(apiKey);
-                    logsService.logFile(" --- - UPLOADER == " + uploader.getUsername());
+                    logsService.logFile(" --- - API_KEY User == " + uploader.getUsername());
                     prometheusMetricService.recordEvent(MetricRecordType.VALID_API_KEY_REQUEST_MADE);
                 } catch (InvalidApiKeyException e) {
+                    log.info("Invalid API Key used: {}", apiKey);
                     prometheusMetricService.recordEvent(MetricRecordType.INVALID_API_KEY_REQUEST_MADE);
                     this.writeErrorResponse(response, new DefaultResponse(true, e.getMessage()), HttpStatus.UNAUTHORIZED);
                     return false;
@@ -94,6 +95,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                     this.writeErrorResponse(response, new DefaultResponse(true, "You are not allowed to access this resource (KEY)"), HttpStatus.FORBIDDEN);
                     return false;
                 } else {
+                    log.info("Special API Key used on {} by {}", route, uploader.getId());
                     prometheusMetricService.recordEvent(MetricRecordType.VALID_SPECIAL_API_KEY_REQUEST_MADE);
                 }
 

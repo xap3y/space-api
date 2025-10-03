@@ -3,6 +3,7 @@ package me.xap3y.space.service;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.model.request.EmailRequest;
@@ -12,6 +13,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 @ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
@@ -30,7 +32,7 @@ public class EmailService {
         String url = serverInfo.getBaseUrl();
 
         EmailRequest emailRequest = new EmailRequest();
-        emailRequest.setFrom("root@xap3y.space");
+        emailRequest.setFrom("auth@xap3y.space");
         emailRequest.setTo(to);
         emailRequest.setSubject("Your Verification Code - " + code);
         emailRequest.setContent("Your code is: " + code + "\n\n" +
@@ -50,6 +52,8 @@ public class EmailService {
         message.setText(emailRequest.getContent());
 
         prometheusMetricService.recordEvent(MetricRecordType.EMAIL_SENT);
+
+        log.info("Sending email to: {}, Subject: {}", emailRequest.getTo(), emailRequest.getSubject());
 
         mailSender.send(message);
     }

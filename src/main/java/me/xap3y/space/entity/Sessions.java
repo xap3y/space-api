@@ -3,6 +3,8 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +22,7 @@ public class Sessions {
 
     @JoinColumn(nullable = false)
     @ManyToOne(targetEntity = User.class, fetch = FetchType.EAGER)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User userId;
 
     @Column(nullable = false)

@@ -3,6 +3,8 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -18,6 +20,7 @@ public class DiscordConnection {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User userId;
 
     @Column(nullable = false, unique = true)

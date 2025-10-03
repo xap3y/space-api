@@ -48,3 +48,5 @@ export SHORT_SHORTENER_URL=https://r1.xap3y.tech
 export NAMESPACE_TAG=local_xap
 
 export USE_DISCORD_BOT_A=false
+
+export LOKI_URL=http://localhost:3100/loki/api/v1/push

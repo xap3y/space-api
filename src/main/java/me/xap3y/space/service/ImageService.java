@@ -34,6 +34,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -42,6 +44,8 @@ public class ImageService {
     private final String[] supportedExtensions = {"png", "jpg", "webp", "mp4", "gif", "jpeg", "bmp", "ico", "svg",
             "webm", "mkv", "mov", "avi", "wav", "flv", "wmv", "ogv", "ogg", "avif", "heic", "heif", "jfif", "jpeg", "jif",
             "tiff", "tif", "cur", "bmp", "vob", "drc", "qt", "3gp", "xbm", "dng"};
+
+    private final Set<String> videoExtensions = Set.of("mp4", "mov", "webm", "mkv", "avi", "m4v");
 
     private final ImageRepository imageRepository;
     private final ImageCompressor imageCompressor;
@@ -80,7 +84,7 @@ public class ImageService {
 
         Image imageDto = new Image();
         imageDto.setUniqueId(uniqueId);
-        imageDto.setIsPublic(isPublic);
+        imageDto.setPublic(isPublic);
         imageDto.setPassword(password);
         imageDto.setLocation(location);
         imageDto.setDescription(description);
@@ -218,11 +222,18 @@ public class ImageService {
             log.info("Image already handled, skipping saving step.");
         }
 
+        boolean withPoster = false;
+
+        boolean isVideo = videoExtensions.contains(fElc);
+        if (isVideo) {
+            withPoster = generateVideoPoster(compressedImageFile, uniqueId);
+        }
+
         log.info("Saving image with file name: {}", fileNameWithExtension);
         Image imageDto = new Image();
         imageDto.setUniqueId(uniqueId);
         imageDto.setLocation(ImageLocation.LOCAL);
-        imageDto.setIsPublic(isPublic);
+        imageDto.setPublic(isPublic);
         imageDto.setPassword(password);
         imageDto.setDescription(description);
         imageDto.setFileType(fElc);
@@ -258,7 +269,7 @@ public class ImageService {
                 image.getExpirationTime(),
                 Files.size(filePath) / 1024,
                 null,
-                image.getIsPublic()
+                image.isPublic()
         );
     }
 
@@ -450,5 +461,120 @@ public class ImageService {
     public Optional<Pair<Long, Long>> findBestUploader(LocalDateTime startDate, LocalDateTime endDate) {
         List<Object[]> result = imageRepository.findBestUploader(startDate, endDate).orElse(null);
         return Utils.parseBestUploader(result);
+    }
+
+    private boolean generateVideoPoster(File videoFile, String uniqueId) throws IOException, InterruptedException {
+        // file name suffix
+        File poster = new File(ConfigDb.getIMAGE_DIR() + "poster/", uniqueId + ".jpg");
+
+        // configurable
+        int posterSeekSeconds = 1;
+        boolean ok = runFfmpegExtract(videoFile, poster, posterSeekSeconds);
+        if (!ok) {
+            // fallback if first attempt fails
+            int posterFallbackSeconds = 0;
+            log.warn("First attempt poster failed for {}. Retrying at {}s", uniqueId, posterFallbackSeconds);
+            ok = runFfmpegExtract(videoFile, poster, posterFallbackSeconds);
+        }
+        if (!ok || !poster.exists() || poster.length() == 0) {
+            safeDelete(poster);
+            throw new IOException("Poster generation failed for: " + videoFile.getName());
+        }
+        return true;
+    }
+
+    private boolean runFfmpegExtract(File videoFile, File outFile, int atSeconds) throws IOException, InterruptedException {
+        String timestamp = formatTimestamp(atSeconds);
+        List<String> cmd = new ArrayList<>();
+        String ffmpegExecutable = "ffmpeg";
+        cmd.add(ffmpegExecutable);
+        cmd.add("-hide_banner");
+        cmd.add("-loglevel"); cmd.add("error");
+        cmd.add("-ss"); cmd.add(timestamp);
+        cmd.add("-i"); cmd.add(videoFile.getAbsolutePath());
+        cmd.add("-frames:v"); cmd.add("1");
+        // -1 keeps aspect ratio for height
+        int posterWidth = 320;
+        cmd.add("-vf");
+        cmd.add("scale=" + posterWidth + ":-1");
+        cmd.add("-q:v"); cmd.add("10");
+        cmd.add("-y");
+        cmd.add(outFile.getAbsolutePath());
+
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectErrorStream(true);
+        Process proc = pb.start();
+
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                output.append(line).append('\n');
+            }
+        }
+
+        boolean finished = proc.waitFor(20, TimeUnit.SECONDS);
+        if (!finished) {
+            proc.destroyForcibly();
+            log.error("ffmpeg timed out for {}", videoFile.getName());
+            return false;
+        }
+        int exit = proc.exitValue();
+        if (exit != 0) {
+            log.error("ffmpeg exit {} for {} output:\n{}", exit, videoFile.getName(), output);
+            return false;
+        }
+        return true;
+    }
+
+    private String formatTimestamp(int seconds) {
+        int h = seconds / 3600;
+        int m = (seconds % 3600) / 60;
+        int s = seconds % 60;
+        return String.format("%02d:%02d:%02d", h, m, s);
+    }
+
+    private void safeDelete(File f) {
+        if (f != null && f.exists()) {
+            if (!f.delete()) {
+                log.warn("Failed to delete file {}", f.getAbsolutePath());
+            }
+        }
+    }
+
+    public void fixMissingVideoPostersAsync() {
+        CompletableFuture.runAsync(() -> {
+            List<Image> videos = imageRepository.findAllByFileTypeIn(videoExtensions);
+            int fixed = 0;
+            for (Image video : videos) {
+                if (video.getLocation() != ImageLocation.LOCAL) continue;
+                File poster = new File(ConfigDb.getIMAGE_DIR() + "poster/", video.getUniqueId() + ".jpg");
+                if (!poster.exists() || poster.length() == 0) {
+                    File videoFile = new File(ConfigDb.getIMAGE_DIR(), video.getUniqueId() + "." + video.getFileType());
+                    if (videoFile.exists()) {
+                        try {
+                            boolean ok = generateVideoPoster(videoFile, video.getUniqueId());
+                            if (ok) {
+                                fixed++;
+                                log.info("Fixed missing poster for video {}", video.getUniqueId());
+                                video.setPoster(true);
+                                imageRepository.save(video);
+                            }
+                        } catch (Exception e) {
+                            log.error("Failed to fix poster for video {}", video.getUniqueId(), e);
+                        }
+                    } else {
+                        log.warn("Video file {} is missing, cannot generate poster", videoFile.getAbsolutePath());
+                    }
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Interrupted while waiting between poster generations");
+                }
+            }
+            log.info("Fixed {} missing video posters", fixed);
+        });
     }
 }

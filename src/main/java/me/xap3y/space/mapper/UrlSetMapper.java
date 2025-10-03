@@ -31,6 +31,7 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
         String customUrl = null;
         String deleteUrl = null;
         String userUrl = null;
+        String posterUrl = null;
 
         UrlSetPreference preference = null;
 
@@ -50,6 +51,9 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
                 deleteUrl = serverInfo.getBaseUrl() + "/v1/image/get/" + resource.getUniqueId();
                 if (userSettings != null && userSettings.getUrlSettings() != null && userSettings.getUrlSettings().getImage() != null) {
                     preference = userSettings.getUrlSettings().getImage();
+                }
+                if (img.isPoster()) {
+                    posterUrl = serverInfo.getBaseUrl() + "/v1/image/get/poster/" + resource.getUniqueId();
                 }
             }
             case Paste paste -> {
@@ -89,7 +93,8 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
                 shortUrl,
                 customUrl,
                 deleteUrl,
-                userUrl
+                userUrl,
+                posterUrl
         );
     }
 }

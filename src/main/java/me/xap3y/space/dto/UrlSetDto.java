@@ -17,6 +17,9 @@ public record UrlSetDto(
         @Nullable
         String deleteUrl,
 
-        String userPreference
+        String userPreference,
+
+        @Nullable
+        String posterUrl
 ) {
 }

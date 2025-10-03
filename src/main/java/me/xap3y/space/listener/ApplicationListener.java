@@ -30,9 +30,10 @@ public class ApplicationListener {
     private final EmailVerifyCodeService emailVerifyCodeService;
     private final TelegramConnectionService telegramConnectionService;
     private final TelegramVerifyBot telegramVerifyBot;
+    private final ImageService imageService;
 
 
-    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, RemoteMessageService remoteMessageService, TelegramVerifyService telegramVerifyService, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, TelegramVerifyBot telegramVerifyBot) {
+    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, RemoteMessageService remoteMessageService, TelegramVerifyService telegramVerifyService, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, TelegramVerifyBot telegramVerifyBot, ImageService imageService) {
         this.webhookService = webhookService;
         this.telegramService = telegramService;
         this.serverInfo = serverInfo;
@@ -41,6 +42,7 @@ public class ApplicationListener {
         this.emailVerifyCodeService = emailVerifyCodeService;
         this.telegramConnectionService = telegramConnectionService;
         this.telegramVerifyBot = telegramVerifyBot;
+        this.imageService = imageService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -83,6 +85,8 @@ public class ApplicationListener {
                 30,
                 TimeUnit.SECONDS
         );*/
+
+        imageService.fixMissingVideoPostersAsync();
     }
 
     private void runDiscordTask() {

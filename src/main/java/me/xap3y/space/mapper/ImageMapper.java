@@ -49,7 +49,7 @@ public class ImageMapper implements Function<Image, ImageInfoDto> {
                 urlSetMapper.apply(image),
                 shortUserMapper.apply(image.getUploader()),
                 image.getPassword() != null,
-                image.getIsPublic(),
+                image.isPublic(),
                 image.getLocation(),
                 userSettingsService.getUserSettingsByUserId(image.getUploader().getId()).map(UserSettings::getEmbedSettings).orElse(null)
         );

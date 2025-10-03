@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -39,6 +41,7 @@ public class Url implements ApiResource {
     private LocalDateTime expiresAt;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User createdBy;
 
     public User getUploader() {

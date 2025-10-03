@@ -7,6 +7,8 @@ import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -45,7 +47,11 @@ public class Image implements ApiResource {
 
     @Column(nullable = false)
     @ColumnDefault("true")
-    private Boolean isPublic;
+    private boolean isPublic;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean poster;
 
     @Column(nullable = false)
     @Comment("R2=0,LOCAL=1,UNKNOWN=2")
@@ -53,5 +59,6 @@ public class Image implements ApiResource {
 
     @ManyToOne
     @JoinColumn(nullable = true, name = "uploader_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User uploader;
 }

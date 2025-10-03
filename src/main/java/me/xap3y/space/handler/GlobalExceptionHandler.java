@@ -6,7 +6,9 @@ import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.PrometheusMetricService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -56,7 +58,10 @@ public class GlobalExceptionHandler {
         log.error("Exception: ", ex);
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
-        return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        HttpHeaders errorHeaders = new HttpHeaders();
+        errorHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+        return new ResponseEntity<>(defaultResponse, errorHeaders, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler({FileNotFoundException.class, ResourceNotFoundException.class, NoResourceFoundException.class})

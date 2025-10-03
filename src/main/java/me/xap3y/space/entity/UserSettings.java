@@ -6,6 +6,8 @@ import me.xap3y.space.converter.UserUrlPreferenceConverter;
 import me.xap3y.space.converter.UserWebhookSettingsConverter;
 import me.xap3y.space.model.UserUrlPreferenceSettings;
 import me.xap3y.space.model.UserWebhookSettings;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "user_settings")
@@ -18,6 +20,7 @@ public class UserSettings {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User userId;
 
     @Column(name = "embed_settings", nullable = false)

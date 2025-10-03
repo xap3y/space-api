@@ -11,6 +11,8 @@ import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.util.Utils;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -47,6 +49,7 @@ public class User {
 
     @ManyToOne
     @JoinColumn(unique = true, nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private ApiKey apiKey;
 
     @Column(nullable = true)
@@ -57,6 +60,7 @@ public class User {
     private LocalDateTime createdAt;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private User invitedBy;
 
     /*@ManyToOne

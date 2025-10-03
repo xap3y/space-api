@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -49,6 +51,7 @@ public class Paste implements ApiResource {
     private boolean isPublic;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User createdBy;
 
     public User getUploader() {

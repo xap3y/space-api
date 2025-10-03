@@ -1,7 +1,6 @@
 package me.xap3y.space.filter;
 
 import jakarta.servlet.*;
-import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import me.xap3y.space.api.enums.MetricRecordType;
@@ -9,13 +8,10 @@ import me.xap3y.space.api.wrapper.StatusCaptureResponseWrapper;
 import me.xap3y.space.dto.LogDto;
 import me.xap3y.space.service.LogsService;
 import me.xap3y.space.service.PrometheusMetricService;
-import me.xap3y.space.service.WebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 
 @Component
@@ -45,7 +41,6 @@ public class RequestFilter implements Filter {
             remoteIp = forwardedFor.split(",")[0];
         }
 
-
         if (userAgent == null) {
             userAgent = "curl";
         }
@@ -63,16 +58,20 @@ public class RequestFilter implements Filter {
         String path = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
 
-        prometheusMetricService.recordEvent(MetricRecordType.REQUEST_MADE);
+        if (!path.equals("/actuator/prometheus") && !path.equals("/favicon.ico")) {
+            prometheusMetricService.recordEvent(MetricRecordType.REQUEST_MADE);
+        }
 
         if (userAgent.startsWith("HetrixTools") || userAgent.startsWith("Uptime-")) {
+            log.info("Ping from Uptime.");
             return;
         }
 
         logsService.logFile(" --- [space] RequestFilter   : [" + method +"] REQ FROM: " + remoteIp + ", TO " + path);
-        logsService.log(new LogDto(remoteIp, userAgent, path, method, "???"));
 
         int resultHttpCode = responseWrapper.getStatus();
+
+        logsService.log(new LogDto(remoteIp, userAgent, path, method, resultHttpCode + ""));
 
         log.info("[{}] Request from: {}, to {} ({})", method, remoteIp, path, resultHttpCode);
         //webhookService.postMessage("Request from: " + remoteIp + ", to " + path + " (" + method + ")");

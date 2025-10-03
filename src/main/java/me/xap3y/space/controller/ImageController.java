@@ -24,6 +24,7 @@ import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.MetricService;
 import me.xap3y.space.service.TelegramService;
 import me.xap3y.space.service.WebhookService;
+import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.Utils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -365,7 +366,7 @@ public class ImageController {
         }
         else if (image.getPassword() != null && !passwordEncoder.matches(image.getPassword(), body.getPassword())) {
             throw new BadCredentialsException("Invalid password");
-        } else if (!image.getIsPublic() && (uploader == null || !Objects.equals(image.getUploader().getId(), uploader.getId()))) {
+        } else if (!image.isPublic() && (uploader == null || !Objects.equals(image.getUploader().getId(), uploader.getId()))) {
             throw new ResourceVisibilityException();
         } else if (image.getExpirationTime() != null && LocalDateTime.now().isAfter(image.getExpirationTime())) {
             throw new ResourceExpiredException();
@@ -391,7 +392,7 @@ public class ImageController {
                     "image/heic"
             }
     )
-    public ResponseEntity<?> getImageBase64(
+    public ResponseEntity<?> getImageStream(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
             @RequestParam(required = false, defaultValue = "false", value = "download") boolean download,
@@ -493,6 +494,44 @@ public class ImageController {
     }
 
     @GetMapping(
+            value = "/get/poster/{uniqueId}",
+            produces = {
+                    MediaType.APPLICATION_OCTET_STREAM_VALUE,
+            }
+    )
+    public ResponseEntity<?> getImagePoster(
+            @PathVariable String uniqueId
+    ) {
+        HttpHeaders headers = new HttpHeaders();
+        String posterDirString = ConfigDb.getIMAGE_DIR() + "poster/";
+        Path posterPath = Path.of(posterDirString + uniqueId.toUpperCase() + ".jpg");
+
+        if (!Files.exists(posterPath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String mimeType;
+        try {
+            mimeType = Files.probeContentType(posterPath);
+        } catch (IOException e) {
+            mimeType = "application/octet-stream";
+        }
+
+        headers.setContentType(MediaType.parseMediaType(mimeType != null ? mimeType : "application/octet-stream"));
+        headers.setContentLength(posterPath.toFile().length());
+        headers.set(HttpHeaders.CACHE_CONTROL, CacheControl.maxAge(Duration.ofHours(12)).getHeaderValue());
+
+        InputStreamResource fileResource;
+        try {
+            fileResource = new InputStreamResource(Files.newInputStream(posterPath));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to read poster image");
+        }
+
+        return new ResponseEntity<>(fileResource, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(
             value = "/get/video/{uniqueId}",
             produces = {
                     MediaType.APPLICATION_JSON_VALUE,
@@ -508,7 +547,9 @@ public class ImageController {
                     "video/webm",
                     "video/quicktime"
             }
-    ) public ResponseEntity<StreamingResponseBody> getVideo(
+    )
+    @SneakyThrows
+    public ResponseEntity<StreamingResponseBody> getVideo(
             @PathVariable String uniqueId,
             @RequestHeader(value = "Range", required = false) String rangeHeader,
             HttpServletRequest request
@@ -524,7 +565,8 @@ public class ImageController {
         }
 
         if (!Files.exists(image.path())) {
-            return ResponseEntity.notFound().build();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            return new ResponseEntity<>(headers, HttpStatus.NOT_FOUND);
         }
 
         long fileLength = Files.size(image.path());
@@ -567,19 +609,23 @@ public class ImageController {
             headers.setContentType(
                     MediaType.parseMediaType("multipart/byteranges; boundary=" + boundary));
 
+
             StreamingResponseBody stream = outputStream -> {
-                for (Range r : ranges) {
-                    // Boundary
-                    outputStream.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    // Part headers
-                    outputStream.write(("Content-Type: " + mimeType + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    outputStream.write(("Content-Range: bytes " + r.start + "-" + r.end + "/" + fileLength + "\r\n\r\n")
-                            .getBytes(StandardCharsets.UTF_8));
-                    streamRange(image.path(), r.start, r.end, outputStream);
-                    outputStream.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                try {
+                    for (Range r : ranges) {
+                        outputStream.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        outputStream.write(("Content-Type: " + mimeType + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        outputStream.write(("Content-Range: bytes " + r.start + "-" + r.end + "/" + fileLength + "\r\n\r\n")
+                                .getBytes(StandardCharsets.UTF_8));
+                        streamRange(image.path(), r.start, r.end, outputStream);
+                        outputStream.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
+                    outputStream.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    log.error("Error streaming video ranges: 00");
                 }
-                outputStream.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
             };
+
 
             return new ResponseEntity<>(stream, headers, HttpStatus.PARTIAL_CONTENT);
         }
@@ -654,9 +700,16 @@ public class ImageController {
             while (toRead > 0) {
                 int len = raf.read(buf, 0, (int)Math.min(buf.length, toRead));
                 if (len == -1) break;
-                out.write(buf, 0, len);
+                try {
+                    out.write(buf, 0, len);
+                } catch (IOException e) {
+                    log.warn("Client disconnected during streaming: {}", e.getMessage());
+                    break;
+                }
                 toRead -= len;
             }
+        } catch (IOException e) {
+            // IGNORE
         }
     }
 

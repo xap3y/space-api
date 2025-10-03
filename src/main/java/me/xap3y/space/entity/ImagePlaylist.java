@@ -34,6 +34,7 @@ public class ImagePlaylist {
 
     @ManyToOne
     @JoinColumn(nullable = true, name = "uploader_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User uploader;
 
     @ManyToMany
