@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.enums.MetricRecordType;
+import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.ImageInfoDto;
@@ -16,6 +17,7 @@ import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.DngConverter;
 import me.xap3y.space.util.ImageCompressor;
 import me.xap3y.space.util.Utils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -59,6 +61,22 @@ public class ImageService {
         this.prometheusMetricService = prometheusMetricService;
     }
 
+    public void deleteImageFileAsync(Image image) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType().toLowerCase(Locale.ROOT));
+                Files.deleteIfExists(filePath);
+
+                if (!image.isPoster()) return;
+
+                Path posterPath = Paths.get(ConfigDb.getIMAGE_DIR(), "poster/" + image.getUniqueId() + ".jpg");
+                Files.deleteIfExists(posterPath);
+            } catch (Exception e) {
+                log.error("Failed to delete image file: {}", image.getUniqueId(), e);
+            }
+        });
+    }
+
     public boolean deleteImageFile(String fileName) {
         try {
             Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), fileName);
@@ -70,11 +88,11 @@ public class ImageService {
     }
 
     public Image saveImage(MultipartFile file, User uploader) throws IOException, RuntimeException {
-        return saveImage(file, uploader, null, null, true, null);
+        return saveImage(file, uploader, null, null, true, null, ResourceSourceType.API);
     }
 
     // register image UID into DB
-    public Image registerImage(User uploader, String uniqueId, String password, boolean isPublic, String description, String fileType, Long size, ImageLocation location) throws IOException, RuntimeException {
+    public Image registerImage(User uploader, String uniqueId, String password, boolean isPublic, String description, String fileType, Long size, ImageLocation location, ResourceSourceType source) throws IOException, RuntimeException {
 
         if (uniqueId == null) {
             uniqueId = Utils.generateRandomId();
@@ -83,6 +101,7 @@ public class ImageService {
         }
 
         Image imageDto = new Image();
+        imageDto.setSource(source);
         imageDto.setUniqueId(uniqueId);
         imageDto.setPublic(isPublic);
         imageDto.setPassword(password);
@@ -98,7 +117,7 @@ public class ImageService {
         return imageRepository.save(imageDto);
     }
 
-    public Image saveImageFromUrl(String url, User uploader) {
+    public Image saveImageFromUrl(String url, User uploader, ResourceSourceType type) {
         String uniqueId = Utils.generateRandomId();
         String fileExtension = url.substring(url.lastIndexOf(".") + 1).toLowerCase();
 
@@ -108,7 +127,7 @@ public class ImageService {
         try (InputStream in = new URL(url).openStream()) {
             Files.copy(in, imageFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             log.info("Image downloaded from URL: {}", url);
-            return registerImage(uploader, uniqueId, null, true, null, fileExtension, imageFile.length(), ImageLocation.LOCAL);
+            return registerImage(uploader, uniqueId, null, true, null, fileExtension, imageFile.length(), ImageLocation.LOCAL, type);
         } catch (Exception e) {
             log.error("Failed to download image from URL: {}", url, e);
             throw new RuntimeException("Failed to download image from URL");
@@ -116,7 +135,15 @@ public class ImageService {
     }
 
     @SneakyThrows
-    public Image saveImage(MultipartFile file, User uploader, String uniqueId, String password, boolean isPublic, String description) throws IOException, RuntimeException {
+    public Image saveImage(
+            @NotNull MultipartFile file,
+            @NotNull User uploader,
+            @org.jetbrains.annotations.Nullable String uniqueId,
+            @org.jetbrains.annotations.Nullable String password,
+            boolean isPublic,
+            @org.jetbrains.annotations.Nullable String description,
+            @NotNull ResourceSourceType sourceType
+    ) throws IOException, RuntimeException {
 
         if (uniqueId == null) {
             uniqueId = Utils.generateRandomId();
@@ -231,6 +258,7 @@ public class ImageService {
 
         log.info("Saving image with file name: {}", fileNameWithExtension);
         Image imageDto = new Image();
+        imageDto.setSource(sourceType);
         imageDto.setUniqueId(uniqueId);
         imageDto.setLocation(ImageLocation.LOCAL);
         imageDto.setPublic(isPublic);
@@ -480,6 +508,7 @@ public class ImageService {
             safeDelete(poster);
             throw new IOException("Poster generation failed for: " + videoFile.getName());
         }
+        prometheusMetricService.recordEvent(MetricRecordType.VIDEO_POSTER_GENERATED);
         return true;
     }
 

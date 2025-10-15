@@ -49,7 +49,7 @@ public class User {
 
     @ManyToOne
     @JoinColumn(unique = true, nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private ApiKey apiKey;
 
     @Column(nullable = true)

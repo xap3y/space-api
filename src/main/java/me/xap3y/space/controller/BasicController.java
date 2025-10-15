@@ -153,6 +153,14 @@ public class BasicController {
     }
 
     @GetMapping(
+            value = "/error",
+            produces = "application/json"
+    )
+    public ResponseEntity<?> error() {
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping(
             value = "/metrics",
             produces = "application/json"
     )

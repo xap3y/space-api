@@ -50,6 +50,7 @@ public class UserService {
 
     public void deleteById(Long uid) {
         userRepository.deleteById(uid);
+        prometheusMetricService.recordEvent(MetricRecordType.USER_DELETED);
     }
 
     public User registerUser(AuthRegisterRequest req) {

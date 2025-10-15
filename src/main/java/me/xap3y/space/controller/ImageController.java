@@ -5,6 +5,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ArchiveType;
 import me.xap3y.space.api.enums.ImageLocation;
+import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.RequiresApiKey;
@@ -20,10 +21,7 @@ import me.xap3y.space.model.request.ImageGetRequest;
 import me.xap3y.space.model.request.StatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
-import me.xap3y.space.service.ImageService;
-import me.xap3y.space.service.MetricService;
-import me.xap3y.space.service.TelegramService;
-import me.xap3y.space.service.WebhookService;
+import me.xap3y.space.service.*;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.Utils;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,8 +67,9 @@ public class ImageController {
     private final ImageMapper imageMapper;
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
+    private final PrometheusMetricService prometheusMetricService;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
@@ -80,6 +79,7 @@ public class ImageController {
         this.imageMapper = imageMapper;
         this.s3Client = s3Client;
         this.s3Presigner = s3Presigner;
+        this.prometheusMetricService = prometheusMetricService;
     }
 
     @Value("${cloud.aws.s3.bucket}")
@@ -135,7 +135,8 @@ public class ImageController {
             @RequestParam(value = "size", required = false) Long size,
             @RequestParam(value = "private", required = false) Boolean isPrivate,
             @RequestParam(value = "password", required = false) String password,
-            @RequestParam(value = "desc", required = false) String description
+            @RequestParam(value = "desc", required = false) String description,
+            @RequestParam(value = "source", required = false) ResourceSourceType source
     ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) throw new InvalidApiKeyException();
@@ -144,13 +145,15 @@ public class ImageController {
             return new ResponseEntity<>(new DefaultResponse(true, "Unique ID is required"), HttpStatus.BAD_REQUEST);
         }
 
+        if (source == null) source = ResourceSourceType.API;
+
         boolean isPublic = isPrivate == null || !isPrivate;
         String pass = (password == null) ? null : passwordEncoder.encode(password);
 
         log.info("Size is {}", size);
 
         try {
-            Image savedImage = imageService.registerImage(uploader, uniqueId, pass, isPublic, description, fileType, size, ImageLocation.R2);
+            Image savedImage = imageService.registerImage(uploader, uniqueId, pass, isPublic, description, fileType, size, ImageLocation.R2, source);
 
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
@@ -169,9 +172,12 @@ public class ImageController {
             @RequestParam(value = "uniqueId", required = false) String uniqueId,
             @RequestParam(value = "private", required = false) Boolean isPrivate,
             @RequestParam(value = "password", required = false) String password,
-            @RequestParam(value = "desc", required = false) String description
+            @RequestParam(value = "desc", required = false) String description,
+            @RequestParam(value = "source", required = false) ResourceSourceType source
     ) throws IOException {
         User uploader = (User) request.getAttribute("uploader");
+
+        if (source == null) source = ResourceSourceType.API;
 
         if (file.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
 
@@ -190,7 +196,7 @@ public class ImageController {
                 )
         );
 
-        Image savedImage = imageService.registerImage(uploader, key, password, isPrivate == null || !isPrivate, description, fileExtension[fileExtension.length - 1], file.getSize(), ImageLocation.R2);
+        Image savedImage = imageService.registerImage(uploader, key, password, isPrivate == null || !isPrivate, description, fileExtension[fileExtension.length - 1], file.getSize(), ImageLocation.R2, source);
 
         ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
@@ -219,7 +225,7 @@ public class ImageController {
                 .putObjectRequest(putObjectRequest)
         );
 
-        Image savedImage = imageService.registerImage(uploader, key, null, true, null, "png", 0L, ImageLocation.UNKNOWN);
+        Image savedImage = imageService.registerImage(uploader, key, null, true, null, "png", 0L, ImageLocation.UNKNOWN, ResourceSourceType.UNKNOWN);
 
         return Map.of(
                 "uid", key,
@@ -236,10 +242,13 @@ public class ImageController {
             @RequestParam(value = "uniqueId", required = false) String uniqueId,
             @RequestParam(value = "private", required = false) Boolean isPrivate,
             @RequestParam(value = "password", required = false) String password,
-            @RequestParam(value = "desc", required = false) String description
+            @RequestParam(value = "desc", required = false) String description,
+            @RequestParam(value = "source", required = false) ResourceSourceType source
     ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) throw new InvalidApiKeyException();
+
+        if (source == null) source = ResourceSourceType.API;
 
         if (file.isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
@@ -267,7 +276,7 @@ public class ImageController {
         String pass = (password == null) ? null : passwordEncoder.encode(password);
 
         try {
-            Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description);
+            Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description, source);
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
             /*String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             Map<String, Object> data = new HashMap<>() {{
@@ -315,7 +324,7 @@ public class ImageController {
             throw new InvalidApiKeyException();
         }
 
-        boolean deleted = imageService.deleteImageFile(uniqueId + "." + image.getFileType().toLowerCase(Locale.ROOT));
+        imageService.deleteImageFileAsync(image);
         /*if (!deleted) {
             throw new InternalServerException("Falied to delete image file");
         }*/
@@ -339,6 +348,8 @@ public class ImageController {
 
         Image image = imageService.getImage(uniqueId);
         ImageInfoDto imageInfoDto = imageMapper.apply(image);
+
+        prometheusMetricService.recordImageView(uniqueId, "INFO");
 
         return ResponseEntity.ok()
                 .body(new UIDResponse(false, uniqueId, imageInfoDto));
@@ -396,6 +407,7 @@ public class ImageController {
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
             @RequestParam(required = false, defaultValue = "false", value = "download") boolean download,
+            @RequestParam(required = false, defaultValue = "false", value = "password") String password1,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData,
             @RequestParam(required = false, defaultValue = "false", value = "image_info") boolean imageInfo,
             @RequestParam(required = false, defaultValue = "false", value = "info") boolean onlyInfo,
@@ -422,7 +434,8 @@ public class ImageController {
 
         if (
                 (image.password() != null || !image.isPublic()) && (uploader == null || !Objects.equals(image.uploader().getId(), uploader.getId()))
-                        && !(password != null && image.password() != null && passwordEncoder.matches(password, image.password())) // TODO - PasswordEncoder
+                        && !(password != null && image.password() != null && passwordEncoder.matches(password, image.password()))
+                        && !(password1 != null && image.password() != null && passwordEncoder.matches(password1, image.password()))
                         && !(apiKey != null && Objects.equals(image.uploader().getApiKey().getKeyCode(), apiKey))
         ) {
             throw new ResourceVisibilityException("Insufficient permissions to view this resource");
@@ -430,6 +443,8 @@ public class ImageController {
         else if (image.expiresAt() != null && LocalDateTime.now().isAfter(image.expiresAt())) {
             throw new ResourceExpiredException();
         }
+
+        prometheusMetricService.recordImageView(uniqueId);
 
         if (download) {
             Resource resource = new FileSystemResource(image.path());
@@ -595,6 +610,8 @@ public class ImageController {
                 streamRange(image.path(), 0, fileLength - 1, outputStream);
             };
 
+            prometheusMetricService.recordImageView(uniqueId, "VIDEO");
+
             return new ResponseEntity<>(stream, headers, HttpStatus.OK);
         }
 
@@ -626,7 +643,7 @@ public class ImageController {
                 }
             };
 
-
+            prometheusMetricService.recordImageView(uniqueId, "VIDEO");
             return new ResponseEntity<>(stream, headers, HttpStatus.PARTIAL_CONTENT);
         }
 
@@ -639,6 +656,8 @@ public class ImageController {
         StreamingResponseBody stream = outputStream -> {
             streamRange(image.path(), r.start, r.end, outputStream);
         };
+
+        prometheusMetricService.recordImageView(uniqueId, "VIDEO");
 
         return new ResponseEntity<>(stream, headers, HttpStatus.PARTIAL_CONTENT);
     }

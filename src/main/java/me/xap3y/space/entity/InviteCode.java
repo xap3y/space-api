@@ -38,6 +38,7 @@ public class InviteCode {
     private User createdBy;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User usedBy;
 
     public InviteCode(String code) {

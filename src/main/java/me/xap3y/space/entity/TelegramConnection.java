@@ -32,6 +32,7 @@ public class TelegramConnection {
 
     @ManyToOne
     @JoinColumn(name = "email_verify_code_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private EmailVerifyCodes emailVerifyCode;
 
     @Column(nullable = true)

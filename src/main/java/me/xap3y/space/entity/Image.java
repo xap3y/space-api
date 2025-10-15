@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import me.xap3y.space.api.enums.ImageLocation;
+import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.iface.ApiResource;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
@@ -56,6 +57,10 @@ public class Image implements ApiResource {
     @Column(nullable = false)
     @Comment("R2=0,LOCAL=1,UNKNOWN=2")
     private ImageLocation location;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private ResourceSourceType source;
 
     @ManyToOne
     @JoinColumn(nullable = true, name = "uploader_id")

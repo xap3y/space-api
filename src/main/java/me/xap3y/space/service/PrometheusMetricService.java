@@ -7,13 +7,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class PrometheusMetricService {
 
     private final Map<MetricRecordType, Counter> counters = new EnumMap<>(MetricRecordType.class);
+    private final Map<String, Counter> imageViewCounters = new ConcurrentHashMap<>();
+
+    private final MeterRegistry meterRegistry;
 
     public PrometheusMetricService(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
         for (MetricRecordType type : MetricRecordType.values()) {
             counters.put(type, Counter.builder("app_events_total")
                     .tag("type", type.name().toLowerCase())
@@ -30,5 +35,19 @@ public class PrometheusMetricService {
         Map<MetricRecordType, Double> result = new EnumMap<>(MetricRecordType.class);
         counters.forEach((k, v) -> result.put(k, v.count()));
         return result;
+    }
+
+    public void recordImageView(String uniqueId) {
+        recordImageView(uniqueId, "GET");
+    }
+
+    public void recordImageView(String uniqueId, String type) {
+        imageViewCounters
+                .computeIfAbsent(uniqueId, id -> Counter.builder("spring_image_stats")
+                        .tag("application", "space")
+                        .tag("method", type)
+                        .tag("uniqueId", id)
+                        .register(meterRegistry))
+                .increment();
     }
 }

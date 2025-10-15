@@ -1,6 +1,7 @@
 package me.xap3y.space.util;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageInfoDto;
@@ -273,7 +274,7 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         String fileUrl = "https://api.telegram.org/file/bot" + serverInfo.getTelegramVerifyBotToken() + "/" + filePath;
         log.info("Telegram Download URL: {}", fileUrl);
 
-        return imageService.saveImageFromUrl(fileUrl, user);
+        return imageService.saveImageFromUrl(fileUrl, user, ResourceSourceType.TELEGRAM);
     }
 
 }

@@ -45,9 +45,11 @@ public class RequestFilter implements Filter {
             userAgent = "curl";
         }
 
+        String path = httpRequest.getRequestURI();
+
         log.info("[{}] Request from: {}, User-Agent: {}", httpRequest.getMethod(), remoteIp, userAgent);
 
-        if (userAgent.contains("curl") || userAgent.contains("wget") || userAgent.contains("Custom-")) {
+        if ((userAgent.contains("curl") || userAgent.contains("wget") || userAgent.contains("Custom-")) && !path.contains("/actuator/prometheus")) {
             servletResponse.setContentType("application/json");
             servletResponse.getWriter().write("{\"error\": \"You are in blacklist!\"}");
             return;
@@ -55,7 +57,6 @@ public class RequestFilter implements Filter {
 
         filterChain.doFilter(servletRequest, responseWrapper);
 
-        String path = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
 
         if (!path.equals("/actuator/prometheus") && !path.equals("/favicon.ico")) {

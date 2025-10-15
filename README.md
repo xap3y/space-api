@@ -30,3 +30,8 @@ API for an image/file hosting service, pastebin host, temp email and URL shorten
 - [OpenTelemetry Instrumentation for Java](https://github.com/open-telemetry/opentelemetry-java-instrumentation) (optional)
 - [Prometheus](https://prometheus.io/) (for metrics, optional)
 - [Grafana](https://grafana.com/) (for metrics, optional)
+<br>
+
+#### It took me
+
+[![wakatime](https://wakatime.com/badge/user/018ed1c7-6d42-4752-b478-df3c0e773732/project/b017fb88-4a6f-41df-98d5-d08fa87d7678.svg)](https://wakatime.com/badge/user/018ed1c7-6d42-4752-b478-df3c0e773732/project/b017fb88-4a6f-41df-98d5-d08fa87d7678)

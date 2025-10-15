@@ -18,6 +18,7 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.thymeleaf.exceptions.TemplateInputException;
 
 import java.io.FileNotFoundException;
 import java.time.LocalDateTime;
@@ -55,6 +56,7 @@ public class GlobalExceptionHandler {
             Exception ex
     ) {
         prometheusMetricService.recordEvent(MetricRecordType.ERROR_OCCURRED);
+        prometheusMetricService.recordEvent(MetricRecordType.EXCEPTION_CAUGHT);
         log.error("Exception: ", ex);
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
@@ -77,6 +79,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleInvalidApiKeyException(
             RuntimeException ex
     ) {
+        prometheusMetricService.recordEvent(MetricRecordType.EXCEPTION_CAUGHT);
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.BAD_REQUEST);

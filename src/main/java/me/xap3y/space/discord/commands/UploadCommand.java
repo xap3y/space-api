@@ -9,6 +9,7 @@ import discord4j.core.object.entity.Attachment;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
 import me.xap3y.space.api.enums.ArchiveType;
+import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.discord.Emoji;
 import me.xap3y.space.dto.FoundImageDto;
@@ -128,7 +129,7 @@ public class UploadCommand implements SlashCommand{
         }
 
         try {
-            Image savedImage = imageService.saveImage(multipartFile, user, null, null, true, null);
+            Image savedImage = imageService.saveImage(multipartFile, user, null, null, true, null, ResourceSourceType.DISCORD);
 
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
