@@ -149,16 +149,19 @@ public class PasteController {
 
         try {
             PasteDto savedPasteDto = pasteService.savePaste(content, uploader);
+            //log.info("GOT DTO");
             String url2 = serverInfo.getBaseUrl() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
             String webViewUrl = serverInfo.getBaseUrl() + "/web/paste-render/" + savedPasteDto.uniqueId();
             Map<String, String> additionalJson = new HashMap<>() {{
                 put("message", url2);
                 put("webview", webViewUrl);
             }};
+            //log.info("RETURNING");
             metricService.setDatabaseUpdated(true);
             metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
             return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), additionalJson), HttpStatus.OK);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

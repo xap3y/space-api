@@ -9,13 +9,16 @@ import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.EmailVerifyCodeExpired;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.iface.OptionalApiKey;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.dto.SessionDto;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.entity.EmailVerifyCodes;
-import me.xap3y.space.entity.Sessions;
+import me.xap3y.space.entity.Session;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.mapper.SessionMapper;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.request.AuthLoginRequest;
 import me.xap3y.space.model.request.AuthRegisterRequest;
@@ -28,9 +31,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -50,8 +55,9 @@ public class AuthController {
     private final EmailVerifyCodeService emailVerifyCodeService;
     private final LogsService logsService;
     private final PrometheusMetricService prometheusMetricService;
+    private final SessionMapper sessionMapper;
 
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService) {
+    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionMapper sessionMapper) {
         this.userService = userService;
         this.inviteCodeService = inviteCodeService;
         this.passwordEncoder = passwordEncoder;
@@ -63,6 +69,7 @@ public class AuthController {
         this.emailVerifyCodeService = emailVerifyCodeService;
         this.logsService = logsService;
         this.prometheusMetricService = prometheusMetricService;
+        this.sessionMapper = sessionMapper;
     }
 
     @GetMapping("/me")
@@ -70,12 +77,35 @@ public class AuthController {
         if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Sessions session = sessionService.getSession(token);
+        Session session = sessionService.getSession(token);
         if (session == null || !session.getIsValid()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        UserDto user = userMapper.apply(session.getUserId());
+        UserDto user = userMapper.apply(session.getUser());
         return ResponseEntity.ok(new DefaultResponse(false, user));
+    }
+
+    @GetMapping("/me/sessions")
+    @OptionalApiKey
+    public ResponseEntity<?> getCurrentUserSessions(
+            HttpServletRequest request,
+            @CookieValue(value = "session_token", required = false) String token
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null && token == null) throw new InvalidApiKeyException();
+
+
+        if (token != null && uploader == null) {
+            Session session = sessionService.getSession(token);
+            if (session == null || !session.getIsValid()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            uploader = session.getUser();
+        }
+
+        List<SessionDto> sessionDtoList = sessionService.getSessions(uploader.getId()).stream().map(sessionMapper).toList();
+
+        return ResponseEntity.ok(new DefaultResponse(false, sessionDtoList));
     }
 
     @GetMapping("/validate")
@@ -357,18 +387,18 @@ public class AuthController {
             return new ResponseEntity<>(new DefaultResponse(true, "Invalid email address"), HttpStatus.BAD_REQUEST);
         } else if (!isUsernameValid(registerRequest.getUsername())) {
             return new ResponseEntity<>(new DefaultResponse(true, "You can't have this username!"), HttpStatus.BAD_REQUEST);
-        } else if (userService.existsByUsername(registerRequest.getUsername())) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Username is taken!"), HttpStatus.BAD_REQUEST);
-        } else if (userService.existsByEmail(registerRequest.getEmail())) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Email already in use!"), HttpStatus.BAD_REQUEST);
-        } else if (!inviteCodeService.isValidInviteCode(registerRequest.getInviteCode())) {
-            return new ResponseEntity<>(new DefaultResponse(true, "Invalid invite code"), HttpStatus.BAD_REQUEST);
         } else if (registerRequest.getUsername().contains(registerRequest.getEmail())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Username can't contain your email!"), HttpStatus.BAD_REQUEST);
         } else if (registerRequest.getUsername().contains(registerRequest.getPassword())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Username can't contain your password!"), HttpStatus.BAD_REQUEST);
         } else if (registerRequest.getEmail().equals(registerRequest.getPassword())) {
             return new ResponseEntity<>(new DefaultResponse(true, "Email and password can't be the same!"), HttpStatus.BAD_REQUEST);
+        } else if (!inviteCodeService.isValidInviteCode(registerRequest.getInviteCode())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Invalid invite code"), HttpStatus.BAD_REQUEST);
+        } else if (userService.existsByUsername(registerRequest.getUsername())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Username is taken!"), HttpStatus.BAD_REQUEST);
+        } else if (userService.existsByEmail(registerRequest.getEmail())) {
+            return new ResponseEntity<>(new DefaultResponse(true, "This email is already taken!"), HttpStatus.BAD_REQUEST);
         }
 
         User regiseredUser;

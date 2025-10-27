@@ -21,9 +21,7 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
     private final ServerInfo serverInfo;
     private final UserSettingsService userSettingsService;
 
-    @Override
-    public UrlSetDto apply(ApiResource resource) {
-
+    public UrlSetDto apply(ApiResource resource, Long userId) {
         String webUrl = null;
         String rawUrl = null;
         String portalUrl = null;
@@ -35,7 +33,7 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
 
         UrlSetPreference preference = null;
 
-        UserSettings userSettings = userSettingsService.getUserSettingsByUserId(resource.getUploader().getId()).orElse(null);
+        UserSettings userSettings = userSettingsService.getUserSettingsByUserId(userId).orElse(null);
 
         switch (resource) {
             case Image img -> {
@@ -96,5 +94,10 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
                 userUrl,
                 posterUrl
         );
+    }
+
+    @Override
+    public UrlSetDto apply(ApiResource resource) {
+        return apply(resource, resource.getUploader().getId());
     }
 }

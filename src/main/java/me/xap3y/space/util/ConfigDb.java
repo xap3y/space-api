@@ -21,6 +21,15 @@ public class ConfigDb {
 
     public static final String[] SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".svg", ".heif", ".heic", ".mp4", ".webm", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".mp3", ".wav", ".ogg", ".aac", ".flac"};
 
+    public static boolean isImage(String filename) {
+        String lowerCaseFilename = filename.toLowerCase();
+        for (String ext : SUPPORTED_EXTENSIONS) {
+            if (lowerCaseFilename.endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Getter
     private final static Map<String, String> redirectMapper = new HashMap<>() {{

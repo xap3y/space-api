@@ -130,6 +130,33 @@ public class EmailController {
         return ResponseEntity.ok("ok");
     }
 
+    @GetMapping(
+            value = "/getinfo",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.TEXT_PLAIN_VALUE
+            }
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getTempMailInfo(
+            @RequestParam("email") String email
+    ) {
+        TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
+
+        if (tempMail == null) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Temp mail not found"), HttpStatus.NOT_FOUND);
+        }
+
+        Map<String, String> res = Map.of(
+                "email", tempMail.getEmail(),
+                "createdAt", tempMail.getCreatedAt().toString(),
+                "createdBy", tempMail.getCreatedBy().getUsername(),
+                "expireAt", tempMail.getExpireAt() != null ? tempMail.getExpireAt().toString() : "never"
+        );
+
+        return new ResponseEntity<>(new DefaultResponse(false, res), HttpStatus.OK);
+    }
+
     @PostMapping(
             value = "/create",
             produces = {

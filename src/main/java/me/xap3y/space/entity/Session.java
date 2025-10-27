@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "sessions")
 @Data
-public class Sessions {
+public class Session {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,7 +23,7 @@ public class Sessions {
     @JoinColumn(nullable = false)
     @ManyToOne(targetEntity = User.class, fetch = FetchType.EAGER)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private User userId;
+    private User user;
 
     @Column(nullable = false)
     @ColumnDefault("CURRENT_TIMESTAMP")
@@ -46,9 +46,9 @@ public class Sessions {
     @Column(nullable = false)
     private String ipAddress;
 
-    public Sessions(String token, User user, String userAgent, String ipAddress, LocalDateTime expiresAt) {
+    public Session(String token, User user, String userAgent, String ipAddress, LocalDateTime expiresAt) {
         this.token = token;
-        this.userId = user;
+        this.user = user;
         this.userAgent = userAgent;
         this.ipAddress = ipAddress;
         this.createdAt = LocalDateTime.now();
@@ -57,7 +57,7 @@ public class Sessions {
         this.isValid = true;
     }
 
-    public Sessions() {
+    public Session() {
         this.createdAt = LocalDateTime.now();
         this.expiresAt = LocalDateTime.now().plusDays(7);
         this.lastUsedAt = null;

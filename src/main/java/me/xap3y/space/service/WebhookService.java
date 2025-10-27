@@ -5,7 +5,7 @@ import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.*;
 import me.xap3y.space.entity.Image;
-import me.xap3y.space.entity.Sessions;
+import me.xap3y.space.entity.Session;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
@@ -125,11 +125,11 @@ public class WebhookService {
         }
     }
 
-    public void postSessionInit(Sessions session) {
-        postMessage("> [SESSION-INIT] U: [" + session.getUserId().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUserId().getUsername() + ") F: **" + session.getIpAddress() + "** A: **" + session.getUserAgent() + "**");
+    public void postSessionInit(Session session) {
+        postMessage("> [SESSION-INIT] U: [" + session.getUser().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUser().getUsername() + ") F: **" + session.getIpAddress() + "** A: **" + session.getUserAgent() + "**");
     }
 
-    public void postSessionInvalid(Sessions session) {
-        postMessage("> [SESSION-INVALIDATED] U: [" + session.getUserId().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUserId().getUsername() + ") -ID: **" + session.getId() + "**  -F: **" + session.getIpAddress() + "** -A: **" + session.getUserAgent() + "**");
+    public void postSessionInvalid(Session session) {
+        postMessage("> [SESSION-INVALIDATED] U: [" + session.getUser().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUser().getUsername() + ") -ID: **" + session.getId() + "**  -F: **" + session.getIpAddress() + "** -A: **" + session.getUserAgent() + "**");
     }
 }

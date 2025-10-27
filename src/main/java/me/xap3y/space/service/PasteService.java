@@ -59,17 +59,19 @@ public class PasteService {
     }
 
     public PasteDto savePaste(String title, String text, User uploader) throws IllegalArgumentException, OptimisticLockingFailureException {
-        log.info("DECODING TEXT: {}", text);
+        log.info("ENCODING TEXT: {}", text);
         //byte[] encodedText =  huffmanEncoder.encode(text);
-        String encodedText =  huffmanEncoder.encode(text);
-        log.info("DECODING TEXT: {}", text);
+        //String encodedText =  huffmanEncoder.encode(text);
+        log.info("ENCODING TEXT: {}", text);
         Paste pasteDto = new Paste();
         pasteDto.setTitle(title);
-        pasteDto.setContent(encodedText);
+        pasteDto.setContent(text);
         pasteDto.setCreatedBy(uploader);
         pasteDto.setPublic(true);
         pasteDto.setCreatedAt(LocalDateTime.now());
         pasteDto.setUniqueId(Utils.generateRandomId());
+
+        log.info("APPLYING MAPPER: {}", pasteDto);
 
         return pasteMapper.apply(pasteRepository.save(pasteDto));
     }

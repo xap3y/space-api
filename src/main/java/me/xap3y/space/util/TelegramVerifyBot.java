@@ -21,12 +21,6 @@ import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 @Slf4j
@@ -78,8 +72,13 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         }
     }
 
+    ///////////////////////
+    ///    MSG HANDLE   ///
+    ///////////////////////
+
     private void handleMessage(Message msg) throws Exception {
-        if (msg.hasPhoto()) {
+        if (msg.hasPhoto() || msg.hasVideo()) {
+            log.info("MEDIA MESSAGE");
             Optional<TelegramConnection> telCon = telegramConnectionService.findByTelegramId(msg.getFrom().getId().toString());
             if (telCon.isEmpty()) {
                 send(msg.getChatId(), "You need to verify your account first. Send /start <token> from the website link, or the 6‑digit code if you already have one.");
@@ -89,14 +88,49 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
                 return;
             }
 
-            log.info("Processing photo message from user: {}", msg.getFrom().getId());
+            log.info("Processing media message from user: {}", msg.getFrom().getId());
 
             User user = telCon.get().getUserId();
-            var photos = msg.getPhoto();
-            var bestPhoto = photos.getLast();
-            Image image = downloadImage(bestPhoto.getFileId(), user);
+            String mediaId;
+            if (msg.hasPhoto()) {
+                var photos = msg.getPhoto();
+                mediaId = photos.getLast().getFileId();
+            } else if (msg.hasVideo()) {
+                mediaId = msg.getVideo().getFileId();
+            } else {
+                send(msg.getChatId(), "No valid photo or video found in the message.");
+                return;
+            }
+
+            Image image = downloadImage(mediaId, user);
             ImageInfoDto imgInfo = imageMapper.apply(image);
-            send(msg.getChatId(), imgInfo.urlSet().portalUrl());
+            send(msg.getChatId(), imgInfo.urlSet().userPreference(), msg.getMessageId());
+            return;
+        } else {
+            //log.info("NO PHOTO MESSAGE");
+            // check if message contains attachments
+            if (msg.hasDocument()) {
+                String name = msg.getDocument().getFileName();
+                if (ConfigDb.isImage(name)) {
+                    // get URL of the doc
+                    Optional<TelegramConnection> telCon = telegramConnectionService.findByTelegramId(msg.getFrom().getId().toString());
+                    if (telCon.isEmpty()) {
+                        send(msg.getChatId(), "You need to verify your account first. Send /start <token> from the website link, or the 6‑digit code if you already have one.");
+                        return;
+                    }
+                    if (telCon.get().getUserId().getStatus() != UserAccountStatus.ACTIVE) {
+                        send(msg.getChatId(), "Your account is not active. Please complete the verification process on the website.");
+                        return;
+                    }
+
+                    log.info("Processing document message from user: {}", msg.getFrom().getId());
+                    User user = telCon.get().getUserId();
+                    Image image = downloadImage(msg.getDocument().getFileId(), user);
+                    ImageInfoDto imgInfo = imageMapper.apply(image);
+                    send(msg.getChatId(), imgInfo.urlSet().portalUrl(), msg.getMessageId());
+                    return;
+                }
+            }
         }
 
         String text = msg.getText();
@@ -124,9 +158,27 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
             log.info("SHORT URL COMMAND");
             shortUrlCommand(msg);
             return;
+        } else if (text.startsWith("/help")) {
+            helpCommand(msg);
+            return;
         }
 
-        send(msg.getChatId(), "S-Send /start <token> from the website link, or the 6‑digit code if you already have one.");
+        Optional<TelegramConnection> telCon = telegramConnectionService.findByTelegramId(msg.getFrom().getId().toString());
+        if (telCon.isEmpty()) {
+            send(msg.getChatId(), "Send /start <token> from the website link, or the 6‑digit code if you already have one.");
+        } else {
+            send(msg.getChatId(), "Unknown command. Run **/help** for a list of commands.");
+        }
+    }
+
+    private void helpCommand(Message msg) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("**Available Commands:**\n");
+        sb.append("/account - View your account information.\n");
+        sb.append("/revoke - Revoke your current Telegram connection.\n");
+        sb.append("Send any image or video to upload it.\n");
+        sb.append("Send a valid URL (starting with https://) to shorten it.\n");
+        send(msg.getChatId(), sb.toString());
     }
 
     private void shortUrlCommand(Message msg) {
@@ -145,7 +197,7 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
 
         ShortUrlDto urlDto = urlService.createUrl(url, telCon.get().getUserId(), -1, null);
 
-        send(msg.getChatId(), urlDto.urlSet().rawUrl());
+        send(msg.getChatId(), urlDto.urlSet().rawUrl(), msg.getMessageId());
     }
 
     private void revokeTelegramConnection(Message msg) {
@@ -255,17 +307,22 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         send(msg.getChatId(), "You have successfully verified your account. You can now log in to the website.");
     }
 
-    public void send(Long chatId, String message) {
+    public void send(Long chatId, String message, Integer messageId) {
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(chatId)
                 .text(message.replaceAll("(?<!\\\\)([_\\[\\]\\(\\)~`>#+\\-=|{}.!])", "\\\\$1"))
                 .parseMode(ParseMode.MARKDOWNV2)
+                .replyToMessageId(messageId)
                 .build();
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
             // Handle exception
         }
+    }
+
+    public void send(Long chatId, String message) {
+        send(chatId, message, null);
     }
 
     private Image downloadImage(String fileId, User user) throws Exception {

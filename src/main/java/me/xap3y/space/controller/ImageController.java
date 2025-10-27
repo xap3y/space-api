@@ -8,6 +8,8 @@ import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.*;
+import me.xap3y.space.api.iface.OptionalApiKey;
+import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.FoundImageDto;
@@ -342,12 +344,17 @@ public class ImageController {
                     MediaType.APPLICATION_JSON_VALUE
             }
     )
-    public ResponseEntity<?> getImageBase64(
+    @OptionalApiKey
+    public ResponseEntity<?> getImageInfo(
+            HttpServletRequest request,
             @PathVariable String uniqueId
     ) {
-
+        User uploader = (User) request.getAttribute("uploader");
         Image image = imageService.getImage(uniqueId);
-        ImageInfoDto imageInfoDto = imageMapper.apply(image);
+        ImageInfoDto imageInfoDto;
+        log.info("Uploader is {}", (uploader != null) ? uploader.getUsername() : "null");
+        if (uploader != null) imageInfoDto = imageMapper.apply(image, uploader.getId());
+        else imageInfoDto = imageMapper.apply(image);
 
         prometheusMetricService.recordImageView(uniqueId, "INFO");
 
@@ -403,6 +410,8 @@ public class ImageController {
                     "image/heic"
             }
     )
+    @OptionalCookieAuth
+    @OptionalApiKey
     public ResponseEntity<?> getImageStream(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
@@ -438,7 +447,8 @@ public class ImageController {
                         && !(password1 != null && image.password() != null && passwordEncoder.matches(password1, image.password()))
                         && !(apiKey != null && Objects.equals(image.uploader().getApiKey().getKeyCode(), apiKey))
         ) {
-            throw new ResourceVisibilityException("Insufficient permissions to view this resource");
+            if (!(image.password() != null && uploader != null && Objects.equals(image.uploader().getId(), uploader.getId())))
+                throw new ResourceVisibilityException("Insufficient permissions to view this resource");
         }
         else if (image.expiresAt() != null && LocalDateTime.now().isAfter(image.expiresAt())) {
             throw new ResourceExpiredException();

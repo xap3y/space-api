@@ -1,7 +1,7 @@
 package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
-import me.xap3y.space.entity.Sessions;
+import me.xap3y.space.entity.Session;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.repository.SessionRepository;
 import org.springframework.stereotype.Service;
@@ -26,15 +26,19 @@ public class SessionService {
         String token = UUID.randomUUID().toString();
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
 
-        Sessions session = new Sessions(token, user, userAgent, ipAddress, expiresAt);
+        Session session = new Session(token, user, userAgent, ipAddress, expiresAt);
         sessionRepo.save(session);
         webhookService.postSessionInit(session);
         return token;
     }
 
-    public Sessions getSession(String token) {
+    public List<Session> getSessions(Long userId) {
+        return sessionRepo.findAllByUserIdAndIsValidTrue(userId);
+    }
+
+    public Session getSession(String token) {
         return sessionRepo.findByToken(token)
-                .filter(Sessions::getIsValid)
+                .filter(Session::getIsValid)
                 .filter(s -> s.getExpiresAt().isAfter(LocalDateTime.now()))
                 .orElse(null);
     }
@@ -48,8 +52,8 @@ public class SessionService {
     }
 
     public void invalidateAllSessionsForUser(User user) {
-        List<Sessions> sessions = sessionRepo.findAllByUserId(user);
-        for (Sessions session : sessions) {
+        List<Session> sessions = sessionRepo.findAllByUser(user);
+        for (Session session : sessions) {
             session.setIsValid(false);
         }
         sessionRepo.saveAll(sessions);

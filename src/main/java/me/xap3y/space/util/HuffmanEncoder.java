@@ -1,10 +1,12 @@
 package me.xap3y.space.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.util.*;
 
+@Slf4j
 @Service
 public class HuffmanEncoder {
 
@@ -136,6 +138,7 @@ public class HuffmanEncoder {
     }
 
     public String decode(String encodedString) {
+        log.info("DECODING");
         if (encodedString == null || encodedString.isEmpty()) return "";
 
         // Decode Base64 string into bytes
@@ -153,7 +156,6 @@ public class HuffmanEncoder {
                 return new String(rawBytes);
             }
 
-            int originalLength = in.readInt();
 
             Node root = deserializeTree(in);
 

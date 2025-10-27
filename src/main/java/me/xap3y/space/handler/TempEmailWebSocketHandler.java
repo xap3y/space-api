@@ -53,7 +53,7 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
 
         String apiKey = Utils.extractQueryParam(uri.getQuery(), "apiKey");
         if (apiKey == null || apiKey.isBlank()) {
-            session.close(new CloseStatus(4001, "Missing email"));
+            session.close(new CloseStatus(4001, "Missing apiKey"));
             return;
         }
 

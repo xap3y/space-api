@@ -10,6 +10,7 @@ import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
+import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.dto.UserSettingsDto;
 import me.xap3y.space.dto.UserSocialsPatchDto;
@@ -26,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -74,6 +76,29 @@ public class UserController {
         userService.createUser(username, password, email, test);
 
         return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.CREATED);
+    }
+
+    @GetMapping(
+            value = "/me/images",
+            produces = "application/json"
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> getUserImages(
+            HttpServletRequest request,
+            @RequestParam(value = "from", required = false) Long from,
+            @RequestParam(value = "to", required = false) Long to,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+
+        List<ImageInfoDto> imageDtos = imageService.getAllImagesByUser(uploader.getId(), from, to, limit);
+        int count = imageService.countByUploaderId(uploader.getId());
+
+        if (imageDtos.isEmpty()) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No images found for this user UID"), HttpStatus.NOT_FOUND);
+        }
+
+        return ResponseEntity.ok(new DefaultResponse(false, imageDtos, count));
     }
 
     @PatchMapping(

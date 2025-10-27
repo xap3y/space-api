@@ -1,5 +1,6 @@
 package me.xap3y.space.mapper;
 
+import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.dto.UrlSetDto;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.function.Function;
 
+@Slf4j
 @Service
 public class PasteMapper implements Function<Paste, PasteDto> {
 
@@ -26,10 +28,12 @@ public class PasteMapper implements Function<Paste, PasteDto> {
 
     @Override
     public PasteDto apply(Paste paste) {
-        String decodedText =  huffmanEncoder.decode(paste.getContent());
+        //log.info("STARTING TO DECODE");
+        //String decodedText =  huffmanEncoder.decode(paste.getContent());
+        //log.info("DECODED");
         return new PasteDto(
                 paste.getTitle(),
-                decodedText,
+                paste.getContent(),
                 paste.isPublic(),
                 paste.getCreatedAt(),
                 paste.getUniqueId(),
