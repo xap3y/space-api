@@ -27,4 +27,8 @@ public class ApiKeyService {
         return userRepository.findByApiKey(apiKeyEntity)
                 .orElseThrow(() -> new InvalidApiKeyException("Invalid API Key!"));
     }
+
+    public boolean validateApiKeySimple(String apiKey) {
+        return apiKeyRepository.findByKeyCode(apiKey).isPresent();
+    }
 }

@@ -29,15 +29,15 @@ export CORS_TESTING_URL=http://127.0.0.1
 export FRONTEND_URL=http://localhost:3000
 
 # Discord bot
-export USE_DISCORD_WEBHOOK=true
-export USE_DISCORD_BOT=true
+export USE_DISCORD_WEBHOOK=false
+export USE_DISCORD_BOT=false
 export DISCORD_BOT_ID=1367593639152455792
 export REMOTE_DISCORD_BOT_GUILD_ID=1218647784119599255
 export REMOTE_DISCORD_BOT_CHANNEL_ID=1383182173670215766
 
 # Telegram bot
 export USE_TELEGRAM_BOT=false
-export USE_TELEGRAM_VERIFY_BOT=true
+export USE_TELEGRAM_VERIFY_BOT=false
 
 # Short urls
 export SHORT_IMAGE_URL=https://i1.xap3y.tech

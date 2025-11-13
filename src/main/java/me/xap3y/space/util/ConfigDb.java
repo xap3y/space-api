@@ -3,7 +3,9 @@ package me.xap3y.space.util;
 import lombok.Getter;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ConfigDb {
@@ -12,6 +14,8 @@ public class ConfigDb {
     private final static String IMAGE_DIR = "images/";
 
     public final static File LOG_FILE = new File("logs.txt");
+
+    public static final List<String> availableWsUniqueIds = new ArrayList<>();
 
     public final static int MAX_PASTE_TEXT_LENGTH = 55045;
 

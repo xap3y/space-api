@@ -47,9 +47,19 @@ public class RequestFilter implements Filter {
 
         String path = httpRequest.getRequestURI();
 
-        log.info("[{}] Request from: {}, User-Agent: {}", httpRequest.getMethod(), remoteIp, userAgent);
+        if (!path.equals("/actuator/prometheus"))
+            log.info("[{}] Request from: {}, User-Agent: {}, PATH: {}", httpRequest.getMethod(), remoteIp, userAgent, path);
+
+        if (path.contains("/ws/playcore/in") || path.contains("/ws/playcore/out")) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
+
+        /*if (!path.equals("/actuator/prometheus"))
+            log.info("[{}] Request from: {}, User-Agent: {}", httpRequest.getMethod(), remoteIp, userAgent);*/
 
         if ((userAgent.contains("curl") || userAgent.contains("wget") || userAgent.contains("Custom-")) && !path.contains("/actuator/prometheus")) {
+            log.info("Blocking request from blacklisted user agent: {}", userAgent);
             servletResponse.setContentType("application/json");
             servletResponse.getWriter().write("{\"error\": \"You are in blacklist!\"}");
             return;
@@ -74,7 +84,8 @@ public class RequestFilter implements Filter {
 
         logsService.log(new LogDto(remoteIp, userAgent, path, method, resultHttpCode + ""));
 
-        log.info("[{}] Request from: {}, to {} ({})", method, remoteIp, path, resultHttpCode);
+        if (!path.equals("/actuator/prometheus"))
+            log.info("[{}] Request from: {}, to {} ({})", method, remoteIp, path, resultHttpCode);
         //webhookService.postMessage("Request from: " + remoteIp + ", to " + path + " (" + method + ")");
     }
 }

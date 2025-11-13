@@ -94,7 +94,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                         return true;
                     }
 
-                    if (optionalApiKeyAnnotation != null && optionalCookieAuthAnn != null) return true;
+                    if (optionalApiKeyAnnotation != null || optionalCookieAuthAnn != null) return true; // TODO
                     this.writeErrorResponse(response, new DefaultResponse(true, "API Key is required"), HttpStatus.BAD_REQUEST);
                     return false;
                 }
