@@ -60,7 +60,6 @@ public class BasicController {
             put("version", SpaceApplication.VERSION);
             put("level", SpaceApplication.env.toString());
             put("startedAt", SpaceApplication.startedAt);
-            put("sitemap", serverInfo.getBaseUrl() + "/sitemap.xml");
             put("robots", serverInfo.getBaseUrl() + "/robots.txt");
             put("portal_url", serverInfo.getFrontEndUrl());
             put("namespace_tag", serverInfo.getNamespaceName());
@@ -173,7 +172,6 @@ public class BasicController {
             put("version", SpaceApplication.VERSION);
             put("level", SpaceApplication.env.toString());
             put("startedAt", SpaceApplication.startedAt);
-            put("sitemap", serverInfo.getBaseUrl() + "/sitemap.xml");
             put("robots", serverInfo.getBaseUrl() + "/robots.txt");
             put("portal_url", serverInfo.getFrontEndUrl());
 

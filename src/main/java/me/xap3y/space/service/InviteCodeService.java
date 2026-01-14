@@ -4,6 +4,9 @@ import me.xap3y.space.entity.InviteCode;
 import me.xap3y.space.repository.InviteCodeRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 public class InviteCodeService {
 
@@ -27,4 +30,18 @@ public class InviteCodeService {
         }
         this.inviteCodeRepository.save(code);
     }
+
+    public List<InviteCode> findAllByUsed(boolean used) {
+        return this.inviteCodeRepository.findAllByUsed(used);
+    }
+
+    public List<InviteCode> findAll() {
+        return this.inviteCodeRepository.findAll();
+    }
+
+    public List<InviteCode> findAllByUsedAndCreatedAtAfter(boolean used, LocalDateTime createdAtAfter) {
+        return this.inviteCodeRepository.findAllByUsedAndCreatedAtAfter(used, createdAtAfter);
+    }
+
+
 }

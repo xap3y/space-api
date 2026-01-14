@@ -43,7 +43,7 @@ public class ServerInfo {
     }
 
     public String getTestCorsUrl() {
-        return environment.getProperty("cors.test.url", "https://demo.xap3y.tech");
+        return environment.getProperty("cors.test.url", "https://demo.xap3y.space");
     }
 
     public String getEnv() {
@@ -91,11 +91,11 @@ public class ServerInfo {
     }
 
     public String getShortImageUrl() {
-        return environment.getProperty("SHORT_IMAGE_URL", "https://i.xap3y.tech");
+        return environment.getProperty("SHORT_IMAGE_URL", "https://i.xap3y.space");
     }
 
     public String getShortPasteUrl() {
-        return environment.getProperty("SHORT_PASTE_URL", "https://p.xap3y.tech");
+        return environment.getProperty("SHORT_PASTE_URL", "https://p.xap3y.space");
     }
 
     public Boolean getUseDiscordWebhook() {
@@ -115,7 +115,7 @@ public class ServerInfo {
     }
 
     public String getShortShortenerUrl() {
-        return environment.getProperty("SHORT_SHORTENER_URL", "https://r.xap3y.tech");
+        return environment.getProperty("SHORT_SHORTENER_URL", "https://r.xap3y.space");
     }
 
     public String getInboundEmailToken() {

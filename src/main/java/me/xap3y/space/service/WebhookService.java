@@ -58,7 +58,7 @@ public class WebhookService {
         embedObject.addField("UID", id, true);
         //embedObject.addField("URL", serverInfo.getBaseUrl() + "/v1/image/get/" + id, true);
         embedObject.addField("| SIZE", "**|** " + imageDto.size() / 1024 + " KiB", true);
-        embedObject.addField("| UPLOADER", "**|** [" + imageDto.uploader().username() + "](https://s.xap3y.tech/profile/xap3y)" , true);
+        embedObject.addField("| UPLOADER", "**|** [" + imageDto.uploader().username() + "](https://xap3y.space/user/" + imageDto.uploader().username() +")" , true);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
         hook.setContent(
@@ -80,7 +80,7 @@ public class WebhookService {
         embedObject.setColor(Color.ORANGE);
         embedObject.setTitle("URL Shortened! (" + urlDto.uniqueId() + ")");
         embedObject.setUrl(urlDto.urlSet().rawUrl());
-        embedObject.addField("shortURL", "https://r0.xap3y.tech/" + urlDto.uniqueId(), false);
+        embedObject.addField("shortURL", "https://r0.xap3y.space/" + urlDto.uniqueId(), false);
         embedObject.addField("creator", urlDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
@@ -98,7 +98,7 @@ public class WebhookService {
         embedObject.setColor(Color.ORANGE);
         embedObject.setTitle("Paste Created! (" + pasteDto.uniqueId() + ")");
         embedObject.setUrl(serverInfo.getBaseUrl() + "/v1/paste/get/" + pasteDto.uniqueId());
-        embedObject.addField("shortURL", "https://p0.xap3y.tech/" + pasteDto.uniqueId(), false);
+        embedObject.addField("shortURL", "https://p0.xap3y.space/" + pasteDto.uniqueId(), false);
         embedObject.addField("creator", pasteDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
