@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
@@ -89,6 +90,7 @@ public class DiscordController {
             }
     )
     @RequiresApiKey
+    @OptionalCookieAuth
     public ResponseEntity<?> deauthorizeDiscordConnection(
             @PathVariable(name = "uniqueId") String uniqueId,
             HttpServletRequest request

@@ -29,6 +29,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -521,6 +522,29 @@ public class ImageService {
         }
         prometheusMetricService.recordEvent(MetricRecordType.VIDEO_POSTER_GENERATED);
         return true;
+    }
+
+    @SneakyThrows
+    public boolean saveToTempFileFromUrl(String url, String filename) {
+        return saveToTempFile(new URI(url).toURL().openStream(), filename);
+    }
+
+    public boolean saveToTempFile(InputStream inputStream, String filename) {
+        File poster = new File(ConfigDb.getIMAGE_DIR() + "temp/", filename);
+        log.info("Saving {} to temp file: {}", filename, poster.getAbsolutePath());
+
+        try (OutputStream os = new FileOutputStream(poster)) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            log.info("Saved to temp file: {}", poster.getAbsolutePath());
+            return true;
+        } catch (IOException e) {
+            log.error("Failed to save to temp file: {}", poster.getAbsolutePath(), e);
+            return false;
+        }
     }
 
     private boolean runFfmpegExtract(File videoFile, File outFile, int atSeconds) throws IOException, InterruptedException {

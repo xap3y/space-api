@@ -34,6 +34,9 @@ public class TelegramConnectCodes {
     @Column(nullable = true)
     private LocalDateTime expiresAt;
 
+    @Column(nullable = false, unique = false)
+    private String fallback;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)

@@ -3,10 +3,7 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import me.xap3y.space.api.enums.ArchiveType;
-import me.xap3y.space.api.enums.ImageLocation;
-import me.xap3y.space.api.enums.ResourceSourceType;
-import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.enums.*;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.OptionalApiKey;
 import me.xap3y.space.api.iface.OptionalCookieAuth;
@@ -72,7 +69,7 @@ public class ImageController {
     private final S3Presigner s3Presigner;
     private final PrometheusMetricService prometheusMetricService;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
@@ -523,17 +520,54 @@ public class ImageController {
     }
 
     @GetMapping(
+            value = "/get/temp/{filename}",
+            produces = {
+                    MediaType.APPLICATION_OCTET_STREAM_VALUE,
+            }
+    )
+    @PathLengthValidator
+    public ResponseEntity<?> getTempImage(
+            @PathVariable String filename
+    ) {
+        HttpHeaders headers = new HttpHeaders();
+        String tempDirString = ConfigDb.getIMAGE_DIR() + "temp/";
+        Path tempPath = Path.of(tempDirString + filename);
+
+        if (!Files.exists(tempPath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String mimeType;
+        try {
+            mimeType = Files.probeContentType(tempPath);
+        } catch (IOException e) {
+            mimeType = "application/octet-stream";
+        }
+
+        headers.setContentType(MediaType.parseMediaType(mimeType != null ? mimeType : "application/octet-stream"));
+        headers.setContentLength(tempPath.toFile().length());
+        headers.set(HttpHeaders.CACHE_CONTROL, CacheControl.maxAge(Duration.ofHours(12)).getHeaderValue());
+
+        InputStreamResource fileResource;
+        try {
+            fileResource = new InputStreamResource(Files.newInputStream(tempPath));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to read temp image");
+        }
+
+        return new ResponseEntity<>(fileResource, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(
             value = "/get/poster/{uniqueId}",
             produces = {
                     MediaType.APPLICATION_OCTET_STREAM_VALUE,
             }
     )
+    @PathLengthValidator
     public ResponseEntity<?> getImagePoster(
             @PathVariable String uniqueId
     ) {
-        if (uniqueId.length() > serverInfo.getMaxUniqueIdLength()) {
-            throw new BadRequestException("Unique ID is too long");
-        }
         HttpHeaders headers = new HttpHeaders();
         String posterDirString = ConfigDb.getIMAGE_DIR() + "poster/";
         Path posterPath = Path.of(posterDirString + uniqueId.toUpperCase() + ".jpg");

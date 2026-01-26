@@ -222,7 +222,7 @@ public class AuthController {
             value = "/verify/telegram",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<?> verifyEmail(
+    public ResponseEntity<?> verifyEmailTelegram(
             HttpServletRequest request,
             @CookieValue(value = "verify_token", required = false) String token
     ) {

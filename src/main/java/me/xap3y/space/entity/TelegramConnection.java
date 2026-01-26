@@ -27,6 +27,15 @@ public class TelegramConnection {
     @Column(nullable = false, unique = true)
     private String telegramId;
 
+    @Column(nullable = false, unique = false)
+    private String username;
+
+    @Column(nullable = true, unique = false)
+    private String avatar;
+
+    @Column(nullable = true, unique = false)
+    private String fullName;
+
     @Column(nullable = true)
     private String accessToken;
 
@@ -47,6 +56,15 @@ public class TelegramConnection {
     public TelegramConnection(User user, String telegramId) {
         this.userId = user;
         this.telegramId = telegramId;
+    }
+
+    public TelegramConnection(User user, String telegramId, String username, String avatar, String fullName) {
+        this.userId = user;
+        this.telegramId = telegramId;
+        this.username = username;
+        this.avatar = avatar;
+        this.fullName = fullName;
+        this.connectedAt = LocalDateTime.now();
     }
 
     public TelegramConnection(User user, String telegramId, EmailVerifyCodes emailVerifyCode) {

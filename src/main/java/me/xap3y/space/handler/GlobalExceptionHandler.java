@@ -18,10 +18,8 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
-import org.thymeleaf.exceptions.TemplateInputException;
 
 import java.io.FileNotFoundException;
-import java.time.LocalDateTime;
 
 @Slf4j
 @ControllerAdvice

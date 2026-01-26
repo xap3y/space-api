@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.TempMailStatus;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
@@ -23,10 +24,7 @@ import me.xap3y.space.mapper.TempMailMapper;
 import me.xap3y.space.model.request.EmailRequest;
 import me.xap3y.space.model.request.MissingEmailsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
-import me.xap3y.space.service.EmailService;
-import me.xap3y.space.service.InboundMailService;
-import me.xap3y.space.service.PrometheusMetricService;
-import me.xap3y.space.service.TempMailService;
+import me.xap3y.space.service.*;
 import me.xap3y.space.util.CustomLocalDateTimeDeserializer;
 import me.xap3y.space.util.Utils;
 import org.springframework.beans.factory.ObjectProvider;
@@ -54,8 +52,9 @@ public class EmailController {
     private final InboundEmailMapper inboundEmailMapper;
     private final PrometheusMetricService prometheusMetricService;
     private final TempMailMapper tempMailMapper;
+    private final AuditLogService auditLogService;
 
-    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper) {
+    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper, AuditLogService auditLogService) {
         this.emailService = emailService.getIfAvailable();
         this.serverInfo = serverInfo;
         this.tempMailService = tempMailService;
@@ -64,6 +63,7 @@ public class EmailController {
         this.inboundEmailMapper = inboundEmailMapper;
         this.prometheusMetricService = prometheusMetricService;
         this.tempMailMapper = tempMailMapper;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping(
@@ -79,7 +79,7 @@ public class EmailController {
             return ResponseEntity.badRequest().body("Some required fields are missing");
         }
 
-        prometheusMetricService.recordEvent(MetricRecordType.EMAIL_RECEIVED);
+        prometheusMetricService.recordEvent(MetricRecordType.EMAIL_SENT);
 
         emailService.sendEmail(emailRequest);
 
@@ -136,6 +136,7 @@ public class EmailController {
         tempEmailWebSocketHandler.pushEmail(dto);
 
         prometheusMetricService.recordEvent(MetricRecordType.EMAIL_RECEIVED);
+        auditLogService.saveLog(PortalLogType.EMAIL_RECEIVE, null, tempMail.getEmail(), "API");
 
         log.info("Email added to temp mail: {}", tempMail.getEmail());
 
@@ -207,10 +208,10 @@ public class EmailController {
         tempMail.setExpireAt(LocalDateTime.now().plusDays(7));
 
         tempMailService.save(tempMail);
-
         prometheusMetricService.recordEvent(MetricRecordType.EMAIL_CREATED);
 
         log.info("Temp mail created: {} | by {}", tempMail.getEmail(), creator.getUsername());
+        auditLogService.saveLog(PortalLogType.EMAIL_CREATE, creator, tempMail.getEmail(), "API");
 
         Map<String, String> res = Map.of(
                 "email", tempMail.getEmail(),
@@ -259,6 +260,7 @@ public class EmailController {
 
         tempMailService.markDeleted(email);
         tempEmailWebSocketHandler.closeByEmail(email);
+        auditLogService.saveLog(PortalLogType.EMAIL_DELETE, uploader, email, "API");
 
         return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
     }

@@ -7,6 +7,7 @@ import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.UserSettings;
 import me.xap3y.space.service.UserSettingsService;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Function;

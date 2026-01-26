@@ -1,6 +1,7 @@
 package me.xap3y.space.util;
 
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.config.ServerInfo;
@@ -14,13 +15,23 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.methods.GetUserProfilePhotos;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.UserProfilePhotos;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.CopyTextButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -36,8 +47,9 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
     private final ImageMapper imageMapper;
     private final TelegramConnectCodesService telegramConnectCodesService;
     private final UrlService urlService;
+    private final AuditLogService auditLogService;
 
-    public TelegramVerifyBot(ServerInfo serverInfo, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, UserService userService, VerifyWebSocketHandler verifyWebSocketHandler, ImageService imageService, ImageMapper imageMapper, TelegramConnectCodesService telegramConnectCodesService, UrlService urlService) {
+    public TelegramVerifyBot(ServerInfo serverInfo, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, UserService userService, VerifyWebSocketHandler verifyWebSocketHandler, ImageService imageService, ImageMapper imageMapper, TelegramConnectCodesService telegramConnectCodesService, UrlService urlService, AuditLogService auditLogService) {
         this.serverInfo = serverInfo;
         this.emailVerifyCodeService = emailVerifyCodeService;
         this.telegramConnectionService = telegramConnectionService;
@@ -49,6 +61,7 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         this.imageMapper = imageMapper;
         this.telegramConnectCodesService = telegramConnectCodesService;
         this.urlService = urlService;
+        this.auditLogService = auditLogService;
     }
 
     private TelegramClient telegramClient;
@@ -197,7 +210,16 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
 
         ShortUrlDto urlDto = urlService.createUrl(url, telCon.get().getUserId(), -1, null);
 
-        send(msg.getChatId(), urlDto.urlSet().rawUrl(), msg.getMessageId());
+        InlineKeyboardRow row = new InlineKeyboardRow();
+        row.add(InlineKeyboardButton.builder()
+                .text("Copy Short URL")
+                .copyText(CopyTextButton.builder().text((urlDto.urlSet().userPreference() == null) ? urlDto.urlSet().rawUrl() : urlDto.urlSet().userPreference()).build())
+                .build());
+        InlineKeyboardMarkup kb = InlineKeyboardMarkup.builder()
+                .keyboardRow(row)
+                .build();
+
+        send(msg.getChatId(), urlDto.urlSet().rawUrl(), msg.getMessageId(), kb);
     }
 
     private void revokeTelegramConnection(Message msg) {
@@ -208,6 +230,7 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         }
 
         telegramConnectionService.revokeByUserId(telCon.get().getUserId().getId());
+        auditLogService.saveLog(PortalLogType.TELEGRAM_REVOKED, telCon.get().getUserId(), telCon.get().getId().toString(), "TG");
         send(msg.getChatId(), "Your Telegram connection has been revoked.");
     }
 
@@ -233,6 +256,8 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
             default -> "";
         };
 
+        auditLogService.saveLog(PortalLogType.TELEGRAM_BOT_COMMAND, user, "account_info", null);
+
         sb.append(statusEmoji).append(" Status: ").append(user.getStatus().name()).append("\n");
         sb.append("\uD83D\uDCC5 Created at: ").append(user.getCreatedAt()).append("\n");
 
@@ -256,11 +281,58 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         }
 
         String userId = msg.getFrom().getId().toString();
+        String username = msg.getFrom().getUserName();
+        GetUserProfilePhotos getPhotos = new GetUserProfilePhotos(msg.getFrom().getId());
+        getPhotos.setLimit(1);
+        String avatarUrl = null;
 
-        telegramConnectionService.save(new TelegramConnection(code.get().getUser(), userId));
+        try {
+            UserProfilePhotos photos = telegramClient.execute(getPhotos);
+            if (photos.getTotalCount() > 0) {
+                PhotoSize photo =
+                        photos.getPhotos().getFirst()
+                                .getLast();
+
+                File file = telegramClient.execute(
+                        new GetFile(photo.getFileId())
+                );
+
+                String url = "https://api.telegram.org/file/bot" + serverInfo.getTelegramVerifyBotToken() + "/" + file.getFilePath();
+                String name = file.getFilePath().replaceAll("/", "_");
+                boolean saved = imageService.saveToTempFileFromUrl(url,name);
+                if (saved)
+                    avatarUrl = serverInfo.getBaseUrl() + "/v1/image/get/temp/" + name;
+            }
+        } catch (TelegramApiException e) {
+            log.warn("Could not get profile photos for user {}: {}", msg.getFrom().getId(), e.getMessage());
+        }
+
+        TelegramConnection connection = new TelegramConnection(
+                code.get().getUser(),
+                userId,
+                username,
+                avatarUrl,
+                msg.getFrom().getFirstName() + (msg.getFrom().getLastName() != null ? " " + msg.getFrom().getLastName() : "")
+        );
+
+        telegramConnectionService.save(connection);
         verifyWebSocketHandler.pushVerified(token);
         telegramConnectCodesService.setCodeUsed(code.get());
-        send(msg.getChatId(), "You have successfully connected your Telegram account. You can now send images to this bot to upload them.");
+        auditLogService.saveLog(PortalLogType.TELEGRAM_CONNECTED, code.get().getUser(), connection.getId().toString(), null);
+        InlineKeyboardMarkup kb = null;
+
+        if (code.get().getFallback() != null && !code.get().getFallback().isBlank() && code.get().getFallback().startsWith("https://")) {
+            InlineKeyboardRow row = new InlineKeyboardRow();
+            row.add(InlineKeyboardButton.builder()
+                    .text("Return to Website")
+                    .url(code.get().getFallback())
+                    .build());
+            kb = InlineKeyboardMarkup.builder()
+                    .keyboardRow(row)
+                    .build();
+        }
+
+        send(msg.getChatId(), "You have successfully connected your Telegram account. You can now send images to this bot to upload them and urls.", null, kb);
     }
 
     private void processStartCommand(Message msg, String token) throws Exception {
@@ -307,17 +379,29 @@ public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer 
         send(msg.getChatId(), "You have successfully verified your account. You can now log in to the website.");
     }
 
-    public void send(Long chatId, String message, Integer messageId) {
+    private static String escapeMdV2Text(String s) {
+        return s.replaceAll("(?<!\\\\)([_\\[\\]\\(\\)~`>#+\\-=|{}.!])", "\\\\$1");
+    }
+
+    public void send(Long chatId, String message, Integer messageId){
+        send(chatId, message, messageId, null);
+    }
+
+    public void send(Long chatId, String message, Integer messageId, InlineKeyboardMarkup kb) {
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(chatId)
-                .text(message.replaceAll("(?<!\\\\)([_\\[\\]\\(\\)~`>#+\\-=|{}.!])", "\\\\$1"))
+                .text(escapeMdV2Text(message))
                 .parseMode(ParseMode.MARKDOWNV2)
                 .replyToMessageId(messageId)
+                .disableWebPagePreview(true)
                 .build();
+        if (kb != null) {
+            sendMessage.setReplyMarkup(kb);
+        }
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
-            // Handle exception
+            log.error("Failed to send message to chat {}: {}", chatId, e.getMessage());
         }
     }
 

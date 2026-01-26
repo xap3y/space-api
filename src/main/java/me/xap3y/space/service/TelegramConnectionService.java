@@ -1,6 +1,7 @@
 package me.xap3y.space.service;
 
 import lombok.AllArgsConstructor;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.entity.TelegramConnection;
 import me.xap3y.space.repository.TelegramConnectionRepository;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import java.util.Optional;
 public class TelegramConnectionService {
 
     private final TelegramConnectionRepository telegramConnectionRepository;
+    private final AuditLogService auditLogService;
 
     public boolean existsByTelegramId(String telegramId) {
         return telegramConnectionRepository.existsByTelegramId(telegramId);

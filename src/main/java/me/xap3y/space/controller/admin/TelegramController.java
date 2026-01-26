@@ -2,6 +2,9 @@ package me.xap3y.space.controller.admin;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import me.xap3y.space.api.enums.PortalLogType;
+import me.xap3y.space.api.exception.BadRequestException;
+import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.dto.ShortUserDto;
 import me.xap3y.space.entity.TelegramConnectCodes;
@@ -9,6 +12,7 @@ import me.xap3y.space.entity.TelegramConnection;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.service.AuditLogService;
 import me.xap3y.space.service.EmailVerifyCodeService;
 import me.xap3y.space.service.TelegramConnectCodesService;
 import me.xap3y.space.service.TelegramConnectionService;
@@ -16,9 +20,7 @@ import me.xap3y.space.util.Utils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -32,8 +34,8 @@ public class TelegramController {
 
     private final TelegramConnectionService telegramConnectionService;
     private final ShortUserMapper shortUserMapper;
-    private final EmailVerifyCodeService emailVerifyCodeService;
     private final TelegramConnectCodesService telegramConnectCodesService;
+    private final AuditLogService auditLogService;
 
     @GetMapping(
             value = "/@me",
@@ -55,6 +57,9 @@ public class TelegramController {
             put("telegram_id", connection.getTelegramId());
             put("user", userDto);
             put("connected_at", connection.getConnectedAt());
+            put("full_name", connection.getFullName());
+            put("username", connection.getUsername());
+            put("avatar", connection.getAvatar());
         }};
 
         return new ResponseEntity<>(new DefaultResponse(false, map), HttpStatus.OK);
@@ -105,13 +110,49 @@ public class TelegramController {
             }
     )
     @RequiresApiKey
+    @OptionalCookieAuth
     public ResponseEntity<?> revokeTelegramConnection(
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
         TelegramConnection connection = telegramConnectionService.findByUserStrict(uploader.getId());
 
+        auditLogService.saveLog(PortalLogType.TELEGRAM_REVOKED, connection.getUserId(), connection.getId().toString(), "API");
         telegramConnectionService.revokeByUserId(connection.getUserId().getId());
         return new ResponseEntity<>(new DefaultResponse(false, "Revoked"), HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping(
+            value = "/connect/request",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @RequiresApiKey
+    @OptionalCookieAuth
+    public ResponseEntity<?> requestConnectToTelegram(
+            HttpServletRequest request,
+            @RequestParam(value = "fallback", required = false) String fallbackUrl
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+
+        boolean exists = telegramConnectionService.existsByUserId(uploader.getId());
+        if (exists) {
+            throw new BadRequestException("User already connected to Telegram");
+        }
+
+        TelegramConnectCodes newCode = new TelegramConnectCodes();
+        newCode.setUser(uploader);
+        newCode.setExpiresAt(LocalDateTime.now().plusMinutes(15));
+        newCode.setCreatedAt(LocalDateTime.now());
+        newCode.setCode(Utils.generateRandomId(55));
+        newCode.setFallback(fallbackUrl);
+        telegramConnectCodesService.save(newCode);
+
+        Map<String, String> res = Map.of(
+                "botname", "xapspace_auth_dev_bot",
+                "url", "https://t.me/xapspace_auth_dev_bot?start=" + newCode.getCode(),
+                "token", newCode.getCode()
+        );
+
+        return new ResponseEntity<>(new DefaultResponse(false, res), HttpStatus.OK);
     }
 }
