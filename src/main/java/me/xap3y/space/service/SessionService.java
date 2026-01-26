@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.entity.Session;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.repository.SessionRepository;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -36,10 +37,23 @@ public class SessionService {
         return sessionRepo.findAllByUserIdAndIsValidTrue(userId);
     }
 
+    @Nullable
     public Session getSession(String token) {
+        return sessionRepo.findByToken(token).orElse(null);
+    }
+
+    @Nullable
+    public Session getValidSession(String token) {
         return sessionRepo.findByToken(token)
                 .filter(Session::getIsValid)
                 .filter(s -> s.getExpiresAt().isAfter(LocalDateTime.now()))
+                .orElse(null);
+    }
+
+    @Nullable
+    public Session getInvalidSession(String token) {
+        return sessionRepo.findByToken(token)
+                .filter(s -> !s.getIsValid() || s.getExpiresAt().isBefore(LocalDateTime.now()))
                 .orElse(null);
     }
 

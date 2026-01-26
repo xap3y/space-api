@@ -18,13 +18,17 @@ public class ShortUserMapper implements Function<User, ShortUserDto> {
 
     @Override
     public ShortUserDto apply(User user) {
+        return apply(user, true);
+    }
+
+    public ShortUserDto apply(User user, boolean withInvitor) {
         return new ShortUserDto(
                 user.getId(),
                 user.getUsername(),
                 user.getRole(),
                 user.getAvatar(),
                 user.getCreatedAt(),
-                (user.getInvitedBy() != null) ? userInvitorMapper.apply(user.getInvitedBy()) : null
+                (user.getInvitedBy() != null && withInvitor) ? userInvitorMapper.apply(user.getInvitedBy()) : null
         );
     }
 }

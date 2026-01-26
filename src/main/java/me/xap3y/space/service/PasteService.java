@@ -2,6 +2,7 @@ package me.xap3y.space.service;
 
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.PasteSummary;
 import me.xap3y.space.entity.Paste;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.PasteMapper;
@@ -96,14 +97,11 @@ public class PasteService {
         return map;
     }
 
-    public List<PasteDto> getAllPastesByUserId(Long uid) {
-        List<Paste> pastes = pasteRepository.findByCreatedById(uid);
-        if (pastes.isEmpty()) return List.of();
-        List<PasteDto> pasteDtos = new ArrayList<>();
-        for (Paste paste : pastes) {
-            pasteDtos.add(pasteMapper.apply(paste));
-        }
-        return pasteDtos;
+    public List<PasteDto> getAllPastesByUserId(Long uid, boolean includeContent) {
+        return pasteRepository.findByCreatedById(uid)
+                .stream()
+                .map((p) -> pasteMapper.apply(p, includeContent))
+                .toList();
     }
 
     public List<Pair<LocalDate, Long>> findTotalImagesPerDayByUser(LocalDateTime startDate, LocalDateTime endDate, Long uploaderId, boolean fillMissingDates) {

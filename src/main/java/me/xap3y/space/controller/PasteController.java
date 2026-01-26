@@ -3,8 +3,10 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.PasteDto;
@@ -207,6 +209,7 @@ public class PasteController {
             value = "/get/{uniqueId}"
     )
     @RequiresApiKey
+    @PathLengthValidator
     public ResponseEntity<?> deletePaste(
             HttpServletRequest request,
             @PathVariable String uniqueId
@@ -237,11 +240,11 @@ public class PasteController {
                     MediaType.TEXT_PLAIN_VALUE
             }
     )
+    @PathLengthValidator
     public ResponseEntity<?> getPaste(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData
     ) {
-
         PasteDto pasteDto = pasteService.getPasteByUniqueId(uniqueId)
                 .map(pasteMapper)
                 .orElseThrow(() -> new ResourceNotFoundException("Paste not found"));

@@ -5,26 +5,6 @@
 1. Replace the values in `env.sh` with your own values
 2. Run `sh launcher.sh` to start the API 
 
-## Endpoints
-
-| Method | Path                   | Description             |
-|--------|------------------------|-------------------------|
-| GET    | /status                | API Status              |
-| GET    | /v1/image/get/{id}     | Get image               |
-| POST   | /v1/image/upload       | Upload image            |
-| GET    | /v1/paste/get/{id}     | Get paste               |
-| POST   | /v1/paste/create       | Upload paste            |
-| GET    | /v1/url/get/{id}       | Get shortened URL       |
-| POST   | /v1/url/create         | Create shortened URL    |
-| GET    | /web/image-upload      | Image upload form       |
-| GET    | /web/image-render/{id} | Render image            |
-| GET    | /web/paste-render/{id} | Display a paste         |
-| GET    | /web/url-render/{id}   | Display a shortened url |
-| GET    | /web/url-create        | Short-URL create form   |
-| GET    | /web/paste-create      | Paste create form       |
-| GET    | /web/error400          | Bad Request UI          |
-| GET    | /web/error404          | Resource Not Found UI   |
-
 ## Image uploading automation
 
 <details>

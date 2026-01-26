@@ -53,6 +53,9 @@ public class RequestFilter implements Filter {
         if (path.contains("/ws/playcore/in") || path.contains("/ws/playcore/out")) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
+        } else if (path.contains("/get") && path.length() > 100) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
         }
 
         /*if (!path.equals("/actuator/prometheus"))

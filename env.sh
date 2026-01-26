@@ -1,52 +1,85 @@
 #!/bin/sh
 
-# Spring boot application properties
 export SPRING_SERVER_PORT=8012
 export SPRING_SERVER_PROTOCOL=http
 export SPRING_SERVER_BASEURL=192.168.100.100:$SPRING_SERVER_PORT
-#export SPRING_SERVER_BASEURL=api.xap3y.space
 
 # Database
 export SPRING_DATASOURCE_PREFIX=mariadb
 export SPRING_DATASOURCE_HOST=localhost
 export SPRING_DATASOURCE_PORT=3306
-export SPRING_DATASOURCE_SCHEMA=space
+export SPRING_DATASOURCE_SCHEMA=example
 export SPRING_JPA_SHOW_SQL=FALSE
+export SPRING_DATASOURCE_USERNAME=example
+export SPRING_DATASOURCE_PASSWORD=password1234
 
 # Security
-export SPRING_SECURITY_USERNAME=xap3y
+export SPRING_SECURITY_USERNAME=example
 export SPRING_SECURITY_PASSWORD=admin
-
-# File upload (For image and pastes)
-# If using nginx, make sure to set client_max_body_size to the same value
-# If using S3 or R2, ignore this
 export SPRING_MAX_FILE_SIZE=5000MB
+export AUTH_COOKIE_SECURE=true
+export AUTH_COOKIE_SAMESITE=None
+export AUTH_COOKIE_MAXAGE=604800
 
 # Debug
 export SPRING_DEBUG=false
 export SPRING_ENV=dev
+export NAMESPACE_TAG=local
 export CORS_TESTING_URL=http://127.0.0.1
 export FRONTEND_URL=http://localhost:3000
+
+# Mail configuration
+export SPRING_MAIL_HOST=smtp.example.com
+export SPRING_MAIL_PORT=465
+export SPRING_MAIL_USERNAME=auth@example.com
+export SPRING_MAIL_PASSWORD=password1234
+export SPRING_MAIL_PROTOCOL=smtps
+export SPRING_MAIL_SMTP_AUTH=true
+export SPRING_MAIL_SMTP_SSL=true
+export SPRING_MAIL_SMTP_STARTTLS_ENABLE=false
 
 # Discord bot
 export USE_DISCORD_WEBHOOK=false
 export USE_DISCORD_BOT=false
-export DISCORD_BOT_ID=1367593639152455792
-export REMOTE_DISCORD_BOT_GUILD_ID=1218647784119599255
-export REMOTE_DISCORD_BOT_CHANNEL_ID=1383182173670215766
+export DISCORD_BOT_ID=0000000000000000000
+export REMOTE_DISCORD_BOT_GUILD_ID=0000000000000000000
+export REMOTE_DISCORD_BOT_CHANNEL_ID=0000000000000000000
+export DISCORD_CLIENT_SECRET=EXAMPLE_SECRET
+export REMOTE_DISCORD_BOT_TOKEN=EXAMPLE_TOKEN
+export REMOTE_DICSORD_BOT_TOKEN_SECOND=EXAMPLE_TOKEN
+export DISCORD_BOT=BOT_URL_EXAMPLE
+
+# S3 / R2 configuration
+export S3_ENDPOINT=https://example.com
+export S3_ACCESS_KEY=EXAMPLE_KEY
+export S3_SECRET_KEY=EXAMPLE_SECRET
+export S3_BUCKET_NAME=EXAMPLE
 
 # Telegram bot
 export USE_TELEGRAM_BOT=false
 export USE_TELEGRAM_VERIFY_BOT=false
+export TELEGRAM_BOT_TOKEN=EXAMPLE_TOKEN
+export TELEGRAM_VERIFY_BOT_TOKEN=EXAMPLE_TOKEN
 
 # Short urls
-export SHORT_IMAGE_URL=https://i1.xap3y.space
-export SHORT_PASTE_URL=https://p1.xap3y.space
-export SHORT_SHORTENER_URL=https://r1.xap3y.space
+export SHORT_IMAGE_URL=https://i.example.com
+export SHORT_PASTE_URL=https://p.example.com
+export SHORT_SHORTENER_URL=https://r.example.com
 
-# TODO
-export NAMESPACE_TAG=local_xap
+# Inbound email
+export INBOUND_EMAIL_TOKEN=YOUR_TOKEN
+export INBOUND_EMAIL_ADDRESS=example.com
 
-export USE_DISCORD_BOT_A=false
+# Loki
+export LOKI_URL=http://localhost:3000/loki/api/v1/push
 
-export LOKI_URL=http://localhost:3100/loki/api/v1/push
+# Other
+export OTEL_LOG_LEVEL=warn
+export MAX_UNIQUE_ID_LENGTH=20
+
+if [ ! -d "images" ]; then
+  echo "Creating images directory"
+  mkdir images
+fi
+
+./gradlew bootRun

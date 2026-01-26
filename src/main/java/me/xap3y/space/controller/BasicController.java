@@ -43,10 +43,6 @@ public class BasicController {
     ) public ResponseEntity<?> renderPage(
             @PathVariable String id
     ) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("discord_id", "1234567890");
-        map.put("discord", 23);
-        Long discordId = (Long) map.get("discord_id");
         return new ResponseEntity<>(new DefaultResponse(true, "Internal server error"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -60,7 +56,6 @@ public class BasicController {
             put("version", SpaceApplication.VERSION);
             put("level", SpaceApplication.env.toString());
             put("startedAt", SpaceApplication.startedAt);
-            put("robots", serverInfo.getBaseUrl() + "/robots.txt");
             put("portal_url", serverInfo.getFrontEndUrl());
             put("namespace_tag", serverInfo.getNamespaceName());
             // TODO: Get urls from enviroments variables
@@ -73,12 +68,7 @@ public class BasicController {
             produces = "application/json"
     )
     public ResponseEntity<Map<String, Object>> fakeEnv() {
-        Map<String, Object> response = new HashMap<>() {{
-            put("error", true);
-            put("version", "v1");
-            put("message", "False positive");
-        }};
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
     }
 
     // Test for CSRF vulnerability

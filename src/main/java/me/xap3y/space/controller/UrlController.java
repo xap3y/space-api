@@ -2,8 +2,10 @@ package me.xap3y.space.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ShortUrlDto;
@@ -106,6 +108,7 @@ public class UrlController {
     @GetMapping(
             value = "/r/{uniqueId}"
     )
+    @PathLengthValidator
     public ResponseEntity<?> redirectUrl(
             HttpServletRequest request,
             @PathVariable String uniqueId
@@ -137,6 +140,7 @@ public class UrlController {
             }
     )
     @RequiresApiKey
+    @PathLengthValidator
     public ResponseEntity<?> deleteUrl(
             HttpServletRequest request,
             @PathVariable String uniqueId
@@ -167,6 +171,7 @@ public class UrlController {
                     MediaType.TEXT_PLAIN_VALUE
             }
     )
+    @PathLengthValidator
     public ResponseEntity<?> getUrl(
             @PathVariable String uniqueId
             /*@RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData
@@ -207,6 +212,7 @@ public class UrlController {
             }
     )
     @RequiresApiKey
+    @PathLengthValidator
     public ResponseEntity<?> getUrlLogs(
             HttpServletRequest request,
             @PathVariable String uniqueId

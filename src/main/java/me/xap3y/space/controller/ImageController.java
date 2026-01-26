@@ -10,6 +10,7 @@ import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.OptionalApiKey;
 import me.xap3y.space.api.iface.OptionalCookieAuth;
+import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.FoundImageDto;
@@ -345,6 +346,7 @@ public class ImageController {
             }
     )
     @OptionalApiKey
+    @PathLengthValidator
     public ResponseEntity<?> getImageInfo(
             HttpServletRequest request,
             @PathVariable String uniqueId
@@ -370,6 +372,7 @@ public class ImageController {
             }
     )
     @RequiresApiKey
+    @PathLengthValidator
     public ResponseEntity<?> getImageBase64(
             @PathVariable String uniqueId,
             @RequestBody(required = false) ImageGetRequest body,
@@ -412,6 +415,7 @@ public class ImageController {
     )
     @OptionalCookieAuth
     @OptionalApiKey
+    @PathLengthValidator
     public ResponseEntity<?> getImageStream(
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "base64") boolean valBool,
@@ -527,6 +531,9 @@ public class ImageController {
     public ResponseEntity<?> getImagePoster(
             @PathVariable String uniqueId
     ) {
+        if (uniqueId.length() > serverInfo.getMaxUniqueIdLength()) {
+            throw new BadRequestException("Unique ID is too long");
+        }
         HttpHeaders headers = new HttpHeaders();
         String posterDirString = ConfigDb.getIMAGE_DIR() + "poster/";
         Path posterPath = Path.of(posterDirString + uniqueId.toUpperCase() + ".jpg");
@@ -574,6 +581,7 @@ public class ImageController {
             }
     )
     @SneakyThrows
+    @PathLengthValidator
     public ResponseEntity<StreamingResponseBody> getVideo(
             @PathVariable String uniqueId,
             @RequestHeader(value = "Range", required = false) String rangeHeader,

@@ -42,6 +42,10 @@ public class ServerInfo {
                 environment.getProperty("server.baseurl", "127.0.0.1");
     }
 
+    public int getMaxUniqueIdLength() {
+        return Integer.parseInt(Objects.requireNonNull(environment.getProperty("MAX_UNIQUE_ID_LENGTH", "20")));
+    }
+
     public String getTestCorsUrl() {
         return environment.getProperty("cors.test.url", "https://demo.xap3y.space");
     }

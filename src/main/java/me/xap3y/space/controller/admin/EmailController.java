@@ -1,17 +1,25 @@
 package me.xap3y.space.controller.admin;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
+import me.xap3y.space.api.enums.TempMailStatus;
+import me.xap3y.space.api.exception.BadRequestException;
+import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.InboundEmailDto;
+import me.xap3y.space.dto.TempMailDto;
 import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.handler.TempEmailWebSocketHandler;
 import me.xap3y.space.mapper.InboundEmailMapper;
+import me.xap3y.space.mapper.TempMailMapper;
 import me.xap3y.space.model.request.EmailRequest;
 import me.xap3y.space.model.request.MissingEmailsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
@@ -19,11 +27,13 @@ import me.xap3y.space.service.EmailService;
 import me.xap3y.space.service.InboundMailService;
 import me.xap3y.space.service.PrometheusMetricService;
 import me.xap3y.space.service.TempMailService;
+import me.xap3y.space.util.CustomLocalDateTimeDeserializer;
 import me.xap3y.space.util.Utils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,8 +53,9 @@ public class EmailController {
     private final InboundMailService inboundMailService;
     private final InboundEmailMapper inboundEmailMapper;
     private final PrometheusMetricService prometheusMetricService;
+    private final TempMailMapper tempMailMapper;
 
-    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService) {
+    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper) {
         this.emailService = emailService.getIfAvailable();
         this.serverInfo = serverInfo;
         this.tempMailService = tempMailService;
@@ -52,6 +63,7 @@ public class EmailController {
         this.inboundMailService = inboundMailService;
         this.inboundEmailMapper = inboundEmailMapper;
         this.prometheusMetricService = prometheusMetricService;
+        this.tempMailMapper = tempMailMapper;
     }
 
     @PostMapping(
@@ -131,6 +143,23 @@ public class EmailController {
     }
 
     @GetMapping(
+            value = "/getall",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.TEXT_PLAIN_VALUE
+            }
+    )
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> getTempMailInfo(
+    ) {
+        List<TempMail> tempMails = tempMailService.findAll();
+        List<TempMailDto> tempMailDtos = tempMails.stream()
+                .map(tempMailMapper)
+                .toList();
+        return new ResponseEntity<>(new DefaultResponse(true, tempMailDtos), HttpStatus.OK);
+    }
+
+    @GetMapping(
             value = "/getinfo",
             produces = {
                 MediaType.APPLICATION_JSON_VALUE,
@@ -151,6 +180,7 @@ public class EmailController {
                 "email", tempMail.getEmail(),
                 "createdAt", tempMail.getCreatedAt().toString(),
                 "createdBy", tempMail.getCreatedBy().getUsername(),
+                "status", tempMail.getStatus().name(),
                 "expireAt", tempMail.getExpireAt() != null ? tempMail.getExpireAt().toString() : "never"
         );
 
@@ -190,4 +220,121 @@ public class EmailController {
 
         return new ResponseEntity<>(new DefaultResponse(false, res), HttpStatus.OK);
     }
+
+    @GetMapping("/{email}/suspend")
+    @RequiresSpecialApiKey
+    @PathLengthValidator
+    public ResponseEntity<?> revokeMail(
+            @PathVariable("email") String email,
+            HttpServletRequest request
+    ) {
+        //User uploader = (User) request.getAttribute("uploader");
+        TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
+
+        if (tempMail == null) {
+            throw new ResourceNotFoundException("Temp mail not found");
+        }
+
+        tempMailService.suspendEmail(email);
+        tempEmailWebSocketHandler.closeByEmail(email);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @DeleteMapping("/{email}")
+    @RequiresApiKey
+    @PathLengthValidator
+    public ResponseEntity<?> deleteMail(
+            @PathVariable("email") String email,
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
+
+        if (tempMail == null) {
+            throw new ResourceNotFoundException("Temp mail not found");
+        } else if (!tempMail.getCreatedBy().getId().equals(uploader.getId()) && !uploader.isAdmin()) {
+            throw new InvalidApiKeyException();
+        }
+
+        tempMailService.markDeleted(email);
+        tempEmailWebSocketHandler.closeByEmail(email);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/{email}/close")
+    @RequiresApiKey
+    @PathLengthValidator
+    public ResponseEntity<?> closeMail(
+            @PathVariable("email") String email,
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
+
+        if (tempMail == null) {
+            throw new ResourceNotFoundException("Temp mail not found");
+        } else if (!tempMail.getCreatedBy().getId().equals(uploader.getId()) && !uploader.isAdmin()) {
+            throw new InvalidApiKeyException();
+        }
+
+        tempMailService.closeEmail(email);
+        tempEmailWebSocketHandler.closeByEmail(email);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/{email}/open")
+    @RequiresApiKey
+    @PathLengthValidator
+    public ResponseEntity<?> openMail(
+            @PathVariable("email") String email,
+            HttpServletRequest request
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
+
+        if (tempMail == null) {
+            throw new ResourceNotFoundException("Temp mail not found");
+        } else if (!tempMail.getCreatedBy().getId().equals(uploader.getId()) && !uploader.isAdmin()) {
+            throw new InvalidApiKeyException();
+        } else if (tempMail.getStatus().equals(TempMailStatus.OPEN)) {
+            return new ResponseEntity<>(new DefaultResponse(false, "Temp mail is already open"), HttpStatus.OK);
+        }
+
+        tempMailService.openMail(email);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @PutMapping("/{email}/expiration")
+    @RequiresSpecialApiKey
+    @PathLengthValidator
+    public ResponseEntity<?> updateExpiration(
+            @PathVariable("email") String email,
+            @RequestBody(required = true) UpdateExpirationRequest body
+    ) {
+        TempMail tempMail = tempMailService.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Temp mail not found"));
+
+        if (body.expirationDate == null) {
+            throw new BadRequestException("expirationDate is required");
+        } else if (body.expirationDate.isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("expirationDate cannot be in the past");
+        }
+
+        tempMail.setExpireAt(body.expirationDate);
+        tempMailService.save(tempMail);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record UpdateExpirationRequest(
+            @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
+            @Nullable
+            LocalDateTime expirationDate
+    ) { }
 }
+

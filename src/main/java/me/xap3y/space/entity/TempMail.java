@@ -3,6 +3,7 @@ package me.xap3y.space.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import me.xap3y.space.api.enums.TempMailStatus;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
@@ -35,6 +36,11 @@ public class TempMail {
     @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    @ColumnDefault("5")
+    @Enumerated(EnumType.ORDINAL)
+    private TempMailStatus status;
+
     @Column(nullable = true)
     private LocalDateTime expireAt;
 
@@ -42,5 +48,6 @@ public class TempMail {
         this.email = email;
         this.createdBy = createdBy;
         this.createdAt = LocalDateTime.now();
+        this.status = TempMailStatus.OPEN;
     }
 }

@@ -3,9 +3,12 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageAlbumDto;
 import me.xap3y.space.entity.ImagePlaylist;
 import me.xap3y.space.entity.User;
@@ -25,9 +28,11 @@ public class ImagePlaylistController {
 
     private final ImagePlaylistService imagePlaylistService;
     private final ImageAlbumMapper imageAlbumMapper;
+    private final ServerInfo serverInfo;
 
 
     @GetMapping("/get/{identifier}")
+    @PathLengthValidator
     public ResponseEntity<?> getImagePlaylist(
             HttpServletRequest request,
             @PathVariable(value = "identifier") String identifier
@@ -42,11 +47,12 @@ public class ImagePlaylistController {
 
     @PutMapping("/get/{identifier}/images")
     @RequiresApiKey
+    @PathLengthValidator
     public ResponseEntity<?> addImageToPlaylist(
             HttpServletRequest request,
             @PathVariable(value = "identifier") String identifier,
             @RequestBody AddPlaylistImageRequest body
-            ) {
+    ) {
         User uploader = (User) request.getAttribute("uploader");
         if (uploader == null) throw new InvalidApiKeyException();
         else if (body.getImagesUids() == null || body.getImagesUids().isEmpty()) {
@@ -73,6 +79,7 @@ public class ImagePlaylistController {
 
     @DeleteMapping("/get/{identifier}/images/{imageUid}")
     @RequiresApiKey
+    @PathLengthValidator
     public ResponseEntity<?> removeImageFromPlaylist(
             HttpServletRequest request,
             @PathVariable(value = "identifier") String identifier,

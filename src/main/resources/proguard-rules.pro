@@ -41,3 +41,4 @@
 # Remove debugging information (optional, for further size reduction)
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
+

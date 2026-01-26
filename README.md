@@ -8,15 +8,13 @@ API for an image/file hosting service, pastebin host, temp email and URL shorten
 - [Frontend](https://xap3y.space)
 - [Frontend-source](https://github.com/xap3y/front-space-v2/)
 - [Public API](https://call.xap3y.space/)
-- [Status](https://uptime.xap3y.space/status/space)
+- [Status](https://status.xap3y.space/status/space)
 
 <br>
 
-#### API Status
-<img src="https://uptime.xap3y.space/api/badge/22/status" alt="Uptime" />
-
 ## Dependencies
 
+- [ffmpeg](https://www.ffmpeg.org/download.html)
 - [dcraw](https://archlinux.org/packages/extra/x86_64/dcraw/)
 - [imagemagick](https://archlinux.org/packages/extra/x86_64/imagemagick/)
 - Have S3 or R2 bucket
@@ -27,7 +25,7 @@ API for an image/file hosting service, pastebin host, temp email and URL shorten
 - Discord bot (optional)
 - [Tempo server](https://github.com/grafana/tempo) (for tracing, optional)
 - [Loki server](https://github.com/grafana/loki) (for logging, optional)
-- [OpenTelemetry Instrumentation for Java](https://github.com/open-telemetry/opentelemetry-java-instrumentation) (optional)
+- [OpenTelemetry Java agent](https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases) (optional)
 - [Prometheus](https://prometheus.io/) (for metrics, optional)
 - [Grafana](https://grafana.com/) (for metrics, optional)
 <br>

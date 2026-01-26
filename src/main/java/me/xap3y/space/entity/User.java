@@ -101,4 +101,8 @@ public class User {
         this.invitedBy = null;
         this.avatar = "https://gravatar.com/avatar/" + Utils.sha256hex(email);
     }
+
+    public boolean isAdmin() {
+        return this.role == UserRole.ADMIN || this.role == UserRole.OWNER;
+    }
 }

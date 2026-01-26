@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.api.enums.Environment;
 import me.xap3y.space.api.enums.MetricRecordType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.EmailVerifyCodeExpired;
@@ -35,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -56,8 +56,9 @@ public class AuthController {
     private final LogsService logsService;
     private final PrometheusMetricService prometheusMetricService;
     private final SessionMapper sessionMapper;
+    private final AuditLogService auditLogService;
 
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionMapper sessionMapper) {
+    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionMapper sessionMapper, AuditLogService auditLogService) {
         this.userService = userService;
         this.inviteCodeService = inviteCodeService;
         this.passwordEncoder = passwordEncoder;
@@ -70,6 +71,7 @@ public class AuthController {
         this.logsService = logsService;
         this.prometheusMetricService = prometheusMetricService;
         this.sessionMapper = sessionMapper;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/me")
@@ -77,7 +79,7 @@ public class AuthController {
         if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Session session = sessionService.getSession(token);
+        Session session = sessionService.getValidSession(token);
         if (session == null || !session.getIsValid()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -96,7 +98,7 @@ public class AuthController {
 
 
         if (token != null && uploader == null) {
-            Session session = sessionService.getSession(token);
+            Session session = sessionService.getValidSession(token);
             if (session == null || !session.getIsValid()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
@@ -156,6 +158,7 @@ public class AuthController {
         //String code = String.valueOf((int)(Math.random() * 900000) + 100000);
         //emailService.sendVerificationCode(user.getEmail(), code, );
         prometheusMetricService.recordEvent(MetricRecordType.USER_LOGIN);
+        auditLogService.saveLog(PortalLogType.USER_LOGIN, user);
 
         ResponseCookie cookie = ResponseCookie.from("session_token", sessionToken)
                 .httpOnly(true)
@@ -202,6 +205,11 @@ public class AuthController {
                 .secure(false)
                 .sameSite("Lax")
                 .build();
+
+        Session session = sessionService.getSession(token);
+        if (session != null) {
+            auditLogService.saveLog(PortalLogType.USER_LOGOUT, session.getUser());
+        }
 
         prometheusMetricService.recordEvent(MetricRecordType.USER_LOGOUT);
 

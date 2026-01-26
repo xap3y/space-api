@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'me.xap3y'
-version = '1.0-beta.24'
+version = '1.0-beta.25-pre2'
 
 def otlpEndpoint = 'http://0.0.0.0:4317'
 
@@ -46,7 +46,7 @@ dependencies {
     implementation 'io.micrometer:micrometer-core:1.16.0-M3'
     implementation 'io.micrometer:micrometer-registry-prometheus:1.16.0-M3'
     implementation 'io.micrometer:micrometer-tracing-bridge-otel:1.6.0-M3'
-    //implementation 'com.github.loki4j:loki-logback-appender:1.2.0'
+    implementation 'com.github.loki4j:loki-logback-appender:1.2.0'
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
@@ -75,7 +75,6 @@ sourceSets {
     }
 }*/
 
-/*
 bootRun {
     jvmArgs = [
             "-javaagent:${projectDir}/opentelemetry-javaagent.jar",
@@ -84,6 +83,7 @@ bootRun {
             "-Dotel.exporter.otlp.protocol=grpc",
             "-Dotel.metrics.exporter=none",
             "-Dotel.logs.exporter=none",
-            "-Dotel.instrumentation.logging.mdcs.enabled=true"
+            "-Dotel.instrumentation.logging.mdcs.enabled=true",
+            "-Dotel.log.level=warn"
     ]
-}*/
+}

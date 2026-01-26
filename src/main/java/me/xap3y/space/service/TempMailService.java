@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import me.xap3y.space.dto.InboundEmailDto;
 import me.xap3y.space.entity.InboundEmail;
 import me.xap3y.space.entity.TempMail;
+import me.xap3y.space.handler.TempEmailWebSocketHandler;
 import me.xap3y.space.repository.TempMailRepository;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,10 @@ public class TempMailService {
         return tempMailRepository.findByEmail(email);
     }
 
+    public List<TempMail> findAll() {
+        return tempMailRepository.findAll();
+    }
+
     public boolean existsByEmail(String email) {
         return tempMailRepository.existsByEmail(email);
     }
@@ -34,5 +39,21 @@ public class TempMailService {
             return inboundMailService.save(tempMail, email);
         }
         return null;
+    }
+
+    public void suspendEmail(String email) {
+        tempMailRepository.suspendEmail(email);
+    }
+
+    public void markDeleted(String email) {
+        tempMailRepository.deleteEmail(email);
+    }
+
+    public void closeEmail(String email) {
+        tempMailRepository.closeEmail(email);
+    }
+
+    public void openMail(String email) {
+        tempMailRepository.openMail(email);
     }
 }

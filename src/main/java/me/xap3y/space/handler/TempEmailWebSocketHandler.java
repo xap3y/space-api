@@ -2,10 +2,9 @@ package me.xap3y.space.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.enums.TempMailStatus;
 import me.xap3y.space.dto.InboundEmailDto;
-import me.xap3y.space.entity.InboundEmail;
 import me.xap3y.space.entity.TempMail;
-import me.xap3y.space.service.InboundMailService;
 import me.xap3y.space.service.TempMailService;
 import me.xap3y.space.util.Utils;
 import org.jetbrains.annotations.NotNull;
@@ -16,9 +15,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,11 +27,9 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     private final TempMailService tempMailService;
-    private final InboundMailService inboundMailService;
 
-    public TempEmailWebSocketHandler(TempMailService tempMailService, InboundMailService inboundMailService) {
+    public TempEmailWebSocketHandler(TempMailService tempMailService) {
         this.tempMailService = tempMailService;
-        this.inboundMailService = inboundMailService;
     }
 
     @Override
@@ -59,21 +54,20 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
 
         log.info("EMAIL WS: {} {}", email, apiKey);
 
-        // decode from URL encoding, dont use any library for this like Utils.decodeURIComponent
-
-
         TempMail mail = tempMailService.findByEmail(email).orElse(null);
         if (mail == null) {
             session.close(new CloseStatus(4002, "Email not found"));
             return;
         }
-
-        if (mail.getExpireAt().isBefore(LocalDateTime.now())) {
+        else if (!mail.getStatus().equals(TempMailStatus.OPEN)) {
+            session.close(new CloseStatus(4003, "Email not open"));
+            return;
+        }
+        else if (mail.getExpireAt().isBefore(LocalDateTime.now())) {
             session.close(new CloseStatus(4003, "Email expired"));
             return;
         }
-
-        if (!mail.getCreatedBy().getApiKey().getKeyCode().equals(apiKey)){
+        else if (!mail.getCreatedBy().getApiKey().getKeyCode().equals(apiKey)){
             session.close(new CloseStatus(4002, "Invalid API key"));
             return;
         }
@@ -113,6 +107,22 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
             //session.close(CloseStatus.NORMAL);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void closeByEmail(String email) {
+        var session = sessions.get(email);
+        if (session == null || !session.isOpen()) return;
+
+        try {
+            sendJson(session, Map.of(
+                    "error", true,
+                    "message", "Email suspended or deleted",
+                    "close", true
+            ));
+            session.close(CloseStatus.NORMAL);
+        } catch (IOException e) {
+            log.warn("Cannnot close WS session for email {}: {}", email, e.getMessage());
         }
     }
 

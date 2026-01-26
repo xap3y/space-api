@@ -33,7 +33,22 @@ public class PasteMapper implements Function<Paste, PasteDto> {
         //log.info("DECODED");
         return new PasteDto(
                 paste.getTitle(),
-                paste.getContent(),
+                paste.getContent() != null ? paste.getContent() : "",
+                paste.isPublic(),
+                paste.getCreatedAt(),
+                paste.getUniqueId(),
+                urlSetMapper.apply(paste),
+                shortUserMapper.apply(paste.getCreatedBy())
+        );
+    }
+
+    public PasteDto apply(Paste paste, boolean includeContent) {
+        //log.info("STARTING TO DECODE");
+        //String decodedText =  huffmanEncoder.decode(paste.getContent());
+        //log.info("DECODED");
+        return new PasteDto(
+                paste.getTitle(),
+                includeContent ? paste.getContent() : null,
                 paste.isPublic(),
                 paste.getCreatedAt(),
                 paste.getUniqueId(),

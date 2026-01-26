@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ImageLocation;
 import me.xap3y.space.api.enums.MetricRecordType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -53,12 +54,14 @@ public class ImageService {
     private final ImageCompressor imageCompressor;
     private final ImageMapper imageMapper;
     private final PrometheusMetricService prometheusMetricService;
+    private final AuditLogService auditLogService;
 
-    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService) {
+    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService) {
         this.imageRepository = imageRepository;
         this.imageCompressor = imageCompressor;
         this.imageMapper = imageMapper;
         this.prometheusMetricService = prometheusMetricService;
+        this.auditLogService = auditLogService;
     }
 
     public void deleteImageFileAsync(Image image) {
@@ -113,6 +116,7 @@ public class ImageService {
         imageDto.setUploader(uploader);
 
         prometheusMetricService.recordEvent(MetricRecordType.IMAGE_UPLOAD);
+        auditLogService.saveLog(PortalLogType.IMAGE_UPLOAD, uploader, uniqueId, source.toString());
 
         return imageRepository.save(imageDto);
     }
@@ -270,6 +274,7 @@ public class ImageService {
         imageDto.setUploader(uploader);
 
         prometheusMetricService.recordEvent(MetricRecordType.IMAGE_UPLOAD);
+        auditLogService.saveLog(PortalLogType.IMAGE_UPLOAD, uploader, uniqueId, sourceType.toString());
 
         try {
             return imageRepository.save(imageDto);
@@ -327,6 +332,12 @@ public class ImageService {
 
     public long getImageCountByDate(LocalDateTime fromDate, LocalDateTime toDate) {
         return imageRepository.countByUploadTimeBetween(fromDate, toDate);
+    }
+
+    public long getTodayImageCount() {
+        LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+        return imageRepository.countByUploadTimeBetween(startOfDay, endOfDay);
     }
 
     @Nullable

@@ -21,23 +21,27 @@ public class UserMapper implements Function<User, UserDto> {
 
     @Override
     public UserDto apply(User user) {
+        return apply(user, true, true, true);
+    }
 
+    public UserDto apply(User user, boolean withSocials, boolean withApiKey, boolean withPassword) {
         UserInviter inviter = null;
         if (user.getInvitedBy() != null) {
             inviter = userInvitorMapper.apply(user.getInvitedBy());
         }
+
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
                 user.getUsername(),
-                user.getPassword(),
+                withPassword ? user.getPassword() : null,
                 user.getRole(),
                 user.getAvatar(),
                 user.getCreatedAt(),
                 inviter,
                 helperService.getUserStats(user.getId()),
-                user.getSocials(),
-                user.getApiKey().getKeyCode()
+                withSocials ? user.getSocials() : null,
+                withApiKey ? user.getApiKey().getKeyCode() : null
         );
     }
 }

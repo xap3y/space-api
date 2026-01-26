@@ -83,7 +83,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                     }
 
                     if (sessionToken != null) {
-                        Session ses = sessionService.getSession(sessionToken);
+                        Session ses = sessionService.getValidSession(sessionToken);
                         if (ses == null) {
                             this.writeErrorResponse(response, new DefaultResponse(true, "Invalid session token"), HttpStatus.FORBIDDEN);
                             return false;

@@ -31,6 +31,8 @@
         </format>
     </appender>
 
+    <logger name="io.opentelemetry.exporter.internal.grpc" level="WARN"/>
+    <logger name="io.opentelemetry.exporter.internal" level="WARN"/>
     <!-- Root logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
