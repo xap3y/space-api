@@ -22,6 +22,8 @@ public interface PasteRepository extends JpaRepository<Paste, Long> {
 
     List<Paste> findByCreatedBy(User user);
 
+    boolean existsByUniqueId(String uid);
+
     @Transactional
     void deleteByUniqueId(String uniqueId);
 

@@ -83,7 +83,6 @@ public class StatsController {
             @RequestBody(required = false) StatsRequest body
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
 
         StatsRequest requestFilter = new StatsRequest();
         if (body == null) {

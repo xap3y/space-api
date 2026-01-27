@@ -11,15 +11,18 @@ import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.EmailVerifyCodeExpired;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.iface.OptionalApiKey;
+import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.SessionDto;
+import me.xap3y.space.dto.ShortUserDto;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.entity.EmailVerifyCodes;
 import me.xap3y.space.entity.Session;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.SessionMapper;
+import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.request.AuthLoginRequest;
 import me.xap3y.space.model.request.AuthRegisterRequest;
@@ -57,8 +60,9 @@ public class AuthController {
     private final PrometheusMetricService prometheusMetricService;
     private final SessionMapper sessionMapper;
     private final AuditLogService auditLogService;
+    private final ShortUserMapper shortUserMapper;
 
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionMapper sessionMapper, AuditLogService auditLogService) {
+    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionMapper sessionMapper, AuditLogService auditLogService, ShortUserMapper shortUserMapper) {
         this.userService = userService;
         this.inviteCodeService = inviteCodeService;
         this.passwordEncoder = passwordEncoder;
@@ -72,6 +76,7 @@ public class AuthController {
         this.prometheusMetricService = prometheusMetricService;
         this.sessionMapper = sessionMapper;
         this.auditLogService = auditLogService;
+        this.shortUserMapper = shortUserMapper;
     }
 
     @GetMapping("/me")
@@ -112,18 +117,14 @@ public class AuthController {
 
     @GetMapping("/validate")
     @RequiresApiKey
+    @OptionalCookieAuth
     public ResponseEntity<?> validateApiKey(
             HttpServletRequest request
-            //@RequestHeader(required = false, value = "key") String apiKey
     ) {
+        User user = (User) request.getAttribute("uploader");
+        ShortUserDto userDto = shortUserMapper.apply(user, false);
 
-        /*if (apiKey == null || apiKey.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-
-        apiKeyService.validateApiKey(apiKey);*/
-
-        return ResponseEntity.ok(new DefaultResponse(false, "OK"));
+        return new ResponseEntity<>(new DefaultResponse(false, userDto), HttpStatus.OK);
     }
 
     @PostMapping(
@@ -240,7 +241,7 @@ public class AuthController {
         }
 
         Map<String, String> res = Map.of(
-                "botname", "xapspace_auth_dev_bot", //XapSpaceAuth_bot
+                "botname", serverInfo.getTelegramVerifyBotName(),
                 "token", verifyCode.getTelCode()
         );
 

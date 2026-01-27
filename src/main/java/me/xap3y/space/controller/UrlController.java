@@ -71,12 +71,13 @@ public class UrlController {
             @RequestBody ShortUrlRequest body
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) {
-            throw new InvalidApiKeyException();
-        }
 
         if (body == null) {
             return new ResponseEntity<>(new DefaultResponse(true, "Missing request body"), HttpStatus.BAD_REQUEST);
+        } else if (body.getUniqueId() != null && !uploader.isAdmin()) {
+            throw new BadRequestException("No permission to use custom UID");
+        } else if (body.getUniqueId() != null && uploader.isAdmin() && urlService.existByUniqueId(body.getUniqueId())) {
+            throw new BadRequestException("This UID already exists!");
         }
 
         String uniqueId = body.getUniqueId();
@@ -84,12 +85,6 @@ public class UrlController {
 
         if (url == null) {
             return new ResponseEntity<>(new DefaultResponse(true, "Please provide a URL"), HttpStatus.BAD_REQUEST);
-        }
-
-        if (uniqueId != null) {
-            if (urlService.existByShortCode(uniqueId)) {
-                return new ResponseEntity<>(new DefaultResponse(true, "ShortUrl with this UID already exists"), HttpStatus.BAD_REQUEST);
-            }
         }
 
         if (!url.startsWith("http")) {
@@ -146,7 +141,6 @@ public class UrlController {
             @PathVariable String uniqueId
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         Url urlDto = urlService.getUrlByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Url not found"));
 
@@ -218,7 +212,6 @@ public class UrlController {
             @PathVariable String uniqueId
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         ShortUrlDto urlDto = urlService.getUrlByUniqueId(uniqueId)
                 .map(shortUrlMapper)

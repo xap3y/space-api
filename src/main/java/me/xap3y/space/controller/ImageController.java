@@ -92,7 +92,6 @@ public class ImageController {
             @RequestParam("file") MultipartFile file
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
         if (file.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
 
         try (InputStream is = file.getInputStream()) {
@@ -139,7 +138,6 @@ public class ImageController {
             @RequestParam(value = "source", required = false) ResourceSourceType source
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         if (uniqueId == null || uniqueId.isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "Unique ID is required"), HttpStatus.BAD_REQUEST);
@@ -213,7 +211,6 @@ public class ImageController {
 
         String key = Utils.generateRandomId();
 
-        if (uploader == null) throw new InvalidApiKeyException();
         var putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key("media/" + key)
@@ -246,7 +243,6 @@ public class ImageController {
             @RequestParam(value = "source", required = false) ResourceSourceType source
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         if (source == null) source = ResourceSourceType.API;
 
@@ -308,7 +304,6 @@ public class ImageController {
             @PathVariable String uniqueId
     ) throws RuntimeException, IOException {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         Image image = imageService.getImage(uniqueId);
         if (image.getUploader() == null) {

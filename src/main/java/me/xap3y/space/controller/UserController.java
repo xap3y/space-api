@@ -153,7 +153,6 @@ public class UserController {
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
         log.info("Getting current user: {}", uploader.getUsername());
 
         UserDto userDto = userMapper.apply(uploader);
@@ -170,7 +169,6 @@ public class UserController {
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
         log.info("Getting current user: {}", uploader.getUsername());
 
         Optional<UserSettings> userSettings = userSettingsService.getUserSettingsByUserId(uploader.getId());
@@ -194,7 +192,6 @@ public class UserController {
             @RequestBody UserWebhookSettings body
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         Optional<UserSettings> existingSettings = userSettingsService.getUserSettingsByUserId(uploader.getId());
 
@@ -281,7 +278,6 @@ public class UserController {
             @RequestBody Map<SegmentType, UrlSetPreference> body
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         UserSettings settings = userSettingsService.getUserSettingsByUserIdSafe(uploader);
 

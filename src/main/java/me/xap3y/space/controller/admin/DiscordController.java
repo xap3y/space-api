@@ -50,7 +50,6 @@ public class DiscordController {
     ) {
 
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         DiscordConnection connection = discordConnectionService.findByUserId(uploader).orElseThrow(() -> new BadRequestException("You don't have a Discord connection"));
 
@@ -139,7 +138,6 @@ public class DiscordController {
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         DiscordConnection connection = discordConnectionService.findByUserId(uploader).orElseThrow(() -> new BadRequestException("You don't have a Discord connection"));
 
@@ -166,9 +164,8 @@ public class DiscordController {
             @RequestBody DiscordConnectionRequest body
     ) throws JsonProcessingException {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
-        else if (body.getAccessToken() == null) {
+        if (body.getAccessToken() == null) {
             throw new BadRequestException("Missing access token");
         }
 

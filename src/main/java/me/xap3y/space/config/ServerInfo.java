@@ -47,7 +47,7 @@ public class ServerInfo {
     }
 
     public String getTestCorsUrl() {
-        return environment.getProperty("cors.test.url", "https://demo.xap3y.space");
+        return environment.getProperty("cors.test.url", "https://demo.example.com");
     }
 
     public String getEnv() {
@@ -95,11 +95,11 @@ public class ServerInfo {
     }
 
     public String getShortImageUrl() {
-        return environment.getProperty("SHORT_IMAGE_URL", "https://i.xap3y.space");
+        return environment.getProperty("SHORT_IMAGE_URL", "https://i.example.com");
     }
 
     public String getShortPasteUrl() {
-        return environment.getProperty("SHORT_PASTE_URL", "https://p.xap3y.space");
+        return environment.getProperty("SHORT_PASTE_URL", "https://p.example.com");
     }
 
     public Boolean getUseDiscordWebhook() {
@@ -118,8 +118,12 @@ public class ServerInfo {
         return environment.getProperty("USE_TELEGRAM_VERIFY_BOT", Boolean.class, false);
     }
 
+    public String getTelegramVerifyBotName() {
+        return environment.getProperty("TELEGRAM_VERIFY_BOT_NAME", String.class, "bot");
+    }
+
     public String getShortShortenerUrl() {
-        return environment.getProperty("SHORT_SHORTENER_URL", "https://r.xap3y.space");
+        return environment.getProperty("SHORT_SHORTENER_URL", "https://r.example.com");
     }
 
     public String getInboundEmailToken() {
@@ -127,7 +131,7 @@ public class ServerInfo {
     }
 
     public String getInboundEmailAddress() {
-        return environment.getProperty("INBOUND_EMAIL_ADDRESS", "xap3y.space");
+        return environment.getProperty("INBOUND_EMAIL_ADDRESS", "example.com");
     }
 
     public Integer getAuthCookieMaxAge() {

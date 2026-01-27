@@ -9,6 +9,7 @@ import me.xap3y.space.mapper.PasteMapper;
 import me.xap3y.space.repository.PasteRepository;
 import me.xap3y.space.util.HuffmanEncoder;
 import me.xap3y.space.util.Utils;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -56,10 +57,10 @@ public class PasteService {
     }
 
     public PasteDto savePaste(String text, User uploader) {
-        return savePaste("Untitled", text, uploader);
+        return savePaste("Untitled", text, uploader, null);
     }
 
-    public PasteDto savePaste(String title, String text, User uploader) throws IllegalArgumentException, OptimisticLockingFailureException {
+    public PasteDto savePaste(String title, String text, User uploader, @Nullable String uniqueId) throws IllegalArgumentException, OptimisticLockingFailureException {
         log.info("ENCODING TEXT: {}", text);
         //byte[] encodedText =  huffmanEncoder.encode(text);
         //String encodedText =  huffmanEncoder.encode(text);
@@ -70,7 +71,7 @@ public class PasteService {
         pasteDto.setCreatedBy(uploader);
         pasteDto.setPublic(true);
         pasteDto.setCreatedAt(LocalDateTime.now());
-        pasteDto.setUniqueId(Utils.generateRandomId());
+        pasteDto.setUniqueId(uniqueId == null ? Utils.generateRandomId() : uniqueId);
 
         log.info("APPLYING MAPPER: {}", pasteDto);
 
@@ -116,5 +117,9 @@ public class PasteService {
 
     public long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate) {
         return pasteRepository.countByCreatedAtBetween(startDate, endDate);
+    }
+
+    public boolean existByUniqueId(String uniqueId) {
+        return pasteRepository.existsByUniqueId(uniqueId);
     }
 }

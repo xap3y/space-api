@@ -20,4 +20,7 @@ public class PasteRequest {
 
     @Nullable
     private String title;
+
+    @Nullable
+    private String uniqueId;
 }

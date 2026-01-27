@@ -54,8 +54,7 @@ public class ImagePlaylistController {
             @RequestBody AddPlaylistImageRequest body
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
-        else if (body.getImagesUids() == null || body.getImagesUids().isEmpty()) {
+        if (body.getImagesUids() == null || body.getImagesUids().isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "Image UID is required"), HttpStatus.BAD_REQUEST);
         }
 
@@ -85,9 +84,6 @@ public class ImagePlaylistController {
             @PathVariable(value = "identifier") String identifier,
             @PathVariable(value = "imageUid") String imageUid
     ) {
-        User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
-
         boolean playListExists = imagePlaylistService.exists(identifier);
 
         if (!playListExists) {

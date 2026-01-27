@@ -6,6 +6,7 @@ import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ShortUserDto;
 import me.xap3y.space.entity.TelegramConnectCodes;
 import me.xap3y.space.entity.TelegramConnection;
@@ -36,6 +37,7 @@ public class TelegramController {
     private final ShortUserMapper shortUserMapper;
     private final TelegramConnectCodesService telegramConnectCodesService;
     private final AuditLogService auditLogService;
+    private final ServerInfo serverInfo;
 
     @GetMapping(
             value = "/@me",
@@ -80,6 +82,8 @@ public class TelegramController {
 
         if (telegramConnectionService.existsByUserId(uploader.getId())) {
             return new ResponseEntity<>(new DefaultResponse(true, "User already connected to Telegram"), HttpStatus.BAD_REQUEST);
+        } else if (!serverInfo.getUseTelegramVerifyBot()) {
+            return new ResponseEntity<>(new DefaultResponse(false, "Service unavailable"), HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         TelegramConnectCodes codeToUse = telegramConnectCodesService.findByUserIdNotUsed(uploader.getId())
@@ -138,6 +142,9 @@ public class TelegramController {
         if (exists) {
             throw new BadRequestException("User already connected to Telegram");
         }
+        else if (!serverInfo.getUseTelegramVerifyBot()) {
+            return new ResponseEntity<>(new DefaultResponse(false, "Service unavailable"), HttpStatus.SERVICE_UNAVAILABLE);
+        }
 
         TelegramConnectCodes newCode = new TelegramConnectCodes();
         newCode.setUser(uploader);
@@ -148,8 +155,8 @@ public class TelegramController {
         telegramConnectCodesService.save(newCode);
 
         Map<String, String> res = Map.of(
-                "botname", "xapspace_auth_dev_bot",
-                "url", "https://t.me/xapspace_auth_dev_bot?start=" + newCode.getCode(),
+                "botname", serverInfo.getTelegramVerifyBotName(),
+                "url", "https://t.me/" + serverInfo.getTelegramVerifyBotName() + "?start=" + newCode.getCode(),
                 "token", newCode.getCode()
         );
 

@@ -104,4 +104,8 @@ public class UrlService {
         List<Object[]> result = urlRepository.findBiggestCreatorInRangeWithId(startDate, endDate).orElse(null);
         return Utils.parseBestUploader(result);
     }
+
+    public boolean existByUniqueId(String uniqueId) {
+        return urlRepository.existsByShortCode(uniqueId);
+    }
 }

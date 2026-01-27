@@ -127,7 +127,6 @@ public class PasteController {
     ) {
 
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) return new ResponseEntity<>(new DefaultResponse(true, "Unauthorized"), HttpStatus.UNAUTHORIZED);
 
         if (file != null &&
                 !file.isEmpty() &&
@@ -181,13 +180,14 @@ public class PasteController {
             @RequestBody PasteRequest body
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) {
-            throw new InvalidApiKeyException();
-        }
         if (body == null) {
             return new ResponseEntity<>(new DefaultResponse(true, "Please provide either text or file, not both"), HttpStatus.BAD_REQUEST);
         } else if (body.getText().length() > ConfigDb.MAX_PASTE_TEXT_LENGTH) {
             return new ResponseEntity<>(new DefaultResponse(true, "Text is too long, max length is 55045 characters!"), HttpStatus.BAD_REQUEST);
+        } else if (body.getUniqueId() != null && !uploader.isAdmin()) {
+            throw new BadRequestException("No permission to use custom UID");
+        } else if (body.getUniqueId() != null && uploader.isAdmin() && pasteService.existByUniqueId(body.getUniqueId())) {
+            throw new BadRequestException("This UID already exists!");
         }
 
         String title = body.getTitle();
@@ -195,7 +195,7 @@ public class PasteController {
             title = Utils.generateRandomId();
         }
         try {
-            PasteDto savedPasteDto = pasteService.savePaste(title, body.getText(), uploader);
+            PasteDto savedPasteDto = pasteService.savePaste(title, body.getText(), uploader, body.getUniqueId());
             metricService.setDatabaseUpdated(true);
             metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
             webhookService.postPasteCreated(savedPasteDto);
@@ -215,7 +215,6 @@ public class PasteController {
             @PathVariable String uniqueId
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (uploader == null) throw new InvalidApiKeyException();
 
         Paste paste = pasteService.getPasteByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Paste not found"));
 
