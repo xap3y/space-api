@@ -142,6 +142,10 @@ public class ServerInfo {
         return environment.getProperty("AUTH_COOKIE_SAMESITE", "None");
     }
 
+    public String getAuthCookieDomain() {
+        return environment.getProperty("AUTH_COOKIE_DOMAIN", "EXAMPLE.COM");
+    }
+
     public Boolean getAuthCookieSecure() {
         return environment.getProperty("AUTH_COOKIE_SECURE", Boolean.class, true);
     }

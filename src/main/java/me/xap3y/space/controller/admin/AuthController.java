@@ -167,6 +167,7 @@ public class AuthController {
                 .path("/")
                 .maxAge(serverInfo.getAuthCookieMaxAge())
                 .sameSite(serverInfo.getAuthCookieSameSite())
+                .domain(serverInfo.getAuthCookieDomain())
                 .secure(serverInfo.getAuthCookieSecure())
                 .build();
 

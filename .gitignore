@@ -40,14 +40,11 @@ images/
 ver.md
 todo.md
 gradlew.bat
-
 logs.txt
-
 zscripts/startdev.sh
-
 zscripts/up.sh
 zscripts/
-
 zscripts/env_dev.sh
-
+transcript
+transcripts
 opentelemetry-javaagent.jar
