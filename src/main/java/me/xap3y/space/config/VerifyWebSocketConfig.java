@@ -20,7 +20,7 @@ public class VerifyWebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(verifyWebSocketHandler, "/ws/verify")
-                .setAllowedOrigins("http://localhost:3000", "https://space.xap3y.fun", "https://xap3y.space", "http://localhost:3006");
+                .setAllowedOrigins("http://localhost:3000", "https://space.xap3y.eu", "https://xap3y.space", "http://localhost:3006");
         // .withSockJS(); // (NOT needed if using native WebSocket)
     }
 }

@@ -1,16 +1,16 @@
 package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "logs")
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LogRecord {
 
     @Id

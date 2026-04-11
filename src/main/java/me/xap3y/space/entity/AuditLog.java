@@ -1,10 +1,7 @@
 package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import me.xap3y.space.api.enums.PortalLogType;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
@@ -14,8 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_log")
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class AuditLog {

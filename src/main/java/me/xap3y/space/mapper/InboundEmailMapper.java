@@ -24,7 +24,8 @@ public class InboundEmailMapper implements Function<InboundEmail, InboundEmailDt
                 mail.getMessageId(),
                 mail.getTextBody(),
                 mail.getHtmlBody(),
-                List.of()
+                List.of(),
+                mail.getId()
         );
     }
 }

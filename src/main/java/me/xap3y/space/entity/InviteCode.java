@@ -1,6 +1,7 @@
 package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
@@ -11,8 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "invite_codes")
-@Getter
-@Setter
+@Data
 public class InviteCode {
 
     @Id

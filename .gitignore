@@ -47,4 +47,5 @@ zscripts/
 zscripts/env_dev.sh
 transcript
 transcripts
+tr_images/
 opentelemetry-javaagent.jar

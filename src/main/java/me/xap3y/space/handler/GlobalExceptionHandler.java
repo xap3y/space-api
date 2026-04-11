@@ -17,9 +17,11 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.FileNotFoundException;
+import java.util.Map;
 
 @Slf4j
 @ControllerAdvice
@@ -38,6 +40,12 @@ public class GlobalExceptionHandler {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 
         return new ResponseEntity<>(defaultResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(ImageToolsException.class)
+    public ResponseEntity<DefaultResponse> handleImageTools(ImageToolsException ex) {
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
+        return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler({InsufficientAuthenticationException.class, InvalidApiKeyException.class})
@@ -73,7 +81,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(defaultResponse, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler({InvalidFormatException.class, BadRequestException.class, IllegalArgumentException.class, InvalidInviteCodeException.class, InvalidUniqueIdException.class, MissingRequestCookieException.class, MissingCredentialsException.class, HttpMediaTypeNotSupportedException.class, HttpMessageNotReadableException.class})
+    @ExceptionHandler({MaxUploadSizeExceededException.class, InvalidFormatException.class, BadRequestException.class, IllegalArgumentException.class, InvalidInviteCodeException.class, InvalidUniqueIdException.class, MissingRequestCookieException.class, MissingCredentialsException.class, HttpMediaTypeNotSupportedException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<?> handleInvalidApiKeyException(
             RuntimeException ex
     ) {
@@ -91,7 +99,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler({ResourceExpiredException.class, ResourceVisibilityException.class})
+    @ExceptionHandler({ResourceExpiredException.class, ResourceVisibilityException.class, ResourceAccessForbiddenException.class})
     public ResponseEntity<?> handleNoAuthorizedException(
             RuntimeException ex
     ) {

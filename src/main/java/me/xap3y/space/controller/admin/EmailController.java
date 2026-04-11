@@ -2,20 +2,25 @@ package me.xap3y.space.controller.admin;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.TempMailStatus;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.exception.ResourceAccessForbiddenException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
+import me.xap3y.space.api.iface.OptionalApiKey;
 import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.InboundEmailDto;
 import me.xap3y.space.dto.TempMailDto;
+import me.xap3y.space.entity.InboundEmail;
 import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.handler.TempEmailWebSocketHandler;
@@ -28,9 +33,7 @@ import me.xap3y.space.service.*;
 import me.xap3y.space.util.CustomLocalDateTimeDeserializer;
 import me.xap3y.space.util.Utils;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -53,8 +56,9 @@ public class EmailController {
     private final PrometheusMetricService prometheusMetricService;
     private final TempMailMapper tempMailMapper;
     private final AuditLogService auditLogService;
+    private final TurnStileService turnStileService;
 
-    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper, AuditLogService auditLogService) {
+    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper, AuditLogService auditLogService, TurnStileService turnStileService) {
         this.emailService = emailService.getIfAvailable();
         this.serverInfo = serverInfo;
         this.tempMailService = tempMailService;
@@ -64,6 +68,7 @@ public class EmailController {
         this.prometheusMetricService = prometheusMetricService;
         this.tempMailMapper = tempMailMapper;
         this.auditLogService = auditLogService;
+        this.turnStileService = turnStileService;
     }
 
     @PostMapping(
@@ -87,10 +92,12 @@ public class EmailController {
     }
 
     @PostMapping("/getmissing")
-    @RequiresApiKey
+    @OptionalApiKey
     public ResponseEntity<?> getMissingMails(
+            HttpServletRequest request,
             @RequestBody MissingEmailsRequest dto
     ) {
+
         if (dto.getMail() == null || dto.getMessageIds() == null || dto.getMessageIds().isEmpty()) {
             return ResponseEntity.badRequest().body("Missing required fields: mail or messageIds");
         }
@@ -100,10 +107,29 @@ public class EmailController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Temp mail not found");
         }
 
+        User uploader = (User) request.getAttribute("uploader");
+        String cookieName = "email_token_" + tempMail.getFingerprint();
+        Cookie[] cookies = request.getCookies();
+        boolean hasCookie = false;
+
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                log.info("Cookie: {}={}", cookie.getName(), cookie.getValue());
+                if (cookie.getName().equals(cookieName)) {
+                    hasCookie = true;
+                    break;
+                }
+            }
+        }
+
+        if (uploader == null && !hasCookie) {
+            throw new InvalidApiKeyException();
+        }
+
         var emails = inboundMailService.getMissingEmails(tempMail, dto.getMessageIds());
 
         if (emails.isEmpty()) {
-            return ResponseEntity.ok("No missing emails found");
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
         List<InboundEmailDto> emailDtos = emails.stream()
@@ -127,13 +153,22 @@ public class EmailController {
 
         log.info("ENVELOPE: {}", dto.envelope);
 
+        if (dto.to.contains("netflix@xap3x.fun")) {
+            log.info("Forwarding netflix email to xap3x.fun: from={} subject={}", dto.from, dto.subject);
+            emailService.forwardEmail(dto);
+            return ResponseEntity.ok("forwarded");
+        } else {
+            log.info("NOT AN NETFLIX MAIL");
+        }
+
         TempMail tempMail = tempMailService.findByEmail(dto.to).orElse(null);
 
         if (tempMail == null) return ResponseEntity.ok("ok");
 
-        tempMailService.addEmailToTempMail(tempMail, dto);
+        InboundEmail inserted = tempMailService.addEmailToTempMail(tempMail, dto);
+        InboundEmailDto insertedDto = inboundEmailMapper.apply(inserted);
 
-        tempEmailWebSocketHandler.pushEmail(dto);
+        tempEmailWebSocketHandler.pushEmail(insertedDto);
 
         prometheusMetricService.recordEvent(MetricRecordType.EMAIL_RECEIVED);
         auditLogService.saveLog(PortalLogType.EMAIL_RECEIVE, null, tempMail.getEmail(), "API");
@@ -167,9 +202,10 @@ public class EmailController {
                 MediaType.TEXT_PLAIN_VALUE
             }
     )
-    @RequiresApiKey
+    @OptionalApiKey
     public ResponseEntity<?> getTempMailInfo(
-            @RequestParam("email") String email
+            @RequestParam("email") String email,
+            HttpServletRequest request
     ) {
         TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
 
@@ -177,15 +213,78 @@ public class EmailController {
             return new ResponseEntity<>(new DefaultResponse(true, "Temp mail not found"), HttpStatus.NOT_FOUND);
         }
 
+        User uploader = (User) request.getAttribute("uploader");
+
+        String cookieName = "email_token_" + tempMail.getFingerprint();
+        Cookie[] cookies = request.getCookies();
+        boolean hasCookie = false;
+
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                log.info("Cookie: {}={}", cookie.getName(), cookie.getValue());
+                if (cookie.getName().equals(cookieName)) {
+                    hasCookie = true;
+                    break;
+                }
+            }
+        }
+
+        if (uploader == null && !hasCookie) {
+            throw new InvalidApiKeyException();
+        }
+
         Map<String, String> res = Map.of(
                 "email", tempMail.getEmail(),
                 "createdAt", tempMail.getCreatedAt().toString(),
-                "createdBy", tempMail.getCreatedBy().getUsername(),
+                "createdBy", tempMail.getCreatedBy() != null ? tempMail.getCreatedBy().getUsername() : "public",
                 "status", tempMail.getStatus().name(),
                 "expireAt", tempMail.getExpireAt() != null ? tempMail.getExpireAt().toString() : "never"
         );
 
         return new ResponseEntity<>(new DefaultResponse(false, res), HttpStatus.OK);
+    }
+
+    @PostMapping(
+            value = "/create/public",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.TEXT_PLAIN_VALUE
+            }
+    )
+    public ResponseEntity<?> createTempMailPublic(
+            HttpServletRequest request,
+            @RequestBody(required = false) NewTempMailPublicRequest body
+    ) {
+        if (body == null || body.token == null || body.getToken().isBlank()) {
+            throw new BadRequestException();
+        }
+
+        boolean isCaTokenValid = turnStileService.validate(body.getToken());
+        if (!isCaTokenValid) throw new ResourceAccessForbiddenException();
+
+        TempMail tempMail = tempMailService.createNewRandom(null);
+        auditLogService.saveLog(PortalLogType.EMAIL_CREATE, null, tempMail.getEmail(), "API");
+
+        log.info("Temp mail created: {} | by public API", tempMail.getEmail());
+
+        Map<String, String> res = Map.of(
+                "email", tempMail.getEmail(),
+                "createdBy", "public",
+                "expireAt", tempMail.getExpireAt() != null ? tempMail.getExpireAt().toString() : "never"
+        );
+
+        ResponseCookie cookie = ResponseCookie.from("email_token_" + tempMail.getFingerprint(), tempMail.getToken())
+                .httpOnly(serverInfo.getSetCookieHttpOnly())
+                .path("/")
+                .maxAge(serverInfo.getAuthCookieMaxAge())
+                .sameSite(serverInfo.getAuthCookieSameSite())
+                .domain(serverInfo.getAuthCookieDomain())
+                .secure(serverInfo.getAuthCookieSecure())
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new DefaultResponse(false, res));
     }
 
     @PostMapping(
@@ -201,14 +300,7 @@ public class EmailController {
     ) {
         User creator = (User) request.getAttribute("uploader");
 
-        String randomAddress = Utils.generateRandomId(8) + "@" + serverInfo.getInboundEmailAddress();
-
-        TempMail tempMail = new TempMail(randomAddress, creator);
-
-        tempMail.setExpireAt(LocalDateTime.now().plusDays(7));
-
-        tempMailService.save(tempMail);
-        prometheusMetricService.recordEvent(MetricRecordType.EMAIL_CREATED);
+        TempMail tempMail = tempMailService.createNewRandom(creator);
 
         log.info("Temp mail created: {} | by {}", tempMail.getEmail(), creator.getUsername());
         auditLogService.saveLog(PortalLogType.EMAIL_CREATE, creator, tempMail.getEmail(), "API");
@@ -338,5 +430,11 @@ public class EmailController {
             @Nullable
             LocalDateTime expirationDate
     ) { }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class NewTempMailPublicRequest {
+        private String token;
+    }
 }
 

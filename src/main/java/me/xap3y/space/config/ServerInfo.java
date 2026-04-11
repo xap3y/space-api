@@ -142,8 +142,20 @@ public class ServerInfo {
         return environment.getProperty("AUTH_COOKIE_SAMESITE", "None");
     }
 
+    public Boolean getSetCookieHttpOnly() {
+        return environment.getProperty("AUTH_COOKIE_HTTP_ONLY", Boolean.class, true);
+    }
+
     public String getAuthCookieDomain() {
         return environment.getProperty("AUTH_COOKIE_DOMAIN", "EXAMPLE.COM");
+    }
+
+    public String getTurnstileSecret() {
+        return environment.getProperty("TURNSTILE_SECRET", "EXAMPLE");
+    }
+
+    public String getCryptoSecret() {
+        return environment.getProperty("CRYPTO_SECRET", "EXAMPLE");
     }
 
     public Boolean getAuthCookieSecure() {

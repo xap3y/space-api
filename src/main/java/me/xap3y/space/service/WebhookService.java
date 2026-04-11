@@ -40,11 +40,7 @@ public class WebhookService {
         if (!serverInfo.getUseDiscordWebhook()) return;
         DiscordWebhook hook = getHook();
         hook.setContent(message);
-        try {
-            hook.execute();
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
+        executeAndLog(hook);
     }
 
     public void postImageUpload(String id, ImageInfoDto imageDto) {
@@ -66,11 +62,7 @@ public class WebhookService {
                         " | [WEB_URL](" + serverInfo.getBaseUrl() + "/web/image-render/" + id + ")" +
                         " | [PORTAL_URL](" + serverInfo.getFrontEndUrl() + "/image/" + id + ")" +
                         " | [SHORT_URL](" + serverInfo.getShortImageUrl() + "/" + id + ")");
-        try {
-            hook.execute();
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
+        executeAndLog(hook);
     }
 
     public void postUrlShorten(ShortUrlDto urlDto) {
@@ -84,11 +76,7 @@ public class WebhookService {
         embedObject.addField("creator", urlDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
-        try {
-            hook.execute();
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
+        executeAndLog(hook);
     }
 
     public void postPasteCreated(PasteDto pasteDto) {
@@ -102,11 +90,7 @@ public class WebhookService {
         embedObject.addField("creator", pasteDto.uploader().username(), false);
         //embedObject.setDescription("SIZE: `" + imageDto.size() + "` UPLOADER: " + imageDto.uploader().getUsername() + "(" + imageDto.uploader().getId() + ")");
         hook.addEmbed(embedObject);
-        try {
-            hook.execute();
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
+        executeAndLog(hook);
     }
 
     public void postImageDeleted(String uniqueId, Image img) {
@@ -118,11 +102,7 @@ public class WebhookService {
         embedObject.addField("| SIZE", "**|** " + img.getSize() / 1024 + " KiB", true);
         embedObject.addField("| UPLOADER", "**|** [" + img.getUploader().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + img.getUploader().getUsername() + ")" , true);
         hook.addEmbed(embedObject);
-        try {
-            hook.execute();
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
+        executeAndLog(hook);
     }
 
     public void postSessionInit(Session session) {
@@ -131,5 +111,13 @@ public class WebhookService {
 
     public void postSessionInvalid(Session session) {
         postMessage("> [SESSION-INVALIDATED] U: [" + session.getUser().getUsername() + "](" + serverInfo.getFrontEndUrl() + "/user/" + session.getUser().getUsername() + ") -ID: **" + session.getId() + "**  -F: **" + session.getIpAddress() + "** -A: **" + session.getUserAgent() + "**");
+    }
+
+    private void executeAndLog(DiscordWebhook hook) {
+        try {
+            hook.execute();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
     }
 }

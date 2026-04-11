@@ -94,6 +94,18 @@ public class Utils {
         return apiKey.toString();
     }
 
+    public static String generateApiKey(int length) {
+        SecureRandom random = new SecureRandom();
+        StringBuilder apiKey = new StringBuilder(length);
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*#&@!?-";
+
+        for (int i = 0; i < length; i++) {
+            apiKey.append(characters.charAt(random.nextInt(characters.length())));
+        }
+
+        return apiKey.toString();
+    }
+
     @Nullable
     public static String sha256hex(String text) {
         MessageDigest digest = null;

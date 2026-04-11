@@ -5,18 +5,20 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.*;
 import me.xap3y.space.api.exception.*;
-import me.xap3y.space.api.iface.OptionalApiKey;
-import me.xap3y.space.api.iface.OptionalCookieAuth;
-import me.xap3y.space.api.iface.PathLengthValidator;
-import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.api.iface.*;
+import me.xap3y.space.api.wrapper.ByteArrayMultipartFile;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.FoundImageDto;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
+import me.xap3y.space.dto.TranscriptImageDto;
 import me.xap3y.space.entity.Image;
+import me.xap3y.space.entity.MinecraftServerReports;
+import me.xap3y.space.entity.TranscriptImage;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ImageMapper;
 import me.xap3y.space.mapper.ShortUserMapper;
+import me.xap3y.space.mapper.UrlSetMapper;
 import me.xap3y.space.model.request.ImageGetRequest;
 import me.xap3y.space.model.request.StatsRequest;
 import me.xap3y.space.model.response.DefaultResponse;
@@ -68,8 +70,10 @@ public class ImageController {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final PrometheusMetricService prometheusMetricService;
+    private final TranscriptImagesService transcriptImagesService;
+    private final UrlSetMapper urlSetMapper;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, TranscriptImagesService transcriptImagesService, UrlSetMapper urlSetMapper) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
@@ -80,6 +84,8 @@ public class ImageController {
         this.s3Client = s3Client;
         this.s3Presigner = s3Presigner;
         this.prometheusMetricService = prometheusMetricService;
+        this.transcriptImagesService = transcriptImagesService;
+        this.urlSetMapper = urlSetMapper;
     }
 
     @Value("${cloud.aws.s3.bucket}")
@@ -229,6 +235,93 @@ public class ImageController {
                 "url", presignedRequest.url().toString(),
                 "method", "PUT"
         );
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @RequiresApiKey
+    public ResponseEntity<?> uploadImageOctetStream(
+            HttpServletRequest request,
+            @RequestBody byte[] body,
+            @RequestParam(value = "filename", required = false) String filename,
+            @RequestParam(value = "contentType", required = false) String contentType,
+            @RequestParam(value = "uniqueId", required = false) String uniqueId,
+            @RequestParam(value = "private", required = false) Boolean isPrivate,
+            @RequestParam(value = "password", required = false) String password,
+            @RequestParam(value = "desc", required = false) String description,
+            @RequestParam(value = "source", required = false) ResourceSourceType source
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (source == null) source = ResourceSourceType.API;
+
+        if (body == null || body.length == 0) {
+            return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
+        }
+
+        if (uniqueId != null && imageService.doesImageExist(uniqueId)) {
+            return new ResponseEntity<>(new DefaultResponse(true, "Image with this UID already exists"), HttpStatus.BAD_REQUEST);
+        }
+
+        if (uploader.getApiKey().getKeyCode().equals(password)) {
+            throw new BadRequestException("Password cannot be the same as your API key!");
+        } else if (password != null && password.length() < 3) {
+            throw new BadRequestException("Password must be at least 3 characters long!");
+        } else if (password != null && password.length() > 100) {
+            throw new BadRequestException("Password must be at most 100 characters long!");
+        } else if (password != null && !password.matches("^[a-zA-Z0-9]*$")) {
+            throw new BadRequestException("Password can only contain alphanumeric characters!");
+        } else if (description != null && description.length() > 200) {
+            throw new BadRequestException("Description must be at most 200 characters long!");
+        }
+
+        boolean isPublic = isPrivate == null || !isPrivate;
+        String pass = (password == null) ? null : passwordEncoder.encode(password);
+
+        String safeFilename = (filename == null || filename.isBlank()) ? "upload.bin" : filename;
+        String safeContentType = (contentType == null || contentType.isBlank())
+                ? MediaType.APPLICATION_OCTET_STREAM_VALUE
+                : contentType;
+
+        MultipartFile file = new ByteArrayMultipartFile("file", safeFilename, safeContentType, body);
+
+        try {
+            Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description, source);
+            ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
+
+            metricService.setDatabaseUpdated(true);
+            metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() + 1);
+            webhookService.postImageUpload(imageInfoDto.uniqueId(), imageInfoDto);
+            telegramService.sendImageUrl("5759660343", imageInfoDto);
+
+            return new ResponseEntity<>(new UIDResponse(false, imageInfoDto.uniqueId(), imageInfoDto), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/upload/url")
+    @RequiresMcApiKey
+    public ResponseEntity<?> uploadImageFromUrl(
+            HttpServletRequest request,
+            @RequestParam("url") String url,
+            @RequestParam(value = "source", required = false) ResourceSourceType source
+    ) {
+        MinecraftServerReports uploader = (MinecraftServerReports) request.getAttribute("minecraftServerReport");
+        if (source == null) source = ResourceSourceType.API;
+
+        if (url == null || url.isBlank()) {
+            throw new BadRequestException("URL cannot be empty");
+        }
+
+        TranscriptImage savedImage = transcriptImagesService.saveTranscriptImageFromUrl(url, uploader, source);
+        TranscriptImageDto imageInfoDto = new TranscriptImageDto(
+                savedImage.getUniqueId(),
+                savedImage.getFileType(),
+                savedImage.getSize(),
+                urlSetMapper.apply(savedImage)
+        );
+
+        return new ResponseEntity<>(new UIDResponse(false, savedImage.getUniqueId(), imageInfoDto), HttpStatus.OK);
     }
 
     @PostMapping("/upload")
@@ -425,8 +518,11 @@ public class ImageController {
         NewImageDto image;
         Map<String, Object> data = new HashMap<>();
 
+        boolean isTrImage = uniqueId.startsWith("tr-");
+
         try {
-            image = imageService.getImageStream(uniqueId, valBool, true);
+
+            image = isTrImage ? transcriptImagesService.getImageStreamByUniqueId(uniqueId) : imageService.getImageStream(uniqueId, valBool, true);
             //headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + uniqueId + "." + image.type() + "\"");
         } catch (ResourceNotFoundException | IOException e) {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
@@ -619,8 +715,10 @@ public class ImageController {
         HttpHeaders headers = new HttpHeaders();
         NewImageDto image;
 
+        boolean isTrImage = uniqueId.startsWith("tr-");
+
         try {
-            image = imageService.getImageStream(uniqueId, false, true);
+            image = isTrImage ? transcriptImagesService.getImageStreamByUniqueId(uniqueId) : imageService.getImageStream(uniqueId, false, true);
         } catch (ResourceNotFoundException | IOException e) {
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             return ResponseEntity.notFound().build();

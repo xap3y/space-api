@@ -16,6 +16,13 @@ import java.util.List;
 public class DiscordTranscript {
 
     private String generatedAt;
+    private String channelId;
+    private String channelName;
+    private String channelTopic;
+    private String createdBy;
+    private String target;
+    private String closedBy;
+    private String closeComment;
     private List<MessageEntry> messages;
 
     @Data
@@ -23,12 +30,32 @@ public class DiscordTranscript {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MessageEntry {
         private String id;
-        private String channelId;
         private String timestamp;
-        private String author;
+        private AuthorEntry author;
+        private String replyToMessageId;
         private String content;
         private List<AttachmentEntry> attachments;
+        private List<StickerEntry> stickers;
         private List<EmbedEntry> embeds;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class StickerEntry {
+        String name;
+        String formatType;
+        String ext;
+        String url;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class AuthorEntry {
+        private String username;
+        private String avatarUrl;
+        private String color;
     }
 
     @Data
@@ -37,6 +64,7 @@ public class DiscordTranscript {
     public static class AttachmentEntry {
         private String filename;
         private String url;
+        private String safeUrl;
         private long size;
     }
 

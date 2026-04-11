@@ -1,26 +1,24 @@
 package me.xap3y.space.controller.admin;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.api.enums.Environment;
 import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.UserAccountStatus;
-import me.xap3y.space.api.exception.BadRequestException;
-import me.xap3y.space.api.exception.EmailVerifyCodeExpired;
-import me.xap3y.space.api.exception.InvalidApiKeyException;
+import me.xap3y.space.api.exception.*;
 import me.xap3y.space.api.iface.OptionalApiKey;
 import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.config.ServerInfo;
-import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.SessionDto;
 import me.xap3y.space.dto.ShortUserDto;
 import me.xap3y.space.dto.UserDto;
-import me.xap3y.space.entity.EmailVerifyCodes;
-import me.xap3y.space.entity.Session;
-import me.xap3y.space.entity.User;
+import me.xap3y.space.entity.*;
 import me.xap3y.space.mapper.SessionMapper;
 import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.mapper.UserMapper;
@@ -43,9 +41,8 @@ import java.util.regex.Pattern;
 @Slf4j
 @RestController
 @RequestMapping("/v1/auth")
+@AllArgsConstructor
 public class AuthController {
-
-    private static final Boolean secure = false;
 
     private final UserService userService;
     private final InviteCodeService inviteCodeService;
@@ -61,23 +58,9 @@ public class AuthController {
     private final SessionMapper sessionMapper;
     private final AuditLogService auditLogService;
     private final ShortUserMapper shortUserMapper;
-
-    public AuthController(UserService userService, InviteCodeService inviteCodeService, PasswordEncoder passwordEncoder, ServerInfo serverInfo, SessionService sessionService, UserMapper userMapper, ApiKeyService apiKeyService, ObjectProvider<EmailService> emailService, EmailVerifyCodeService emailVerifyCodeService, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionMapper sessionMapper, AuditLogService auditLogService, ShortUserMapper shortUserMapper) {
-        this.userService = userService;
-        this.inviteCodeService = inviteCodeService;
-        this.passwordEncoder = passwordEncoder;
-        this.serverInfo = serverInfo;
-        this.sessionService = sessionService;
-        this.userMapper = userMapper;
-        this.apiKeyService = apiKeyService;
-        this.emailService = emailService.getIfAvailable();
-        this.emailVerifyCodeService = emailVerifyCodeService;
-        this.logsService = logsService;
-        this.prometheusMetricService = prometheusMetricService;
-        this.sessionMapper = sessionMapper;
-        this.auditLogService = auditLogService;
-        this.shortUserMapper = shortUserMapper;
-    }
+    private final TurnStileService turnStileService;
+    private final MinecraftServerReportsService minecraftServerReportsService;
+    private final TrSessionService trSessionService;
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@CookieValue(value = "session_token", required = false) String token) {
@@ -90,6 +73,18 @@ public class AuthController {
         }
         UserDto user = userMapper.apply(session.getUser());
         return ResponseEntity.ok(new DefaultResponse(false, user));
+    }
+
+    @GetMapping("/tr/me")
+    public ResponseEntity<?> getCurrentTrUser(@CookieValue(value = "tr_token", required = false) String token) {
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        TrSession session = trSessionService.getValidSession(token);
+        if (session == null || !session.getIsValid()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(new DefaultResponse(false, session.getUser()));
     }
 
     @GetMapping("/me/sessions")
@@ -128,6 +123,53 @@ public class AuthController {
     }
 
     @PostMapping(
+            value = "/tr/login",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<?> tryTrLogin(
+            HttpServletRequest request,
+            @RequestBody AuthLoginRequest body
+    ) {
+        if (body.getEmail() == null || body.getPassword() == null) {
+            throw new BadRequestException("Username/Email and password are required");
+        } else if (body.getToken() == null) {
+            throw new BadRequestException("Captcha token is required!");
+        }
+
+        boolean isCaTokenValid = turnStileService.validate(body.getToken());
+        if (!isCaTokenValid) throw new ResourceAccessForbiddenException();
+
+        MinecraftServerReports user = minecraftServerReportsService.findByServerName(body.getEmail())
+                .orElse(minecraftServerReportsService.findByOwnerEmail(body.getEmail()).orElse(null));
+
+        if (user == null) {
+            throw new BadRequestException("No user found with this email or username");
+        }
+
+        String userAgent = request.getHeader("User-Agent");
+        String ipAddress = request.getRemoteAddr();
+
+        if (isUserAgentBot(userAgent)) {
+            throw new BadRequestException("Bots are not allowed to log in");
+        }
+
+        TrSession sessionToken = trSessionService.createSession(user, userAgent, ipAddress);
+
+        ResponseCookie cookie = ResponseCookie.from("tr_token", sessionToken.getToken())
+                .httpOnly(serverInfo.getSetCookieHttpOnly())
+                .path("/")
+                .maxAge(serverInfo.getAuthCookieMaxAge())
+                .sameSite(serverInfo.getAuthCookieSameSite())
+                .domain(serverInfo.getAuthCookieDomain())
+                .secure(serverInfo.getAuthCookieSecure())
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new DefaultResponse(false, user));
+    }
+
+    @PostMapping(
             value = "/login",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
@@ -135,6 +177,15 @@ public class AuthController {
             HttpServletRequest request,
             @RequestBody AuthLoginRequest loginRequest
     ) {
+
+        if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
+            throw new BadRequestException("Email and password are required");
+        } else if (loginRequest.getToken() == null) {
+            throw new BadRequestException("Captcha token is required!");
+        }
+
+        boolean isCaTokenValid = turnStileService.validate(loginRequest.getToken());
+        if (!isCaTokenValid) throw new ResourceAccessForbiddenException();
 
         User user = userService.findByEmailRaw(loginRequest.getEmail());
 
@@ -162,8 +213,7 @@ public class AuthController {
         auditLogService.saveLog(PortalLogType.USER_LOGIN, user);
 
         ResponseCookie cookie = ResponseCookie.from("session_token", sessionToken)
-                .httpOnly(true)
-                //.secure(false)
+                .httpOnly(serverInfo.getSetCookieHttpOnly())
                 .path("/")
                 .maxAge(serverInfo.getAuthCookieMaxAge())
                 .sameSite(serverInfo.getAuthCookieSameSite())
@@ -203,9 +253,10 @@ public class AuthController {
         ResponseCookie expiredCookie = ResponseCookie.from("session_token", "")
                 .path("/")
                 .maxAge(0)
-                .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .httpOnly(serverInfo.getSetCookieHttpOnly())
+                .secure(serverInfo.getAuthCookieSecure())
+                .sameSite(serverInfo.getAuthCookieSameSite())
+                .domain(serverInfo.getAuthCookieDomain())
                 .build();
 
         Session session = sessionService.getSession(token);

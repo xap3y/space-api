@@ -40,6 +40,7 @@ public class InboundEmailDto {
     public String text;
     public String html;
     public List<Attachment> attachments;
+    public Long id;
 
     public InboundEmailDto(InboundEmail email) {
         this.subject = email.getSubject();

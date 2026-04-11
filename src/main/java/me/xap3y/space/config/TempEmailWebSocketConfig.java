@@ -19,6 +19,6 @@ public class TempEmailWebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(tempEmailWebSocketHandler, "/ws/email")
-                .setAllowedOrigins("http://localhost:3000", "https://space.xap3y.fun", "https://xap3y.space", "http://localhost:3006");
+                .setAllowedOrigins("http://localhost:3000", "https://space.xap3y.eu", "http://localhost:3006");
     }
 }

@@ -23,6 +23,15 @@ public class DiscordTranscriptService {
     public void saveToFile(DiscordTranscript transcript, String uniqueId) {
         String json;
 
+        Path transcriptDirPath = Paths.get(TRANSCRIPT_DIR);
+        if (!Files.exists(transcriptDirPath)) {
+            try {
+                Files.createDirectories(transcriptDirPath);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create transcript directory", e);
+            }
+        }
+
         try {
             json = objectMapper.writeValueAsString(transcript);
             Files.writeString(Paths.get(TRANSCRIPT_DIR + uniqueId + ".json"), json);

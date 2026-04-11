@@ -11,6 +11,7 @@ import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
 import me.xap3y.space.entity.Image;
+import me.xap3y.space.entity.TranscriptImage;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ImageMapper;
 import me.xap3y.space.repository.ImageRepository;
@@ -40,6 +41,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -124,8 +126,8 @@ public class ImageService {
 
     public Image saveImageFromUrl(String url, User uploader, ResourceSourceType type) {
         String uniqueId = Utils.generateRandomId();
-        String fileExtension = url.substring(url.lastIndexOf(".") + 1).toLowerCase();
-
+        String cleanUrl = url.contains("?") ? url.substring(0, url.indexOf("?")) : url;
+        String fileExtension = cleanUrl.substring(cleanUrl.lastIndexOf(".") + 1).toLowerCase();
         // save from URL to file under the generated uniqueId
         String fileNameWithExtension = uniqueId + "." + fileExtension;
         File imageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);

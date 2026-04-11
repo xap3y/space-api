@@ -18,6 +18,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -52,6 +56,31 @@ public class AdminUserController {
         return ResponseEntity.ok(new DefaultResponse(false, usersDto, usersDto.size()));
     }
 
+    /*@GetMapping(
+            value = "/{uid}/images",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> getUserImages(
+            HttpServletRequest request,
+            @PathVariable("uid") Long uid,
+*//*            @RequestBody(required = false) UserImagesRequest body,*//*
+            @RequestParam(value = "from", required = false) Long from,
+            @RequestParam(value = "to", required = false) Long to,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
+        List<ImageInfoDto> imageDtos = imageService.getAllImagesByUser(uid, from, to, limit);
+        int count = imageService.countByUploaderId(uid);
+
+        if (imageDtos.isEmpty()) {
+            return new ResponseEntity<>(new DefaultResponse(true, "No images found for this user UID"), HttpStatus.NOT_FOUND);
+        }
+
+        return ResponseEntity.ok(new DefaultResponse(false, imageDtos, count));
+    }*/
+
     @GetMapping(
             value = "/{uid}/images",
             produces = {
@@ -62,7 +91,7 @@ public class AdminUserController {
     public ResponseEntity<?> getUserImages(
             HttpServletRequest request,
             @PathVariable("uid") Long uid,
-/*            @RequestBody(required = false) UserImagesRequest body,*/
+            /*            @RequestBody(required = false) UserImagesRequest body,*/
             @RequestParam(value = "from", required = false) Long from,
             @RequestParam(value = "to", required = false) Long to,
             @RequestParam(value = "limit", required = false) Integer limit

@@ -23,7 +23,7 @@ public class TempMailMapper implements Function<TempMail, TempMailDto> {
                 email.getStatus(),
                 email.getCreatedAt(),
                 email.getExpireAt(),
-                shortUserMapper.apply(email.getCreatedBy(), false)
+                 email.getCreatedBy() != null ? shortUserMapper.apply(email.getCreatedBy(), false) : null
         );
     }
 }

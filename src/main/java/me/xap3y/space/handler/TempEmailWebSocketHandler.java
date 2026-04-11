@@ -8,6 +8,7 @@ import me.xap3y.space.entity.TempMail;
 import me.xap3y.space.service.TempMailService;
 import me.xap3y.space.util.Utils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -17,6 +18,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -46,20 +48,11 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        String apiKey = Utils.extractQueryParam(uri.getQuery(), "apiKey");
-        if (apiKey == null || apiKey.isBlank()) {
-            session.close(new CloseStatus(4001, "Missing apiKey"));
-            return;
-        }
-
-        log.info("EMAIL WS: {} {}", email, apiKey);
-
         TempMail mail = tempMailService.findByEmail(email).orElse(null);
         if (mail == null) {
             session.close(new CloseStatus(4002, "Email not found"));
             return;
-        }
-        else if (!mail.getStatus().equals(TempMailStatus.OPEN)) {
+        }else if (!mail.getStatus().equals(TempMailStatus.OPEN)) {
             session.close(new CloseStatus(4003, "Email not open"));
             return;
         }
@@ -67,7 +60,35 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
             session.close(new CloseStatus(4003, "Email expired"));
             return;
         }
-        else if (!mail.getCreatedBy().getApiKey().getKeyCode().equals(apiKey)){
+
+        boolean isCookieInvalid = true;
+        HttpHeaders handshakeHeaders = session.getHandshakeHeaders();
+        String cookieHeader = handshakeHeaders.getFirst("Cookie");
+        log.info("Cookie header: {}", cookieHeader);
+
+        if (cookieHeader != null) {
+            String expectedCookieName = "email_token_" + mail.getFingerprint();
+            if (cookieHeader.contains(expectedCookieName)) {
+                isCookieInvalid = false;
+            }
+        }
+
+        String apiKey = Utils.extractQueryParam(uri.getQuery(), "apiKey");
+
+        boolean isKeyInvalid = apiKey == null || apiKey.isBlank();
+
+        if (isCookieInvalid && isKeyInvalid) {
+            sendJson(session, Map.of(
+                    "error", true,
+                    "message", "Unauthorized: Missing or invalid cookie and API key"
+            ));
+            session.close(new CloseStatus(4001, "Unauthorized"));
+            return;
+        }
+
+        log.info("EMAIL WS: {} {}", email, apiKey);
+
+        if (apiKey != null && !mail.getCreatedBy().getApiKey().getKeyCode().equals(apiKey)){
             session.close(new CloseStatus(4002, "Invalid API key"));
             return;
         }
@@ -98,6 +119,7 @@ public class TempEmailWebSocketHandler extends TextWebSocketHandler {
             sendJson(session, Map.of(
                     "messageId", email.messageId,
                     "from", email.from,
+                    "to", email.to,
                     "subject", email.subject,
                     "content", email.text,
                     "html", email.html,

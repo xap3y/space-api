@@ -13,6 +13,8 @@ public class ConfigDb {
     @Getter
     private final static String IMAGE_DIR = "images/";
 
+    public final static String TRANSCRIPT_IMAGE_DIR = "tr_images/";
+
     public final static File LOG_FILE = new File("logs.txt");
 
     public static final List<String> availableWsUniqueIds = new ArrayList<>();

@@ -9,17 +9,12 @@ import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.UserAccountStatus;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
-import me.xap3y.space.api.iface.OptionalApiKey;
-import me.xap3y.space.api.iface.OptionalCookieAuth;
-import me.xap3y.space.api.iface.RequiresApiKey;
-import me.xap3y.space.api.iface.RequiresSpecialApiKey;
+import me.xap3y.space.api.iface.*;
+import me.xap3y.space.entity.MinecraftServerReports;
 import me.xap3y.space.entity.Session;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.model.response.DefaultResponse;
-import me.xap3y.space.service.ApiKeyService;
-import me.xap3y.space.service.LogsService;
-import me.xap3y.space.service.PrometheusMetricService;
-import me.xap3y.space.service.SessionService;
+import me.xap3y.space.service.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
@@ -44,30 +39,54 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
     private final LogsService logsService;
     private final PrometheusMetricService prometheusMetricService;
     private final SessionService sessionService;
+    private final MinecraftServerReportsService minecraftServerReportsService;
 
 
-    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionService sessionService) {
+    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionService sessionService, MinecraftServerReportsService minecraftServerReportsService) {
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
         this.logsService = logsService;
         this.prometheusMetricService = prometheusMetricService;
         this.sessionService = sessionService;
+        this.minecraftServerReportsService = minecraftServerReportsService;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (handler instanceof HandlerMethod method) {
             RequiresApiKey annotation = method.getMethodAnnotation(RequiresApiKey.class);
+            RequiresMcApiKey mcKeyAnn = method.getMethodAnnotation(RequiresMcApiKey.class);
             OptionalApiKey optionalApiKeyAnnotation = method.getMethodAnnotation(OptionalApiKey.class);
             OptionalCookieAuth optionalCookieAuthAnn = method.getMethodAnnotation(OptionalCookieAuth.class);
             logsService.logFile(" --- - RequiresApiKey (RequiresApiKey.class) == " + annotation);
             RequiresSpecialApiKey specialKeyAnnotation = method.getMethodAnnotation(RequiresSpecialApiKey.class);
             logsService.logFile(" --- - RequiresSpecialApiKey (RequiresSpecialApiKey.class) == " + annotation);
-            if (annotation != null || specialKeyAnnotation != null || optionalApiKeyAnnotation != null || optionalCookieAuthAnn != null) {
+            if (annotation != null || specialKeyAnnotation != null || optionalApiKeyAnnotation != null || optionalCookieAuthAnn != null || mcKeyAnn != null) {
                 String apiKey = request.getHeader(this.API_KEY_HEADER_NAME);
                 if (apiKey == null && request.getContentType() != null && request.getContentType().contains("application/x-www-form-urlencoded")) {
                     apiKey = getApiKeyFromBody(request);
                 }
+
+                if (mcKeyAnn != null && apiKey == null) {
+                    this.writeErrorResponse(response, new DefaultResponse(true, "API Key is required"), HttpStatus.BAD_REQUEST);
+                    return false;
+                } else if (mcKeyAnn != null) {
+                    try {
+                        MinecraftServerReports rep = minecraftServerReportsService.getServerByApiKeyStrict(apiKey);
+                        if (rep.isPaused()) {
+                            this.writeErrorResponse(response, new DefaultResponse(true, "This server is paused and cannot make requests!"), HttpStatus.FORBIDDEN);
+                            return false;
+                        } else {
+                            request.setAttribute("minecraftServerReport", rep);
+                            return true;
+                        }
+                    } catch (Exception ex) {
+                        this.writeErrorResponse(response, new DefaultResponse(true, "Invalid API Key"), HttpStatus.UNAUTHORIZED);
+                        return false;
+                    }
+                }
+
+
 
                 User uploader;
 

@@ -1,6 +1,7 @@
 package me.xap3y.space.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import me.xap3y.space.api.iface.ApiResource;
@@ -12,8 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "pastes")
-@Getter
-@Setter
+@Data
 public class Paste implements ApiResource {
 
     @Id

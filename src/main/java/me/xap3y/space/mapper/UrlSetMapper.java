@@ -5,10 +5,7 @@ import me.xap3y.space.api.enums.UrlSetPreference;
 import me.xap3y.space.api.iface.ApiResource;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.UrlSetDto;
-import me.xap3y.space.entity.Image;
-import me.xap3y.space.entity.Paste;
-import me.xap3y.space.entity.Url;
-import me.xap3y.space.entity.UserSettings;
+import me.xap3y.space.entity.*;
 import me.xap3y.space.service.UserSettingsService;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +30,9 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
 
         UrlSetPreference preference = null;
 
-        UserSettings userSettings = userSettingsService.getUserSettingsByUserId(userId).orElse(null);
+        UserSettings userSettings;
+        if (userId != null ) userSettings = userSettingsService.getUserSettingsByUserId(userId).orElse(null);
+        else userSettings = null;
 
         switch (resource) {
             case Image img -> {
@@ -73,6 +72,13 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
                     preference = userSettings.getUrlSettings().getUrl();
                 }
             }
+            case TranscriptImage trImage -> {
+                rawUrl = switch (trImage.getLocation()) {
+                    case R2 -> "https://r3.xap3y.space/media/tr_images/" + resource.getUniqueId();
+                    case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/tr-" + resource.getUniqueId();
+                    default -> serverInfo.getBaseUrl() + "/web/image-render/" + resource.getUniqueId();
+                };
+            }
             default -> {
             }
         }
@@ -98,6 +104,7 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
 
     @Override
     public UrlSetDto apply(ApiResource resource) {
-        return apply(resource, resource.getUploader().getId());
+
+        return apply(resource, resource.getUploader() != null ? resource.getUploader().getId() : null);
     }
 }

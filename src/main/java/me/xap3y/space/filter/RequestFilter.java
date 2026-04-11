@@ -3,21 +3,19 @@ package me.xap3y.space.filter;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.wrapper.StatusCaptureResponseWrapper;
 import me.xap3y.space.dto.LogDto;
 import me.xap3y.space.service.LogsService;
 import me.xap3y.space.service.PrometheusMetricService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+@Slf4j
 @Component
 public class RequestFilter implements Filter {
-
-    private static final Logger log = LoggerFactory.getLogger(RequestFilter.class);
 
     private final LogsService logsService;
     private final PrometheusMetricService prometheusMetricService;

@@ -1,5 +1,6 @@
 package me.xap3y.space.config;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -51,26 +52,24 @@ public class SecurityConfig {
         return new WebMvcConfigurer() {
 
             @Override
-            public void addCorsMappings(CorsRegistry registry) {
+            public void addCorsMappings(@NonNull CorsRegistry registry) {
 
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "https://xap3y.space",
+                                /*"https://xap3y.space",
                                 "https://space.xap3y.space",
                                 "https://test.xap3y.space",
                                 "https://call.xap3y.space",
                                 "https://r2.xap3y.space",
                                 "https://r3.xap3y.space",
-                                "https://api.xap3y.space",
+                                "https://api.xap3y.space",*/
                                 "http://localhost:3000",
                                 "http://localhost:3006",
                                 "http://192.168.100.100:3000",
-                                "https://ext-space.xap3y.space",
-                                "https://space0.xap3y.space",
-                                "https://space1.xap3y.space",
-                                "https://temp-mail-space.xap3y.space",
-                                "https://temp-mail.xap3y.space",
-                                "https://cf-email-temp.xap3y.space",
+                                "https://space.xap3y.eu",
+                                "https://temp-mail-space.xap3y.eu",
+                                "https://temp-mail.xap3y.eu",
+                                "https://cf-email-temp.xap3y.eu",
                                 serverInfo.getTestCorsUrl()
                         )
                         .allowCredentials(true)

@@ -6,7 +6,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.config.ServerInfo;
+import me.xap3y.space.dto.InboundEmailDto;
 import me.xap3y.space.model.request.EmailRequest;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -15,13 +17,25 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@AllArgsConstructor
 @ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
 public class EmailService {
 
     private final ServerInfo serverInfo;
     private final PrometheusMetricService prometheusMetricService;
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
+    private final JavaMailSender netflixMailSender;
+
+    public EmailService(
+            ServerInfo serverInfo,
+            PrometheusMetricService prometheusMetricService,
+            @Qualifier("primaryMailSender") JavaMailSender mailSender,
+            @Qualifier("secondaryMailSender") JavaMailSender netflixMailSender
+    ) {
+        this.serverInfo = serverInfo;
+        this.prometheusMetricService = prometheusMetricService;
+        this.mailSender = mailSender;
+        this.netflixMailSender = netflixMailSender;
+    }
 
     public void sendVerificationCode(String to, String code, String urlCode) {
 
@@ -41,6 +55,38 @@ public class EmailService {
                 "If you did not request this, please ignore this email.");
 
         sendEmail(emailRequest);
+    }
+
+    public void forwardEmail(InboundEmailDto dto) {
+        String matty = "hoskova.matyas@gmail.com";
+        String xap3y = "minecubeks@gmail.com";
+        String sky = "shweyeewin496@gmail.com";
+
+        if (dto.getSubject().toLowerCase().contains("kód") || dto.getSubject().toLowerCase().contains("code")) {
+            log.info("Forwarding code email: {}", dto.getSubject());
+            netflixMailSender.send(buildFor(xap3y, dto));
+            netflixMailSender.send(buildFor(sky, dto));
+            netflixMailSender.send(buildFor(matty, dto));
+        } else {
+            log.info("Forwarding OTHER netflix email: {}", dto.getSubject());
+            netflixMailSender.send(buildFor(matty, dto));
+        }
+    }
+
+    private MimeMessage buildFor(String receiver, InboundEmailDto dto) {
+
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom("netflix@xap3y.space");
+            helper.setTo(receiver);
+            helper.setSubject("Fwd: " + dto.getSubject());
+            helper.setText(dto.getHtml(), true);
+            return message;
+        } catch (Exception e) {
+            log.error("Failed to build email for forwarding", e);
+            throw new RuntimeException("Failed to build email for forwarding", e);
+        }
     }
 
     public void sendEmail(EmailRequest emailRequest) {
