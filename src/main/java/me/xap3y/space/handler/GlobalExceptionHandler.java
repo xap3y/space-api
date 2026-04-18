@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
         this.prometheusMetricService = prometheusMetricService;
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
+    @ExceptionHandler({BadCredentialsException.class, UnauthorizedException.class, InsufficientAuthenticationException.class, InvalidApiKeyException.class})
     public ResponseEntity<DefaultResponse> handleBadCredentialsExceptions(
             BadCredentialsException ex
     ) {
@@ -46,15 +46,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<DefaultResponse> handleImageTools(ImageToolsException ex) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler({InsufficientAuthenticationException.class, InvalidApiKeyException.class})
-    public ResponseEntity<DefaultResponse> handleUnauthorizedExceptions(
-            Exception ex
-    ) {
-        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
-
-        return new ResponseEntity<>(defaultResponse, HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler({Exception.class, RuntimeException.class})

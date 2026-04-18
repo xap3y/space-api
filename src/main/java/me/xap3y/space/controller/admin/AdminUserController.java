@@ -3,25 +3,23 @@ package me.xap3y.space.controller.admin;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
-import me.xap3y.space.dto.*;
+import me.xap3y.space.dto.ImageInfoDto;
+import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.ShortUrlDto;
+import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.mapper.UserMapper;
-import me.xap3y.space.model.request.UserImagesRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
 import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.UserService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -100,7 +98,7 @@ public class AdminUserController {
         int count = imageService.countByUploaderId(uid);
 
         if (imageDtos.isEmpty()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No images found for this user UID"), HttpStatus.NOT_FOUND);
+            throw new ResourceNotFoundException();
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, imageDtos, count));
@@ -120,7 +118,7 @@ public class AdminUserController {
 
         List<PasteDto> pastesDtos = pasteService.getAllPastesByUserId(uid, content);
         if (pastesDtos.isEmpty()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No pastes found for this UID"), HttpStatus.NOT_FOUND);
+            throw new ResourceNotFoundException();
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, pastesDtos));
@@ -140,7 +138,7 @@ public class AdminUserController {
 
         List<ShortUrlDto> urlsDtos = urlService.getAllShortUrlsByCreatorId(uid, logs);
         if (urlsDtos.isEmpty()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No short urls found for this UID"), HttpStatus.NOT_FOUND);
+            throw new ResourceNotFoundException();
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, urlsDtos));

@@ -1,9 +1,7 @@
 package me.xap3y.space.controller.admin;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
 import me.xap3y.space.api.enums.Environment;
@@ -27,7 +25,6 @@ import me.xap3y.space.model.request.AuthRegisterRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.*;
 import me.xap3y.space.util.ConfigDb;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -65,11 +62,11 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@CookieValue(value = "session_token", required = false) String token) {
         if (token == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new MissingCredentialsException();
         }
         Session session = sessionService.getValidSession(token);
         if (session == null || !session.getIsValid()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InvalidApiKeyException();
         }
         UserDto user = userMapper.apply(session.getUser());
         return ResponseEntity.ok(new DefaultResponse(false, user));
@@ -78,11 +75,11 @@ public class AuthController {
     @GetMapping("/tr/me")
     public ResponseEntity<?> getCurrentTrUser(@CookieValue(value = "tr_token", required = false) String token) {
         if (token == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new MissingCredentialsException();
         }
         TrSession session = trSessionService.getValidSession(token);
         if (session == null || !session.getIsValid()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new UnauthorizedException();
         }
         return ResponseEntity.ok(new DefaultResponse(false, session.getUser()));
     }
@@ -100,7 +97,7 @@ public class AuthController {
         if (token != null && uploader == null) {
             Session session = sessionService.getValidSession(token);
             if (session == null || !session.getIsValid()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                throw new UnauthorizedException();
             }
             uploader = session.getUser();
         }
@@ -235,7 +232,7 @@ public class AuthController {
             @CookieValue("session_token") String token
     ) {
         if (token == null) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No session token provided"), HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("No session token provided");
         }
 
         try {
@@ -280,7 +277,7 @@ public class AuthController {
             @CookieValue(value = "verify_token", required = false) String token
     ) {
         if (token == null || token.isEmpty()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No verification token provided"), HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("No verification token provided");
         }
         User uploader = apiKeyService.validateApiKey(token);
 
@@ -289,7 +286,7 @@ public class AuthController {
         if (verifyCode.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new EmailVerifyCodeExpired();
         } else if (verifyCode.isUsed()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "This code has already been used"), HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("This code has already been used");
         }
 
         Map<String, String> res = Map.of(
@@ -310,13 +307,13 @@ public class AuthController {
             @CookieValue(value = "verify_token", required = false) String token
     ) {
         if (token == null || token.isEmpty()) {
-            return new ResponseEntity<>(new DefaultResponse(true, "No verification token provided"), HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("No verification token provided");
         }
 
         User uploader = apiKeyService.validateApiKey(token);
 
         if (uploader.getStatus() != UserAccountStatus.WAITING_VERIFICATION) {
-            return new ResponseEntity<>(new DefaultResponse(true, "User is not pending verification"), HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("User is not pending verification");
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, "Verification token is valid for user: " + uploader.getUsername()));

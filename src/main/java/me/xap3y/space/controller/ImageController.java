@@ -98,7 +98,7 @@ public class ImageController {
             @RequestParam("file") MultipartFile file
     ) {
         User uploader = (User) request.getAttribute("uploader");
-        if (file.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
+        if (file.isEmpty()) throw new BadRequestException("Empty file uploaded");
 
         try (InputStream is = file.getInputStream()) {
             byte[] magic = new byte[4];
@@ -114,13 +114,13 @@ public class ImageController {
         try {
             foundImages = Utils.extractFoundImages(file, ArchiveType.ZIP);
         } catch (ZipException e) {
-            return ResponseEntity.badRequest().body("Uploaded file is not a valid ZIP archive");
+            throw new BadRequestException("Invalid ZIP file");
         } catch (IOException e) {
-            return ResponseEntity.status(500).body("Error processing archive: " + e.getMessage());
+            throw new InternalServerException("Error processing archive");
         }
 
         if (foundImages.isEmpty()) {
-            return ResponseEntity.ok("No supported media files found in the archive");
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
         // Upload each found image

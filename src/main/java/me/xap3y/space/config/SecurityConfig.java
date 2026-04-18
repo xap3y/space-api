@@ -67,6 +67,7 @@ public class SecurityConfig {
                                 "http://localhost:3006",
                                 "http://192.168.100.100:3000",
                                 "https://space.xap3y.eu",
+                                "https://ext-space.xap3y.eu",
                                 "https://temp-mail-space.xap3y.eu",
                                 "https://temp-mail.xap3y.eu",
                                 "https://cf-email-temp.xap3y.eu",
