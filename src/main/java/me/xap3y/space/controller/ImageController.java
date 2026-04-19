@@ -72,8 +72,9 @@ public class ImageController {
     private final PrometheusMetricService prometheusMetricService;
     private final TranscriptImagesService transcriptImagesService;
     private final UrlSetMapper urlSetMapper;
+    private final S3Service s3Service;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, TranscriptImagesService transcriptImagesService, UrlSetMapper urlSetMapper) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, TranscriptImagesService transcriptImagesService, UrlSetMapper urlSetMapper, S3Service s3Service) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
@@ -86,6 +87,7 @@ public class ImageController {
         this.prometheusMetricService = prometheusMetricService;
         this.transcriptImagesService = transcriptImagesService;
         this.urlSetMapper = urlSetMapper;
+        this.s3Service = s3Service;
     }
 
     @Value("${cloud.aws.s3.bucket}")
@@ -217,22 +219,13 @@ public class ImageController {
 
         String key = Utils.generateRandomId();
 
-        var putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key("media/" + key)
-                .contentType(contentType)
-                .build();
-
-        var presignedRequest = s3Presigner.presignPutObject(builder -> builder
-                .signatureDuration(Duration.ofMinutes(10))
-                .putObjectRequest(putObjectRequest)
-        );
+        String url = s3Service.generatePresignedPutUrl("media/" + key, contentType);
 
         Image savedImage = imageService.registerImage(uploader, key, null, true, null, "png", 0L, ImageLocation.UNKNOWN, ResourceSourceType.UNKNOWN);
 
         return Map.of(
                 "uid", key,
-                "url", presignedRequest.url().toString(),
+                "url", url,
                 "method", "PUT"
         );
     }
