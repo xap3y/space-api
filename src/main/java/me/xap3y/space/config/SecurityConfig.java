@@ -79,7 +79,7 @@ public class SecurityConfig {
             }
 
             @Override
-            public void addResourceHandlers(ResourceHandlerRegistry registry) {
+            public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
                 registry.addResourceHandler("/static/**")
                         .addResourceLocations("classpath:/static/");
             }

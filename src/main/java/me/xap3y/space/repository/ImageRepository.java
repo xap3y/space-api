@@ -2,6 +2,8 @@ package me.xap3y.space.repository;
 
 import jakarta.transaction.Transactional;
 import me.xap3y.space.entity.Image;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,6 +42,8 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
                                            @Param("from") LocalDateTime from,
                                            @Param("to") LocalDateTime to,
                                            @Param("amount") Integer amount);
+
+    Page<Image> findByUploaderId(Long uploaderId, Pageable pageable);
 
     @Query("SELECT e FROM Image e WHERE e.fileType IN :fileTypes")
     List<Image> findAllByFileTypeIn(Set<String> fileTypes);

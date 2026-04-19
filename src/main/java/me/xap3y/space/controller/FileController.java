@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -354,7 +355,7 @@ public class FileController {
         }
     }
 
-    @PostMapping("/pack/public/{packId}/download/zip")
+    /*@PostMapping("/pack/public/{packId}/download/zip")
     @OptionalCookieAuth
     public ResponseEntity<?> postDownloadZipPack(
             HttpServletRequest request,
@@ -468,6 +469,125 @@ public class FileController {
         } catch (Exception e) {
             log.error("Error downloading zip pack: {}", e.getMessage(), e);
             throw new BadRequestException("Failed to download pack");
+        }
+    }*/
+
+    @PostMapping("/pack/public/{packId}/download/zip")
+    @OptionalCookieAuth
+    public void postDownloadZipPack(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @PathVariable String packId,
+            @RequestBody(required = false) Map<String, String> passwordRequest
+    ) {
+        try {
+            FileUploadPack pack = fileUploadService.getUploadPackByPackId(packId);
+            if (pack == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Pack not found");
+                return;
+            }
+
+            // Only allow access if pack is completed
+            if (!pack.isComplete()) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Pack is not completed");
+                return;
+            }
+
+            // Verify password if protected
+            if (pack.getPassword() != null) {
+                if (passwordRequest == null || passwordRequest.get("password") == null) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Pack is password protected");
+                    return;
+                }
+
+                String providedPassword = passwordRequest.get("password");
+                boolean passwordMatches = passwordEncoder.matches(providedPassword, pack.getPassword());
+
+                if (!passwordMatches) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid password");
+                    return;
+                }
+            }
+
+            if (pack.getFiles().size() < 2) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Pack must contain at least 2 files");
+                return;
+            }
+
+            // ✅ Set response headers BEFORE getting output stream
+            response.setContentType("application/zip");
+            response.setHeader("Content-Disposition", "attachment; filename=\"pack-" + packId + ".zip\"");
+            response.setHeader("Content-Transfer-Encoding", "binary");
+            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            response.setHeader("Pragma", "no-cache");
+            response.setHeader("Expires", "0");
+            response.setBufferSize(32768); // ✅ Larger buffer
+
+            // ✅ Stream ZIP directly to response
+            try (ServletOutputStream outputStream = response.getOutputStream();
+                 ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
+
+                zipOut.setLevel(Deflater.DEFAULT_COMPRESSION);
+                byte[] buffer = new byte[16384]; // ✅ 16KB buffer
+
+                for (FileEntity file : pack.getFiles()) {
+                    try {
+                        // ✅ Get file from S3 as stream
+                        InputStream fileInputStream = s3Service.getFileAsStream(file.getUniqueId());
+
+                        if (fileInputStream == null) {
+                            log.warn("File not found in S3: {}", file.getUniqueId());
+                            continue;
+                        }
+
+                        try (fileInputStream) {
+                            // ✅ Create ZIP entry
+                            ZipEntry zipEntry = new ZipEntry(file.getFileName());
+                            zipEntry.setTime(System.currentTimeMillis());
+                            zipOut.putNextEntry(zipEntry);
+
+                            // ✅ Stream file to ZIP
+                            int bytesRead;
+                            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                                zipOut.write(buffer, 0, bytesRead);
+                            }
+
+                            zipOut.closeEntry();
+                            log.info("Added file to ZIP: {}", file.getFileName());
+                        }
+
+                    } catch (IOException e) {
+                        if (isClientDisconnected(e)) {
+                            log.warn("Client disconnected during ZIP creation for pack: {}", packId);
+                            return;
+                        }
+                        log.error("Error adding file {} to ZIP: {}", file.getFileName(), e.getMessage());
+                        // Continue with next file
+                    }
+                }
+
+                // ✅ Finish and flush
+                zipOut.finish();
+                zipOut.flush();
+                outputStream.flush();
+
+                log.info("ZIP created successfully for pack: {} with {} files", packId, pack.getFiles().size());
+
+            } catch (IOException e) {
+                if (isClientDisconnected(e)) {
+                    log.warn("Client cancelled ZIP download for pack: {}", packId);
+                } else {
+                    log.error("Error creating ZIP stream: {}", e.getMessage(), e);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Unexpected error downloading zip pack: {}", e.getMessage(), e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to download pack");
+            } catch (IOException ioException) {
+                log.error("Failed to send error response", ioException);
+            }
         }
     }
 
@@ -673,4 +793,15 @@ public class FileController {
         }
     }
 
+    private boolean isClientDisconnected(IOException e) {
+        String message = e.getMessage();
+        return message != null && (
+                message.contains("Broken pipe") ||
+                        message.contains("Connection reset") ||
+                        message.contains("ClientAbortException") ||
+                        message.contains("Stream closed") ||
+                        message.contains("Response committed") ||
+                        message.contains("not usable after response errors")
+        );
+    }
 }
