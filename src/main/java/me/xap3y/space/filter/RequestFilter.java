@@ -79,14 +79,15 @@ public class RequestFilter implements Filter {
             return;
         }
 
-        logsService.logFile(" --- [space] RequestFilter   : [" + method +"] REQ FROM: " + remoteIp + ", TO " + path);
-
         int resultHttpCode = responseWrapper.getStatus();
 
         logsService.log(new LogDto(remoteIp, userAgent, path, method, resultHttpCode + ""));
 
-        if (!path.equals("/actuator/prometheus"))
+        if (!path.equals("/actuator/prometheus")) {
             log.info("[{}] Request from: {}, to {} ({})", method, remoteIp, path, resultHttpCode);
+
+            logsService.logFile(" --- [space] RequestFilter   : [" + method +"] REQ FROM: " + remoteIp + ", TO " + path + " (" + resultHttpCode + ")");
+        }
         //webhookService.postMessage("Request from: " + remoteIp + ", to " + path + " (" + method + ")");
     }
 }
