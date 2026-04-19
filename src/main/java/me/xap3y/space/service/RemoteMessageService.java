@@ -3,6 +3,7 @@ package me.xap3y.space.service;
 import discord4j.core.GatewayDiscordClient;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.config.ServerInfo;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -10,6 +11,7 @@ import java.util.Optional;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
 public class RemoteMessageService {
 
     private final Optional<DiscordBotService> bot;
@@ -41,6 +43,6 @@ public class RemoteMessageService {
     }
 
     public Optional<GatewayDiscordClient> getClient() {
-        return bot.map(DiscordBotService::getClient);
+        return bot.flatMap(DiscordBotService::getClient);
     }
 }

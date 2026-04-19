@@ -19,6 +19,7 @@ import me.xap3y.space.service.DiscordConnectionService;
 import me.xap3y.space.service.RemoteMessageService;
 import me.xap3y.space.service.SessionService;
 import me.xap3y.space.util.Utils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/v1/discord")
 @AllArgsConstructor
+@ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
 public class DiscordController {
 
     private final SessionService sessionService;

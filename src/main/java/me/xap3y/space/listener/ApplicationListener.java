@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +25,7 @@ public class ApplicationListener {
     private final WebhookService webhookService;
     private final TelegramService telegramService;
     private final ServerInfo serverInfo;
-    private final RemoteMessageService remoteMessageService;
+    private final Optional<RemoteMessageService> remoteMessageService;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final TelegramVerifyService telegramVerifyService;
     private final EmailVerifyCodeService emailVerifyCodeService;
@@ -33,7 +34,7 @@ public class ApplicationListener {
     private final ImageService imageService;
 
 
-    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, RemoteMessageService remoteMessageService, TelegramVerifyService telegramVerifyService, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, TelegramVerifyBot telegramVerifyBot, ImageService imageService) {
+    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, Optional<RemoteMessageService> remoteMessageService, TelegramVerifyService telegramVerifyService, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, TelegramVerifyBot telegramVerifyBot, ImageService imageService) {
         this.webhookService = webhookService;
         this.telegramService = telegramService;
         this.serverInfo = serverInfo;
@@ -91,7 +92,11 @@ public class ApplicationListener {
 
     private void runDiscordTask() {
         log.info("runDiscordTask() - Sending message to Discord channel: {}", serverInfo.getRemoteDiscordBotChannelId());
-        remoteMessageService.updateChannelTopic(serverInfo.getRemoteDiscordBotChannelId(), "TEST").subscribe();
+        if (remoteMessageService.isPresent()) {
+            remoteMessageService.get().updateChannelTopic(serverInfo.getRemoteDiscordBotChannelId(), "TEST").subscribe();
+        } else {
+            log.warn("Discord bot service not available, skipping Discord task");
+        }
     }
 
 

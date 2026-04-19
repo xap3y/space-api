@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -22,15 +23,21 @@ public class DiscordBotListener {
 
     private final Collection<SlashCommand> commands;
 
-    public DiscordBotListener(List<SlashCommand> slashCommands, GatewayDiscordClient client) {
+    public DiscordBotListener(List<SlashCommand> slashCommands, Optional<GatewayDiscordClient> client) {
         commands = slashCommands;
 
-        client.on(ChatInputInteractionEvent.class, this::handle).subscribe();
-        client.on(ReadyEvent.class)
+        if (client.isEmpty()) {
+            log.warn("Discord bot client is not available. Listeners will not be registered.");
+            return;
+        }
+
+        GatewayDiscordClient discordClient = client.get();
+        discordClient.on(ChatInputInteractionEvent.class, this::handle).subscribe();
+        discordClient.on(ReadyEvent.class)
             .subscribe(event -> {
                 log.info("Discord bot is ready! Logged in as: {}", event.getSelf().getUsername());
             });
-        client.on(MessageCreateEvent.class).subscribe(event -> {
+        discordClient.on(MessageCreateEvent.class).subscribe(event -> {
             Message message = event.getMessage();
             if (message.getContent().equals("!ping")) {
                 message.getChannel().block().createMessage("Pong2!").block();

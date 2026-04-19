@@ -16,29 +16,37 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
 public class GlobalCommandRegistrar implements ApplicationRunner {
 
-    private final RestClient client;
+    private final Optional<RestClient> client;
     private final ServerInfo serverInfo;
 
-    public GlobalCommandRegistrar(RestClient client, ServerInfo serverInfo) {
+    public GlobalCommandRegistrar(Optional<RestClient> client, ServerInfo serverInfo) {
         this.client = client;
         this.serverInfo = serverInfo;
     }
 
     @Override
     public void run(ApplicationArguments args) throws IOException {
+        if (client.isEmpty()) {
+            log.warn("Discord REST client is not available. Command registration skipped.");
+            return;
+        }
+
+        RestClient restClient = client.get();
+        
         //Create an ObjectMapper that supported Discord4J classes
         final JacksonResources d4jMapper = JacksonResources.create();
 
         // Convenience variables for the sake of easier to read code below.
         PathMatchingResourcePatternResolver matcher = new PathMatchingResourcePatternResolver();
-        final ApplicationService applicationService = client.getApplicationService();
-        final long applicationId = client.getApplicationId().block();
+        final ApplicationService applicationService = restClient.getApplicationService();
+        final long applicationId = restClient.getApplicationId().block();
 
         List<ApplicationCommandRequest> commands = new ArrayList<>();
         for (Resource resource : matcher.getResources("commands/*.json")) {

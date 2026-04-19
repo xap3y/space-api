@@ -16,22 +16,29 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "USE_DISCORD_BOT", havingValue = "true", matchIfMissing = false)
 public class DiscordBotService {
 
     @Getter
-    private final GatewayDiscordClient client;
+    private final Optional<GatewayDiscordClient> client;
     private final long guildId;
     private final ServerInfo serverInfo;
 
-    public DiscordBotService(GatewayDiscordClient client, long guildId, ServerInfo serverInfo) {
+    public DiscordBotService(Optional<GatewayDiscordClient> client, long guildId, ServerInfo serverInfo) {
         this.client = client;
         this.guildId = guildId;
         this.serverInfo = serverInfo;
 
         if (!serverInfo.getUseDiscordBot()) return;
+        
+        if (client.isEmpty()) {
+            log.warn("Discord bot client is not available yet. Operations will be queued.");
+            return;
+        }
 
         //registerEvents();
         log.info("GUILD_ID: {}", guildId);
@@ -58,7 +65,11 @@ public class DiscordBotService {
     }*/
 
     public Mono<Void> sendMessage(long channelId, String message) {
-        return client.getChannelById(Snowflake.of(channelId))
+        if (client.isEmpty()) {
+            log.warn("Discord bot client is not connected. Message cannot be sent: {}", message);
+            return Mono.empty();
+        }
+        return client.get().getChannelById(Snowflake.of(channelId))
                 .ofType(MessageChannel.class)
                 .flatMap(channel -> channel.createMessage(message))
                 .then();
@@ -69,7 +80,11 @@ public class DiscordBotService {
     }
 
     public Mono<Void> editChannelTopic(long channelId, String topic) {
-        return client.getChannelById(Snowflake.of(channelId))
+        if (client.isEmpty()) {
+            log.warn("Discord bot client is not connected. Channel topic cannot be edited.");
+            return Mono.empty();
+        }
+        return client.get().getChannelById(Snowflake.of(channelId))
                 .ofType(TextChannel.class)
                 .flatMap(channel -> channel.edit().withTopic(topic))
                 .then();
