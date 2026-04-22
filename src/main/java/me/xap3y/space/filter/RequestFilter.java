@@ -39,14 +39,35 @@ public class RequestFilter implements Filter {
             remoteIp = forwardedFor.split(",")[0];
         }
 
+        prometheusMetricService.recordIpAccess(remoteIp, httpRequest.getRequestURI());
+
         if (userAgent == null) {
             userAgent = "curl";
         }
 
         String path = httpRequest.getRequestURI();
 
-        if (!path.equals("/actuator/prometheus"))
-            log.info("[{}] Request from: {}, User-Agent: {}, PATH: {}", httpRequest.getMethod(), remoteIp, userAgent, path);
+        String queryString = httpRequest.getQueryString();
+        if (queryString != null) {
+            path += "?" + queryString;
+        }
+
+        if (!path.startsWith("/actuator/prometheus")) {
+            //log.info("[{}] Request from: {}, User-Agent: {}, PATH: {}", httpRequest.getMethod(), remoteIp, userAgent, path);
+            // IGNORE
+        } else {
+            if (!path.contains("?Api-Key=")) {
+                filterChain.doFilter(servletRequest, servletResponse);
+                return;
+            }
+            String[] apiKeySplit = path.split("\\?Api-Key=");
+            if (apiKeySplit.length < 2) {
+                filterChain.doFilter(servletRequest, servletResponse);
+                return;
+            }
+            String apiKey = apiKeySplit[1].split("&")[0];
+            //log.info("[{}] Request from: {}, User-Agent: {}, PATH: {}, API Key: {}", httpRequest.getMethod(), remoteIp, userAgent, path, apiKey);
+        }
 
         if (path.contains("/ws/playcore/in") || path.contains("/ws/playcore/out")) {
             filterChain.doFilter(servletRequest, servletResponse);
@@ -56,8 +77,14 @@ public class RequestFilter implements Filter {
             return;
         }
 
-        /*if (!path.equals("/actuator/prometheus"))
-            log.info("[{}] Request from: {}, User-Agent: {}", httpRequest.getMethod(), remoteIp, userAgent);*/
+        if (!path.startsWith("/actuator/prometheus")) {
+            log.info(
+                    "Req, cookie-size={} auth-type={}, user-agent={}",
+                    httpRequest.getCookies() == null ? 0 : httpRequest.getCookies().length,
+                    httpRequest.getAuthType(),
+                    userAgent
+            );
+        }
 
         if ((userAgent.contains("curl") || userAgent.contains("wget") || userAgent.contains("Custom-")) && !path.contains("/actuator/prometheus")) {
             log.info("Blocking request from blacklisted user agent: {}", userAgent);
@@ -70,7 +97,7 @@ public class RequestFilter implements Filter {
 
         String method = httpRequest.getMethod();
 
-        if (!path.equals("/actuator/prometheus") && !path.equals("/favicon.ico")) {
+        if (!path.startsWith("/actuator/prometheus") && !path.equals("/favicon.ico")) {
             prometheusMetricService.recordEvent(MetricRecordType.REQUEST_MADE);
         }
 
@@ -83,8 +110,8 @@ public class RequestFilter implements Filter {
 
         logsService.log(new LogDto(remoteIp, userAgent, path, method, resultHttpCode + ""));
 
-        if (!path.equals("/actuator/prometheus")) {
-            log.info("[{}] Request from: {}, to {} ({})", method, remoteIp, path, resultHttpCode);
+        if (!path.startsWith("/actuator/prometheus") && !path.equals("/favicon.ico") && !path.equals("/status")) {
+            log.info("Request result code: {}", resultHttpCode);
 
             logsService.logFile(" --- [space] RequestFilter   : [" + method +"] REQ FROM: " + remoteIp + ", TO " + path + " (" + resultHttpCode + ")");
         }

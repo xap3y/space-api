@@ -46,7 +46,7 @@ dependencies {
     implementation 'io.micrometer:micrometer-core:1.17.0-M3'
     implementation 'io.micrometer:micrometer-registry-prometheus:1.17.0-M3'
     implementation 'io.micrometer:micrometer-tracing-bridge-otel:1.7.0-M4'
-    implementation 'com.github.loki4j:loki-logback-appender:2.0.3'
+    implementation 'com.github.loki4j:loki-logback-appender:1.2.0'
     implementation 'com.bucket4j:bucket4j_jdk17-core:8.17.0'
 
     compileOnly 'org.projectlombok:lombok'

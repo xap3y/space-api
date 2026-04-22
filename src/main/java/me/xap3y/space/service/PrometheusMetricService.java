@@ -50,4 +50,13 @@ public class PrometheusMetricService {
                         .register(meterRegistry))
                 .increment();
     }
+
+    public void recordIpAccess(String ip, String path) {
+        Counter.builder("app_ip_access_total")
+                .tag("ip", ip)
+                .tag("path", path)
+                .description("Tracking unique IP accesses per path")
+                .register(meterRegistry)
+                .increment();
+    }
 }

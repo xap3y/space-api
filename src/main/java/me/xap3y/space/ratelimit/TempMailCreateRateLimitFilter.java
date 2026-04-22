@@ -1,4 +1,4 @@
-package me.xap3y.space.filter;
+package me.xap3y.space.ratelimit;
 
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;

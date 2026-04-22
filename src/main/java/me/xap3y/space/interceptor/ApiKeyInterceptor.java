@@ -1,4 +1,4 @@
-package me.xap3y.space.filter;
+package me.xap3y.space.interceptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
