@@ -5,17 +5,17 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
-import me.xap3y.space.dto.ImageInfoDto;
-import me.xap3y.space.dto.PasteDto;
-import me.xap3y.space.dto.ShortUrlDto;
-import me.xap3y.space.dto.UserDto;
+import me.xap3y.space.dto.*;
 import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.model.response.ImageListResponse;
+import me.xap3y.space.model.response.PackListResponse;
 import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
 import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.UserService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -102,6 +102,36 @@ public class AdminUserController {
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, imageDtos, count));
+    }
+
+    @GetMapping(
+            value = "/{uid}/images/pageable",
+            produces = {
+                    MediaType.APPLICATION_JSON_VALUE
+            }
+    )
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> getUserImagesPageable(
+            HttpServletRequest request,
+            @PathVariable("uid") Long uid,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "size", required = false) Integer size
+    ) {
+        Page<PageImage> imageDtos = imageService.getAllImagesByUser(uid, page, size);
+
+        if (imageDtos.isEmpty()) {
+            throw new ResourceNotFoundException();
+        }
+
+        ImageListResponse list = new ImageListResponse(
+                imageDtos.getContent(),
+                imageDtos.getTotalElements(),
+                imageDtos.getTotalPages(),
+                imageDtos.getNumber(),
+                imageDtos.getSize()
+        );
+
+        return ResponseEntity.ok(new DefaultResponse(false, list, imageDtos.getContent().size()));
     }
 
     @GetMapping(

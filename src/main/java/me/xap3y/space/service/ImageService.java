@@ -10,16 +10,22 @@ import me.xap3y.space.api.exception.InvalidUniqueIdException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.dto.ImageInfoDto;
 import me.xap3y.space.dto.NewImageDto;
+import me.xap3y.space.dto.PageImage;
 import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.TranscriptImage;
 import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ImageMapper;
+import me.xap3y.space.mapper.PageImageMapper;
 import me.xap3y.space.repository.ImageRepository;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.DngConverter;
 import me.xap3y.space.util.ImageCompressor;
 import me.xap3y.space.util.Utils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -58,13 +64,15 @@ public class ImageService {
     private final ImageMapper imageMapper;
     private final PrometheusMetricService prometheusMetricService;
     private final AuditLogService auditLogService;
+    private final PageImageMapper pageImageMapper;
 
-    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService) {
+    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, PageImageMapper pageImageMapper) {
         this.imageRepository = imageRepository;
         this.imageCompressor = imageCompressor;
         this.imageMapper = imageMapper;
         this.prometheusMetricService = prometheusMetricService;
         this.auditLogService = auditLogService;
+        this.pageImageMapper = pageImageMapper;
     }
 
     public void deleteImageFileAsync(Image image) {
@@ -422,6 +430,23 @@ public class ImageService {
 
     public int countByUploaderId(Long uid) {
         return imageRepository.countByUploaderId(uid);
+    }
+
+    public Page<PageImage> getAllImagesByUser(Long uid, Integer page, Integer size) {
+
+        if (page == null || page < 0) {
+            page = 0;
+        }
+
+        if (size == null || size < 1 || size > 100) {
+            size = 15;
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("uploadTime").descending());
+
+        Page<Image> images = imageRepository.findByUploaderId(uid, pageable);
+
+        return images.map(pageImageMapper);
     }
 
     public List<ImageInfoDto> getAllImagesByUser(Long uid, Long from, Long to, Integer limit) {
