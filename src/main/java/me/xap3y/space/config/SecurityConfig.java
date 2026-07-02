@@ -1,5 +1,6 @@
 package me.xap3y.space.config;
 
+import me.xap3y.space.handler.CsrfAccessDeniedHandler;
 import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -33,19 +36,32 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        tokenRepository.setCookiePath("/");
+
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+        requestHandler.setCsrfRequestAttributeName(null);
+
         http
-                /*.csrf((csrf) -> csrf
-                        .ignoringRequestMatchers(
-                                "/v1/image/upload",
-                                "/v1/paste/create"
-                        )
-                )*/
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
-                .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/private/*").authenticated()
-                        .anyRequest().permitAll())
-                .httpBasic(Customizer.withDefaults());
+            .cors(Customizer.withDefaults())
+            /*.csrf(csrf -> csrf
+                    .csrfTokenRepository(tokenRepository)
+                    .csrfTokenRequestHandler(requestHandler)
+                    .requireCsrfProtectionMatcher(request ->
+                            new AntPathRequestMatcher("/v1/auth/login", "POST").matches(request) ||
+                            new AntPathRequestMatcher("/v1/auth/register", "POST").matches(request)
+                    )
+            )*/
+            .csrf(AbstractHttpConfigurer::disable)
+            .exceptionHandling(exceptions -> exceptions
+                    .accessDeniedHandler(new CsrfAccessDeniedHandler())
+            )
+            .authorizeHttpRequests((auth) -> auth
+                    .requestMatchers("/v1/auth/login", "/v1/auth/register", "/v1/auth/csrf").permitAll()
+                    .requestMatchers("/private/*").authenticated()
+                    .anyRequest().permitAll())
+            .httpBasic(Customizer.withDefaults());
         return http.build();
     }
 

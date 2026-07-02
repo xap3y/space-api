@@ -49,3 +49,5 @@ transcript
 transcripts
 tr_images/
 opentelemetry-javaagent.jar
+copilot-instructions.md
+.env

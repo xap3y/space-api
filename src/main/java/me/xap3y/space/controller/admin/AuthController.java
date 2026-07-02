@@ -1,6 +1,7 @@
 package me.xap3y.space.controller.admin;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.SpaceApplication;
@@ -27,6 +28,7 @@ import me.xap3y.space.service.*;
 import me.xap3y.space.util.ConfigDb;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -117,6 +119,15 @@ public class AuthController {
         ShortUserDto userDto = shortUserMapper.apply(user, false);
 
         return new ResponseEntity<>(new DefaultResponse(false, userDto), HttpStatus.OK);
+    }
+
+    @GetMapping("/csrf")
+    public void setupCsrf(HttpServletRequest request, HttpServletResponse response) {
+        CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+
+        if (token != null) {
+            response.setHeader("X-CSRF-TOKEN", token.getToken());
+        }
     }
 
     @PostMapping(
