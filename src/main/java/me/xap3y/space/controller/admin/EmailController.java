@@ -314,7 +314,7 @@ public class EmailController {
         return new ResponseEntity<>(new DefaultResponse(false, res), HttpStatus.OK);
     }
 
-    @GetMapping("/{email}/suspend")
+    @PostMapping("/{email}/suspend")
     @RequiresSpecialApiKey
     @PathLengthValidator
     public ResponseEntity<?> revokeMail(
