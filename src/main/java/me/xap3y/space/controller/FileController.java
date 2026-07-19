@@ -412,10 +412,7 @@ public class FileController {
                         return null;
                     }
 
-                    try {
-                        // Get file from S3 as stream
-                        InputStream fileInputStream = s3Service.getFileAsStream(file.getUniqueId());
-
+                    try (InputStream fileInputStream = s3Service.getFileAsStream(file.getUniqueId())) {
                         if (fileInputStream != null) {
                             ZipEntry zipEntry = new ZipEntry(file.getFileName());
                             zipEntry.setTime(System.currentTimeMillis());
@@ -427,7 +424,6 @@ public class FileController {
                                 // Check for client disconnect periodically
                                 if (Thread.currentThread().isInterrupted()) {
                                     log.warn("ZIP download interrupted for pack: {}", packId);
-                                    fileInputStream.close();
                                     return null;
                                 }
 
@@ -436,8 +432,6 @@ public class FileController {
                             }
 
                             zipOut.closeEntry();
-                            fileInputStream.close();
-
                             log.info("Added file to ZIP: {}", file.getFileName());
                         }
                     } catch (IOException e) {

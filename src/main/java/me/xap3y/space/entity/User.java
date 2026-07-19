@@ -48,7 +48,7 @@ public class User {
     private UserAccountStatus status;
 
     @ManyToOne
-    @JoinColumn(unique = true, nullable = false)
+    @JoinColumn(unique = true, nullable = true)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     private ApiKey apiKey;
 

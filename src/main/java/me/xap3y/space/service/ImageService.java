@@ -192,27 +192,48 @@ public class ImageService {
         if (fElc.equals("heic") || fElc.equals("heif")) {
             log.info("Converting HEIC image with id: {}", uniqueId);
 
-            BufferedImage heicImage = ImageIO.read(file.getInputStream());
-            if (heicImage == null) {
-                throw new IOException("Failed to read HEIC image");
+            BufferedImage heicImage = null;
+            try {
+                heicImage = ImageIO.read(file.getInputStream());
+            } catch (Exception e) {
+                log.warn("ImageIO failed to read HEIC image with id: {}. Error: {}", uniqueId, e.getMessage());
             }
-
-            log.info("buffered image: {}x {}y", heicImage.getWidth(), heicImage.getHeight());
 
             // Change extension
             fElc = "jpg";
             fileNameWithExtension = uniqueId + ".jpg";
             compressedImageFile = new File(ConfigDb.getIMAGE_DIR(), fileNameWithExtension);
 
-            BufferedImage awtImage = new BufferedImage(heicImage.getWidth(), heicImage.getHeight(), BufferedImage.TYPE_INT_RGB);
-            Graphics2D g = awtImage.createGraphics();
-            g.drawImage(heicImage, 0, 0, null);
-            g.dispose();
+            if (heicImage == null) {
+                log.info("ImageIO HEIC reader returned null or failed. Falling back to ImageMagick for id: {}", uniqueId);
+                try {
+                    me.xap3y.space.util.HeicConverter.convertHeicToJpeg(file, compressedImageFile, originalExt);
 
-            // Save converted JPG
-            try (OutputStream os = new FileOutputStream(compressedImageFile)) {
-                if (!ImageIO.write(awtImage, "jpg", os)) {
-                    throw new IOException("No ImageIO writer found for JPEG format.");
+                    try {
+                        BufferedImage convertedImage = ImageIO.read(compressedImageFile);
+                        if (convertedImage != null) {
+                            log.info("HEIC image converted via ImageMagick: {}x {}y", convertedImage.getWidth(), convertedImage.getHeight());
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to read back converted image dimensions: {}", e.getMessage());
+                    }
+                } catch (Exception e) {
+                    log.error("ImageMagick HEIC conversion failed for id: {}", uniqueId, e);
+                    throw new IOException("Failed to read/convert HEIC image via both ImageIO and ImageMagick", e);
+                }
+            } else {
+                log.info("buffered image: {}x {}y", heicImage.getWidth(), heicImage.getHeight());
+
+                BufferedImage awtImage = new BufferedImage(heicImage.getWidth(), heicImage.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D g = awtImage.createGraphics();
+                g.drawImage(heicImage, 0, 0, null);
+                g.dispose();
+
+                // Save converted JPG
+                try (OutputStream os = new FileOutputStream(compressedImageFile)) {
+                    if (!ImageIO.write(awtImage, "jpg", os)) {
+                        throw new IOException("No ImageIO writer found for JPEG format.");
+                    }
                 }
             }
 

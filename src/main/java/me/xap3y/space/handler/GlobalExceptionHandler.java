@@ -14,11 +14,14 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.FileNotFoundException;
 import java.util.Map;
@@ -46,6 +49,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<DefaultResponse> handleImageTools(ImageToolsException ex) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
         return new ResponseEntity<>(defaultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<DefaultResponse> handleMethodNotSupportedException(
+            HttpRequestMethodNotSupportedException ex,
+            HttpServletRequest request
+    ) {
+        prometheusMetricService.recordEvent(MetricRecordType.EXCEPTION_CAUGHT);
+        log.info("User tried unsupported operation: {} on path: {}", ex.getMessage(), request.getRequestURI());
+        DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
+
+        return new ResponseEntity<>(defaultResponse, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @ExceptionHandler({Exception.class, RuntimeException.class})
