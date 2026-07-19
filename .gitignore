@@ -51,3 +51,4 @@ tr_images/
 opentelemetry-javaagent.jar
 copilot-instructions.md
 .env
+start.sh

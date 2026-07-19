@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.5'
@@ -77,6 +79,19 @@ sourceSets {
 }*/
 
 bootRun {
+    doFirst {
+        def envFile = file('.env')
+        if (envFile.exists()) {
+            envFile.readLines().each { line ->
+                if (line.contains('=') && !line.startsWith('#')) {
+                    def parts = line.split('=', 2)
+                    // Pass each .env variable as a System Property to the JVM
+                    logger.info("Setting system property: {}={}", parts[0], parts[1])
+                    systemProperty(parts[0], parts[1])
+                }
+            }
+        }
+    }
     jvmArgs = [
             "-javaagent:${projectDir}/opentelemetry-javaagent.jar",
             "-Dotel.service.name=space",
