@@ -4,8 +4,8 @@ API for an image/file hosting service, pastebin host, temp email and URL shorten
 
 ## Links
 
-- [API Docs](https://docs.xap3y.space)
-- [Frontend](https://xap3y.space)
+- [API Docs](https://space.xap3y.eu/docs)
+- [Frontend](https://space.xap3y.eu)
 - [Frontend-source](https://github.com/xap3y/front-space-v2/)
 - [Public API](https://call.xap3y.space/)
 - [Status](https://status.xap3y.space/status/space)

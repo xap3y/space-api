@@ -30,9 +30,9 @@ public class LogRecord {
     @Column(nullable = false)
     private String path;
 
-    @Column(nullable = false, columnDefinition = "GET")
+    @Column(nullable = false)
     private String method;
 
-    @Column(nullable = false, columnDefinition = "???")
+    @Column(nullable = false)
     private String result;
 }
