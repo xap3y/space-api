@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.dto.*;
+import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.response.DefaultResponse;
@@ -16,8 +17,10 @@ import me.xap3y.space.service.PasteService;
 import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.UserService;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +37,7 @@ public class AdminUserController {
     private final UserService userService;
     private final ShortUserMapper shortUserMapper;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping(
             value = "/get",
@@ -172,5 +176,46 @@ public class AdminUserController {
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, urlsDtos));
+    }
+
+    @PutMapping(
+            value = "/{uid}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> updateUser(
+            @PathVariable("uid") Long uid,
+            @RequestBody UserUpdateRequest body,
+            HttpServletRequest request
+    ) {
+        User user = userService.findById(uid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        String newEmail = body.getEmail() != null ? body.getEmail() : body.getMail();
+        if (newEmail != null && !newEmail.equals(user.getEmail())) {
+            if (userService.existsByEmail(newEmail)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new DefaultResponse(true, "Email already in use"));
+            }
+            user.setEmail(newEmail);
+        }
+
+        String newAvatar = body.getAvatar() != null ? body.getAvatar() : body.getProfilePicUrl();
+        if (newAvatar != null) {
+            user.setAvatar(newAvatar);
+        }
+
+        if (body.getRole() != null) {
+            user.setRole(body.getRole());
+        }
+
+        if (body.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(body.getPassword()));
+        }
+
+        userService.saveUser(user);
+
+        return ResponseEntity.ok(new DefaultResponse(false, "User updated successfully"));
     }
 }
