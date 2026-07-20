@@ -416,6 +416,38 @@ public class ImageController {
         return new ResponseEntity<>(new DefaultResponse(false, "Image deleted"), HttpStatus.OK);
     }
 
+    @PutMapping(
+            value = "/password/{uniqueId}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @RequiresApiKey
+    public ResponseEntity<?> updateImagePassword(
+            HttpServletRequest request,
+            @PathVariable String uniqueId,
+            @RequestBody Map<String, String> body
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        Image image = imageService.getImage(uniqueId);
+
+        if (!Objects.equals(image.getUploader().getId(), uploader.getId()) && !uploader.isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new DefaultResponse(true, "You are not allowed to modify this image's password"));
+        }
+
+        String newPassword = body.get("password");
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            image.setPassword(null);
+        } else {
+            image.setPassword(passwordEncoder.encode(newPassword.trim()));
+        }
+
+        imageService.saveImageDirect(image);
+        metricService.setDatabaseUpdated(true);
+
+        return ResponseEntity.ok(new DefaultResponse(false, "Image password updated successfully"));
+    }
+
     @SneakyThrows
     @GetMapping(
             value = "/info/{uniqueId}",

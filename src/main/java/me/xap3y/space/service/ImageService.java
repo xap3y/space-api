@@ -454,6 +454,10 @@ public class ImageService {
     }
 
     public Page<PageImage> getAllImagesByUser(Long uid, Integer page, Integer size) {
+        return getAllImagesByUser(uid, page, size, null, null, null);
+    }
+
+    public Page<PageImage> getAllImagesByUser(Long uid, Integer page, Integer size, java.time.LocalDateTime from, java.time.LocalDateTime to, java.util.List<String> formats) {
 
         if (page == null || page < 0) {
             page = 0;
@@ -465,7 +469,23 @@ public class ImageService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("uploadTime").descending());
 
-        Page<Image> images = imageRepository.findByUploaderId(uid, pageable);
+        org.springframework.data.jpa.domain.Specification<Image> spec = (root, query, cb) -> {
+            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.equal(root.get("uploader").get("id"), uid));
+
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("uploadTime"), from));
+            }
+            if (to != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("uploadTime"), to));
+            }
+            if (formats != null && !formats.isEmpty()) {
+                predicates.add(root.get("fileType").in(formats));
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Image> images = imageRepository.findAll(spec, pageable);
 
         return images.map(pageImageMapper);
     }
@@ -688,5 +708,9 @@ public class ImageService {
             }
             log.info("Fixed {} missing video posters", fixed);
         });
+    }
+
+    public Image saveImageDirect(Image image) {
+        return imageRepository.save(image);
     }
 }

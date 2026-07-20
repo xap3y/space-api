@@ -133,6 +133,26 @@ public class UserService {
         return true;
     }
 
+    public User registerAdminCreatedUser(String email, String username, String password, boolean verified) {
+        String encodedPassword = passwordEncoder.encode(password);
+        User user = new User(email, username, encodedPassword);
+        ApiKey apiKey = new ApiKey();
+        apiKey.setCreatedAt(LocalDateTime.now());
+        apiKey.setKeyCode(Utils.generateApiKey());
+        apiKey.setMaxUploadSize(-1);
+        apiKeyRepository.save(apiKey);
+        user.setApiKey(apiKey);
+
+        user.setStatus(verified ? UserAccountStatus.ACTIVE : UserAccountStatus.WAITING_VERIFICATION);
+        user.setRole(me.xap3y.space.api.enums.UserRole.USER);
+
+        User savedUser = userRepository.save(user);
+        userSettingsService.createDefaultSettingsForUser(savedUser);
+
+        prometheusMetricService.recordEvent(MetricRecordType.USER_SIGNUP);
+        return savedUser;
+    }
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }

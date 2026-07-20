@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'me.xap3y'
-version = '1.0-beta.32'
+version = '1.0-beta.33'
 
 def otlpEndpoint = 'http://0.0.0.0:4317'
 

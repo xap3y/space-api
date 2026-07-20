@@ -23,6 +23,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -119,9 +121,12 @@ public class AdminUserController {
             HttpServletRequest request,
             @PathVariable("uid") Long uid,
             @RequestParam(value = "page", required = false) Integer page,
-            @RequestParam(value = "size", required = false) Integer size
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestParam(required = false) List<String> formats
     ) {
-        Page<PageImage> imageDtos = imageService.getAllImagesByUser(uid, page, size);
+        Page<PageImage> imageDtos = imageService.getAllImagesByUser(uid, page, size, from, to, formats);
 
         if (imageDtos.isEmpty()) {
             throw new ResourceNotFoundException();
@@ -217,5 +222,46 @@ public class AdminUserController {
         userService.saveUser(user);
 
         return ResponseEntity.ok(new DefaultResponse(false, "User updated successfully"));
+    }
+
+    @PostMapping(
+            value = "/create",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> adminCreateUser(
+            @RequestBody AdminCreateUserRequest body,
+            HttpServletRequest request
+    ) {
+        if (body.getUsername() == null || body.getUsername().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DefaultResponse(true, "Username is required"));
+        }
+        if (body.getEmail() == null || body.getEmail().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DefaultResponse(true, "Email is required"));
+        }
+        if (body.getPassword() == null || body.getPassword().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DefaultResponse(true, "Password is required"));
+        }
+
+        if (userService.existsByUsername(body.getUsername())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DefaultResponse(true, "Username is already taken"));
+        }
+        if (userService.existsByEmail(body.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DefaultResponse(true, "Email is already taken"));
+        }
+
+        try {
+            userService.registerAdminCreatedUser(
+                    body.getEmail().trim(),
+                    body.getUsername().trim(),
+                    body.getPassword(),
+                    body.getVerified() != null && body.getVerified()
+            );
+            return ResponseEntity.ok(new DefaultResponse(false, "User created successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new DefaultResponse(true, "Failed to create user: " + e.getMessage()));
+        }
     }
 }
