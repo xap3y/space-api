@@ -37,7 +37,7 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
         switch (resource) {
             case Image img -> {
                 rawUrl = switch (img.getLocation()) {
-                    case R2 -> "https://r3.xap3y.space/media/" + resource.getUniqueId();
+                    case R2 -> "https://r2.xap3y.eu/media/" + resource.getUniqueId();
                     case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/" + resource.getUniqueId();
                     default -> serverInfo.getBaseUrl() + "/web/image-render/" + resource.getUniqueId();
                 };
@@ -74,7 +74,7 @@ public class UrlSetMapper implements Function<ApiResource, UrlSetDto> {
             }
             case TranscriptImage trImage -> {
                 rawUrl = switch (trImage.getLocation()) {
-                    case R2 -> "https://r3.xap3y.space/media/tr_images/" + resource.getUniqueId();
+                    case R2 -> "https://r2.xap3y.eu/media/tr_images/" + resource.getUniqueId();
                     case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/tr-" + resource.getUniqueId();
                     default -> serverInfo.getBaseUrl() + "/web/image-render/" + resource.getUniqueId();
                 };

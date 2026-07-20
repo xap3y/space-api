@@ -35,7 +35,7 @@ public class ImageInfoMapper implements Function<Pair<String, ImageDto>, ImageIn
     public ImageInfoDto apply(Pair<String, ImageDto> imageDto) {
 
         String imageUrl = switch (imageDto.getSecond().location()) {
-            case R2 -> "https://r3.xap3y.space/media/" + imageDto.getFirst();
+            case R2 -> "https://r2.xap3y.eu/media/" + imageDto.getFirst();
             case LOCAL -> serverInfo.getBaseUrl() + "/v1/image/get/" + imageDto.getFirst();
             default -> serverInfo.getBaseUrl() + "/web/image-render/" + imageDto.getFirst();
         };
