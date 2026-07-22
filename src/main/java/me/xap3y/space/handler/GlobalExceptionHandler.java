@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({BadCredentialsException.class, UnauthorizedException.class, InsufficientAuthenticationException.class, InvalidApiKeyException.class})
     public ResponseEntity<DefaultResponse> handleBadCredentialsExceptions(
-            BadCredentialsException ex
+            Exception ex
     ) {
         DefaultResponse defaultResponse = new DefaultResponse(true, ex.getMessage());
 

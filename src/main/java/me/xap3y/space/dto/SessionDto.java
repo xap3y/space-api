@@ -12,6 +12,7 @@ public record SessionDto(
         LocalDateTime expiresAt,
         Boolean isValid,
         String userAgent,
-        String ipAddress
+        String ipAddress,
+        Boolean isCurrent
 ) {
 }

@@ -104,9 +104,43 @@ public class AuthController {
             uploader = session.getUser();
         }
 
-        List<SessionDto> sessionDtoList = sessionService.getSessions(uploader.getId()).stream().map(sessionMapper).toList();
+        final String activeToken = token;
+        List<SessionDto> sessionDtoList = sessionService.getSessions(uploader.getId())
+                .stream()
+                .map(s -> sessionMapper.apply(s, false, activeToken))
+                .toList();
 
         return ResponseEntity.ok(new DefaultResponse(false, sessionDtoList));
+    }
+
+    @DeleteMapping("/me/sessions/{id}")
+    @OptionalApiKey
+    public ResponseEntity<?> revokeSession(
+            HttpServletRequest request,
+            @CookieValue(value = "session_token", required = false) String token,
+            @PathVariable Long id
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        if (uploader == null && token == null) throw new InvalidApiKeyException();
+
+        if (token != null && uploader == null) {
+            Session session = sessionService.getValidSession(token);
+            if (session == null || !session.getIsValid()) {
+                throw new UnauthorizedException();
+            }
+            uploader = session.getUser();
+        }
+
+        Session sessionToRevoke = sessionService.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+
+        if (!sessionToRevoke.getUser().getId().equals(uploader.getId())) {
+            throw new UnauthorizedException("You do not own this session");
+        }
+
+        sessionService.invalidateSessionById(id);
+
+        return ResponseEntity.ok(new DefaultResponse(false, "Session revoked successfully"));
     }
 
     @GetMapping("/validate")

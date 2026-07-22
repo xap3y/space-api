@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -57,8 +58,20 @@ public class SessionService {
                 .orElse(null);
     }
 
+    public Optional<Session> findById(Long id) {
+        return sessionRepo.findById(id);
+    }
+
     public void invalidateSession(String token) {
         sessionRepo.findByToken(token).ifPresent(session -> {
+            session.setIsValid(false);
+            sessionRepo.save(session);
+            webhookService.postSessionInvalid(session);
+        });
+    }
+
+    public void invalidateSessionById(Long id) {
+        sessionRepo.findById(id).ifPresent(session -> {
             session.setIsValid(false);
             sessionRepo.save(session);
             webhookService.postSessionInvalid(session);

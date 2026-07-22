@@ -321,4 +321,41 @@ public class S3Service {
             throw new RuntimeException("Failed to copy object", e);
         }
     }
+
+    /**
+     * Get media stream from S3 (no path prefix added)
+     */
+    public InputStream getMediaStream(String key) {
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            ResponseInputStream<GetObjectResponse> responseInputStream = s3Client.getObject(getObjectRequest);
+            log.info("Media stream opened for key: {}", key);
+            return responseInputStream;
+        } catch (S3Exception e) {
+            log.error("Error getting media stream from S3 with key {}: {}", key, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Delete media from S3 (no path prefix added)
+     */
+    public void deleteMedia(String key) {
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("Media deleted successfully from S3: {}", key);
+        } catch (S3Exception e) {
+            log.error("Error deleting media from S3 with key {}: {}", key, e.getMessage());
+            throw new RuntimeException("Failed to delete media", e);
+        }
+    }
 }

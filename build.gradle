@@ -92,15 +92,24 @@ bootRun {
             }
         }
     }
-    jvmArgs = [
-            "-javaagent:${projectDir}/opentelemetry-javaagent.jar",
-            "-Dotel.service.name=space",
-            "-Dotel.exporter.otlp.endpoint=${otlpEndpoint}",
-            "-Dotel.exporter.otlp.protocol=grpc",
-            "-Dotel.metrics.exporter=none",
-            "-Dotel.logs.exporter=none",
-            "-Dotel.instrumentation.logging.mdcs.enabled=true",
-            "-Dotel.log.level=warn",
-            "--enable-native-access=ALL-UNNAMED"
-    ]
+
+    def enableTelemetry = !project.hasProperty('noTelemetry') && !project.hasProperty('noTelementary')
+
+    if (enableTelemetry) {
+        jvmArgs = [
+                "-javaagent:${projectDir}/opentelemetry-javaagent.jar",
+                "-Dotel.service.name=space",
+                "-Dotel.exporter.otlp.endpoint=${otlpEndpoint}",
+                "-Dotel.exporter.otlp.protocol=grpc",
+                "-Dotel.metrics.exporter=none",
+                "-Dotel.logs.exporter=none",
+                "-Dotel.instrumentation.logging.mdcs.enabled=true",
+                "-Dotel.log.level=warn",
+                "--enable-native-access=ALL-UNNAMED"
+        ]
+    } else {
+        jvmArgs = [
+                "--enable-native-access=ALL-UNNAMED"
+        ]
+    }
 }

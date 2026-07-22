@@ -90,7 +90,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
 
                 User uploader;
 
-                if (apiKey == null) {
+                if (apiKey == null || apiKey.trim().isEmpty() || "null".equalsIgnoreCase(apiKey) || "null_api".equalsIgnoreCase(apiKey) || "undefined".equalsIgnoreCase(apiKey)) {
                     String sessionToken = null;
                     if (request.getCookies() != null) {
                         for (Cookie cookie : request.getCookies()) {

@@ -15,7 +15,7 @@ public class SessionMapper implements Function<Session, SessionDto> {
         this.shortUserMapper = shortUserMapper;
     }
 
-    public SessionDto apply(Session session, boolean includeUser) {
+    public SessionDto apply(Session session, boolean includeUser, String currentToken) {
         return new SessionDto(
                 session.getId(),
                 includeUser ? shortUserMapper.apply(session.getUser()) : null,
@@ -24,13 +24,17 @@ public class SessionMapper implements Function<Session, SessionDto> {
                 session.getExpiresAt(),
                 session.getIsValid(),
                 session.getUserAgent(),
-                session.getIpAddress()
+                session.getIpAddress(),
+                currentToken != null && currentToken.equals(session.getToken())
         );
+    }
 
+    public SessionDto apply(Session session, boolean includeUser) {
+        return apply(session, includeUser, null);
     }
 
     @Override
     public SessionDto apply(Session session) {
-        return apply(session, false);
+        return apply(session, false, null);
     }
 }

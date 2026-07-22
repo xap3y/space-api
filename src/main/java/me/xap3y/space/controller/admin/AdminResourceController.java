@@ -18,6 +18,10 @@ import me.xap3y.space.model.response.PagedResponse;
 import me.xap3y.space.repository.ImageRepository;
 import me.xap3y.space.repository.PasteRepository;
 import me.xap3y.space.repository.UrlRepository;
+import me.xap3y.space.service.ImageService;
+import me.xap3y.space.api.exception.ResourceNotFoundException;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +47,7 @@ public class AdminResourceController {
     private final PasteRepository pasteRepository;
     private final UrlRepository urlRepository;
     private final ImageRepository imageRepository;
+    private final ImageService imageService;
 
     private final PasteMapper pasteMapper;
     private final ShortUrlMapper shortUrlMapper;
@@ -218,5 +223,25 @@ public class AdminResourceController {
         );
 
         return ResponseEntity.ok(new DefaultResponse(false, response));
+    }
+
+    @PostMapping("/images/{uniqueId}/migrate")
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> migrateImage(
+            HttpServletRequest request,
+            @PathVariable String uniqueId
+    ) {
+        try {
+            Image image = imageRepository.findByUniqueId(uniqueId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Image not found"));
+
+            imageService.migrateImageStorage(image);
+
+            return ResponseEntity.ok(new DefaultResponse(false, "Storage migrated successfully"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(new DefaultResponse(true, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new DefaultResponse(true, "Failed to migrate storage: " + e.getMessage()));
+        }
     }
 }

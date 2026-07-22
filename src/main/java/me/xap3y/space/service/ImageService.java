@@ -65,14 +65,16 @@ public class ImageService {
     private final PrometheusMetricService prometheusMetricService;
     private final AuditLogService auditLogService;
     private final PageImageMapper pageImageMapper;
+    private final S3Service s3Service;
 
-    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, PageImageMapper pageImageMapper) {
+    public ImageService(ImageRepository imageRepository, ImageCompressor imageCompressor, ImageMapper imageMapper, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, PageImageMapper pageImageMapper, S3Service s3Service) {
         this.imageRepository = imageRepository;
         this.imageCompressor = imageCompressor;
         this.imageMapper = imageMapper;
         this.prometheusMetricService = prometheusMetricService;
         this.auditLogService = auditLogService;
         this.pageImageMapper = pageImageMapper;
+        this.s3Service = s3Service;
     }
 
     public void deleteImageFileAsync(Image image) {
@@ -712,5 +714,57 @@ public class ImageService {
 
     public Image saveImageDirect(Image image) {
         return imageRepository.save(image);
+    }
+
+    public void migrateImageStorage(Image image) throws IOException {
+        ImageLocation currentLocation = image.getLocation();
+        if (currentLocation == ImageLocation.LOCAL) {
+            Path filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType());
+            if (!Files.exists(filePath)) {
+                filePath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType().toLowerCase(Locale.ROOT));
+            }
+            if (!Files.exists(filePath)) {
+                throw new FileNotFoundException("Local file not found for image: " + image.getUniqueId());
+            }
+
+            byte[] fileContent = Files.readAllBytes(filePath);
+            String contentType = switch (image.getFileType().toLowerCase(Locale.ROOT)) {
+                case "png" -> "image/png";
+                case "jpg", "jpeg" -> "image/jpeg";
+                case "gif" -> "image/gif";
+                case "mp4" -> "video/mp4";
+                case "heif" -> "image/heif";
+                case "heic" -> "image/heic";
+                default -> "application/octet-stream";
+            };
+
+            s3Service.uploadFile("media/" + image.getUniqueId(), fileContent, contentType);
+
+            image.setLocation(ImageLocation.R2);
+            imageRepository.save(image);
+
+            Files.deleteIfExists(filePath);
+
+            log.info("Successfully migrated image {} from LOCAL to R2", image.getUniqueId());
+        } else if (currentLocation == ImageLocation.R2) {
+            String s3Key = "media/" + image.getUniqueId();
+            try (InputStream is = s3Service.getMediaStream(s3Key)) {
+                if (is == null) {
+                    throw new FileNotFoundException("File not found on R2/S3 for key: " + s3Key);
+                }
+                Path targetPath = Paths.get(ConfigDb.getIMAGE_DIR(), image.getUniqueId() + "." + image.getFileType().toLowerCase(Locale.ROOT));
+                Files.createDirectories(targetPath.getParent());
+                Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+                image.setLocation(ImageLocation.LOCAL);
+                imageRepository.save(image);
+
+                s3Service.deleteMedia(s3Key);
+
+                log.info("Successfully migrated image {} from R2 to LOCAL", image.getUniqueId());
+            }
+        } else {
+            throw new IllegalStateException("Unsupported or unknown image location: " + currentLocation);
+        }
     }
 }
