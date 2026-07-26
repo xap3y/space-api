@@ -20,4 +20,10 @@ public interface InboundMailRepository extends JpaRepository<InboundEmail, Long>
     List<InboundEmail> findAllByTempMail(TempMail tempMail);
 
     List<InboundEmail> findTop20ByTempMailOrderBySentDateDesc(TempMail tempMail);
+
+    /** Delete a specific inbound message only if it belongs to the given temp mail email (safe scoped delete). */
+    void deleteByIdAndTempMail_Email(Long id, String tempMailEmail);
+
+    /** Delete all inbound messages belonging to a temp mail address. */
+    void deleteAllByTempMail_Email(String tempMailEmail);
 }

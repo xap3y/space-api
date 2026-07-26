@@ -424,6 +424,52 @@ public class EmailController {
         return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
     }
 
+    /**
+     * DELETE /v1/email/{email}/inbox/{messageId}
+     * Deletes a single inbound message from the inbox of the given temp mail.
+     * Requires special (admin) API key.
+     */
+    @DeleteMapping("/{email}/inbox/{messageId}")
+    @RequiresSpecialApiKey
+    @PathLengthValidator
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> deleteInboxMessage(
+            @PathVariable("email") String email,
+            @PathVariable("messageId") Long messageId
+    ) {
+        if (tempMailService.findByEmail(email).isEmpty()) {
+            throw new ResourceNotFoundException("Temp mail not found");
+        }
+
+        boolean deleted = inboundMailService.deleteMessage(messageId, email);
+        if (!deleted) {
+            throw new ResourceNotFoundException("Inbox message not found or does not belong to this email");
+        }
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    /**
+     * DELETE /v1/email/{email}/inbox
+     * Clears all inbound messages from the inbox of the given temp mail.
+     * Requires special (admin) API key.
+     */
+    @DeleteMapping("/{email}/inbox")
+    @RequiresSpecialApiKey
+    @PathLengthValidator
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> clearInbox(
+            @PathVariable("email") String email
+    ) {
+        if (tempMailService.findByEmail(email).isEmpty()) {
+            throw new ResourceNotFoundException("Temp mail not found");
+        }
+
+        inboundMailService.deleteAllMessages(email);
+
+        return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record UpdateExpirationRequest(
             @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)

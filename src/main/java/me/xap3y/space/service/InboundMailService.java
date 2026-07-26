@@ -56,4 +56,22 @@ public class InboundMailService {
                 .stream()
                 .findFirst();
     }
+
+    /**
+     * Delete a single inbound message by its ID, but only if it belongs to the given temp mail address.
+     * Returns {@code true} if the message was found and deleted, {@code false} if not found.
+     */
+    public boolean deleteMessage(Long messageId, String tempMailEmail) {
+        Optional<InboundEmail> msg = inboundMailRepository.findById(messageId);
+        if (msg.isEmpty() || !msg.get().getTempMail().getEmail().equals(tempMailEmail)) {
+            return false;
+        }
+        inboundMailRepository.deleteByIdAndTempMail_Email(messageId, tempMailEmail);
+        return true;
+    }
+
+    /** Delete every inbound message belonging to a temp mail address (clear inbox). */
+    public void deleteAllMessages(String tempMailEmail) {
+        inboundMailRepository.deleteAllByTempMail_Email(tempMailEmail);
+    }
 }
