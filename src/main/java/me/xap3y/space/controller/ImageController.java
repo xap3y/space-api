@@ -297,6 +297,9 @@ public class ImageController {
     public ResponseEntity<?> uploadImageFromUrl(
             HttpServletRequest request,
             @RequestParam("url") String url,
+            @RequestParam(value = "filename", required = false) String filename,
+            @RequestParam(value = "contentType", required = false) String contentType,
+            @RequestParam(value = "responseHeader", required = false, defaultValue = "false") boolean responseHeader,
             @RequestParam(value = "source", required = false) ResourceSourceType source
     ) {
         MinecraftServerReports uploader = (MinecraftServerReports) request.getAttribute("minecraftServerReport");
@@ -306,13 +309,21 @@ public class ImageController {
             throw new BadRequestException("URL cannot be empty");
         }
 
-        TranscriptImage savedImage = transcriptImagesService.saveTranscriptImageFromUrl(url, uploader, source);
+        TranscriptImage savedImage = transcriptImagesService.saveTranscriptImageFromUrl(
+                url, filename, contentType, uploader, source
+        );
         TranscriptImageDto imageInfoDto = new TranscriptImageDto(
                 savedImage.getUniqueId(),
                 savedImage.getFileType(),
                 savedImage.getSize(),
                 urlSetMapper.apply(savedImage)
         );
+
+        if (responseHeader) {
+            return ResponseEntity.noContent()
+                    .header("X-Transcript-Attachment-Url", imageInfoDto.urlSet().rawUrl())
+                    .build();
+        }
 
         return new ResponseEntity<>(new UIDResponse(false, savedImage.getUniqueId(), imageInfoDto), HttpStatus.OK);
     }

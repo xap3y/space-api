@@ -62,9 +62,11 @@ public class DiscordTranscript {
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class AttachmentEntry {
+        private String id;
         private String filename;
         private String url;
         private String safeUrl;
+        private String contentType;
         private long size;
     }
 

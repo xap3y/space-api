@@ -45,27 +45,19 @@ public class RequestFilter implements Filter {
             userAgent = "curl";
         }
 
+        // Persist only the route. Query values can be very large (for example,
+        // signed Discord CDN URLs) and may also contain sensitive data.
         String path = httpRequest.getRequestURI();
-
         String queryString = httpRequest.getQueryString();
-        if (queryString != null) {
-            path += "?" + queryString;
-        }
 
         if (!path.startsWith("/actuator/prometheus")) {
             //log.info("[{}] Request from: {}, User-Agent: {}, PATH: {}", httpRequest.getMethod(), remoteIp, userAgent, path);
             // IGNORE
         } else {
-            if (!path.contains("?Api-Key=")) {
+            if (queryString == null || !queryString.contains("Api-Key=")) {
                 filterChain.doFilter(servletRequest, servletResponse);
                 return;
             }
-            String[] apiKeySplit = path.split("\\?Api-Key=");
-            if (apiKeySplit.length < 2) {
-                filterChain.doFilter(servletRequest, servletResponse);
-                return;
-            }
-            String apiKey = apiKeySplit[1].split("&")[0];
             //log.info("[{}] Request from: {}, User-Agent: {}, PATH: {}, API Key: {}", httpRequest.getMethod(), remoteIp, userAgent, path, apiKey);
         }
 
