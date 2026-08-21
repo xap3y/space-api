@@ -192,7 +192,7 @@ public class EmailController {
         List<TempMailDto> tempMailDtos = tempMails.stream()
                 .map(tempMailMapper)
                 .toList();
-        return new ResponseEntity<>(new DefaultResponse(true, tempMailDtos), HttpStatus.OK);
+        return new ResponseEntity<>(new DefaultResponse(false, tempMailDtos), HttpStatus.OK);
     }
 
     @GetMapping(
@@ -483,4 +483,3 @@ public class EmailController {
         private String token;
     }
 }
-

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +18,20 @@ public interface TempMailRepository extends JpaRepository<TempMail, Long> {
     Optional<TempMail> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    @Query("SELECT DATE(e.createdAt), COUNT(e.id) FROM TempMail e " +
+            "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate " +
+            "AND e.createdBy.id = :createdById GROUP BY DATE(e.createdAt) ORDER BY DATE(e.createdAt) ASC")
+    List<Object[]> findTotalPerDayByUser(@Param("startDate") LocalDateTime startDate,
+                                          @Param("endDate") LocalDateTime endDate,
+                                          @Param("createdById") Long createdById);
+
+    @Query("SELECT e.status, COUNT(e.id) FROM TempMail e " +
+            "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate " +
+            "AND e.createdBy.id = :createdById GROUP BY e.status ORDER BY COUNT(e.id) DESC")
+    List<Object[]> findStatusesByUser(@Param("startDate") LocalDateTime startDate,
+                                       @Param("endDate") LocalDateTime endDate,
+                                       @Param("createdById") Long createdById);
 
     @Transactional
     void deleteByEmail(String email);

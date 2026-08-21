@@ -11,6 +11,9 @@ import me.xap3y.space.api.iface.RequiresApiKey;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.ImageInfoDto;
+import me.xap3y.space.dto.PageImage;
+import me.xap3y.space.dto.PasteDto;
+import me.xap3y.space.dto.ShortUrlDto;
 import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.dto.UserSettingsDto;
 import me.xap3y.space.dto.UserSocialsPatchDto;
@@ -21,7 +24,10 @@ import me.xap3y.space.mapper.UserSettingsMapper;
 import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.model.UserWebhookSettings;
 import me.xap3y.space.model.response.DefaultResponse;
+import me.xap3y.space.model.response.ImageListResponse;
 import me.xap3y.space.service.*;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -102,6 +108,51 @@ public class UserController {
         }
 
         return ResponseEntity.ok(new DefaultResponse(false, imageDtos, count));
+    }
+
+    /**
+     * Native and other trusted first-party clients cannot use the portal's
+     * server-side administrative key. These self-scoped endpoints expose the
+     * same list data while deriving ownership from the authenticated API key.
+     */
+    @GetMapping(value = "/me/images/pageable", produces = "application/json")
+    @RequiresApiKey
+    public ResponseEntity<?> getCurrentUserImagesPageable(
+            HttpServletRequest request,
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "21") Integer size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestParam(required = false) List<String> formats
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        Page<PageImage> images = imageService.getAllImagesByUser(uploader.getId(), page, size, from, to, formats);
+        ImageListResponse response = new ImageListResponse(
+                images.getContent(), images.getTotalElements(), images.getTotalPages(), images.getNumber(), images.getSize()
+        );
+        return ResponseEntity.ok(new DefaultResponse(false, response, images.getContent().size()));
+    }
+
+    @GetMapping(value = "/me/pastes", produces = "application/json")
+    @RequiresApiKey
+    public ResponseEntity<?> getCurrentUserPastes(
+            HttpServletRequest request,
+            @RequestParam(value = "content", required = false, defaultValue = "false") boolean content
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        List<PasteDto> pastes = pasteService.getAllPastesByUserId(uploader.getId(), content);
+        return ResponseEntity.ok(new DefaultResponse(false, pastes, pastes.size()));
+    }
+
+    @GetMapping(value = "/me/urls", produces = "application/json")
+    @RequiresApiKey
+    public ResponseEntity<?> getCurrentUserUrls(
+            HttpServletRequest request,
+            @RequestParam(value = "logs", required = false, defaultValue = "false") boolean logs
+    ) {
+        User uploader = (User) request.getAttribute("uploader");
+        List<ShortUrlDto> urls = urlService.getAllShortUrlsByCreatorId(uploader.getId(), logs);
+        return ResponseEntity.ok(new DefaultResponse(false, urls, urls.size()));
     }
 
     @PatchMapping(

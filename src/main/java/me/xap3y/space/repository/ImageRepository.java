@@ -117,6 +117,42 @@ public interface ImageRepository extends JpaRepository<Image, Long>, JpaSpecific
                                                 @Param("endDate") LocalDateTime endDate,
                                                 @Param("uploaderId") Long uploaderId);
 
+    @Query("SELECT DATE(e.uploadTime), SUM(e.size) FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
+            "AND e.uploader.id = :uploaderId GROUP BY DATE(e.uploadTime) ORDER BY DATE(e.uploadTime) ASC")
+    List<Object[]> findStoragePerDayByUser(@Param("startDate") LocalDateTime startDate,
+                                            @Param("endDate") LocalDateTime endDate,
+                                            @Param("uploaderId") Long uploaderId);
+
+    @Query("SELECT COALESCE(SUM(e.size), 0) FROM Image e WHERE e.uploader.id = :uploaderId")
+    Long sumStorageByUploaderId(@Param("uploaderId") Long uploaderId);
+
+    @Query("SELECT COALESCE(SUM(e.size), 0) FROM Image e " +
+            "WHERE e.uploader.id = :uploaderId AND e.uploadTime < :before")
+    Long sumStorageByUploaderIdBefore(@Param("uploaderId") Long uploaderId,
+                                       @Param("before") LocalDateTime before);
+
+    @Query("SELECT e.fileType, COUNT(e.id), SUM(e.size) FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
+            "AND e.uploader.id = :uploaderId GROUP BY e.fileType ORDER BY COUNT(e.id) DESC")
+    List<Object[]> findFileTypesByUser(@Param("startDate") LocalDateTime startDate,
+                                        @Param("endDate") LocalDateTime endDate,
+                                        @Param("uploaderId") Long uploaderId);
+
+    @Query("SELECT e.location, COUNT(e.id), SUM(e.size) FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
+            "AND e.uploader.id = :uploaderId GROUP BY e.location ORDER BY COUNT(e.id) DESC")
+    List<Object[]> findLocationsByUser(@Param("startDate") LocalDateTime startDate,
+                                        @Param("endDate") LocalDateTime endDate,
+                                        @Param("uploaderId") Long uploaderId);
+
+    @Query("SELECT e.isPublic, COUNT(e.id) FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
+            "AND e.uploader.id = :uploaderId GROUP BY e.isPublic")
+    List<Object[]> findVisibilityByUser(@Param("startDate") LocalDateTime startDate,
+                                         @Param("endDate") LocalDateTime endDate,
+                                         @Param("uploaderId") Long uploaderId);
+
     @Query("SELECT MAX(e.size) as largest, MIN(e.size) as smallest, AVG(e.size) as average, SUM(e.size) as total " +
             "FROM Image e " +
             "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate")

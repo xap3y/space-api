@@ -32,13 +32,33 @@ public class StatsController {
     private final UrlService urlService;
     private final StatsService statsService;
     private final UserService userService;
+    private final UserAnalyticsService userAnalyticsService;
 
-    public StatsController(ImageService imageService, PasteService pasteService, UrlService urlService, StatsService statsService, UserService userService) {
+    public StatsController(ImageService imageService, PasteService pasteService, UrlService urlService, StatsService statsService, UserService userService, UserAnalyticsService userAnalyticsService) {
         this.imageService = imageService;
         this.pasteService = pasteService;
         this.urlService = urlService;
         this.statsService = statsService;
         this.userService = userService;
+        this.userAnalyticsService = userAnalyticsService;
+    }
+
+    @PostMapping("/me/analytics")
+    @RequiresApiKey
+    public ResponseEntity<?> getUserAnalytics(HttpServletRequest request,
+                                              @RequestBody(required = false) StatsRequest body) {
+        User uploader = (User) request.getAttribute("uploader");
+        LocalDateTime to = body != null && body.getToDate() != null
+                ? body.getToDate() : LocalDateTime.now();
+        LocalDateTime from = body != null && body.getFromDate() != null
+                ? body.getFromDate() : to.minusMonths(1);
+        if (from.isAfter(to))
+            throw new BadRequestException("fromDate must be before toDate");
+        if (from.isBefore(to.minusYears(5)))
+            throw new BadRequestException("Analytics range cannot exceed 5 years");
+
+        return ResponseEntity.ok(new DefaultResponse(false,
+                userAnalyticsService.getAnalytics(uploader.getId(), from, to)));
     }
 
     @PostMapping(

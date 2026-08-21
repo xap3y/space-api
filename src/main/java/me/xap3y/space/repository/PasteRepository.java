@@ -79,4 +79,11 @@ public interface PasteRepository extends JpaRepository<Paste, Long>, JpaSpecific
     List<Object[]> findTotalPastesPerDayByUser(@Param("startDate") LocalDateTime startDate,
                                                 @Param("endDate") LocalDateTime endDate,
                                                 @Param("createdById") Long createdById);
+
+    @Query("SELECT COALESCE(e.language, 'Plain text'), COUNT(e.id) FROM Paste e " +
+            "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate " +
+            "AND e.createdBy.id = :createdById GROUP BY e.language ORDER BY COUNT(e.id) DESC")
+    List<Object[]> findLanguagesByUser(@Param("startDate") LocalDateTime startDate,
+                                        @Param("endDate") LocalDateTime endDate,
+                                        @Param("createdById") Long createdById);
 }

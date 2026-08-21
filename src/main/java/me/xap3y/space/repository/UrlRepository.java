@@ -41,6 +41,13 @@ public interface UrlRepository extends JpaRepository<Url, Long>, JpaSpecificatio
                                                @Param("endDate") LocalDateTime endDate,
                                                @Param("uploaderId") Long uploaderId);
 
+    @Query("SELECT COALESCE(SUM(e.visits), 0) FROM Url e " +
+            "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate " +
+            "AND e.createdBy.id = :uploaderId")
+    Long sumVisitsByUser(@Param("startDate") LocalDateTime startDate,
+                          @Param("endDate") LocalDateTime endDate,
+                          @Param("uploaderId") Long uploaderId);
+
     // Get total biggest paste cretor in range, only get the id make return Optional<List<Object[]>>
     @Query("SELECT e.createdBy.id as uid, COUNT(e) as uploadCount " +
             "FROM Url e " +
