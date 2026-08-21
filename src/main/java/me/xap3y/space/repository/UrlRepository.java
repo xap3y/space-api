@@ -30,6 +30,12 @@ public interface UrlRepository extends JpaRepository<Url, Long>, JpaSpecificatio
 
     long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
 
+    @Query("SELECT COUNT(e.id) FROM Url e " +
+            "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate AND e.createdBy.id = :createdById")
+    long countByUserInRange(@Param("createdById") Long createdById,
+                            @Param("startDate") LocalDateTime startDate,
+                            @Param("endDate") LocalDateTime endDate);
+
     // Accept start and end date, get total of url each day filter by user
     @Query("SELECT DATE(e.createdAt) as date, COUNT(e.id) as count " +
             "FROM Url e " +

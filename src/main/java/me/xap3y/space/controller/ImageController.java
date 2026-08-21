@@ -73,8 +73,9 @@ public class ImageController {
     private final TranscriptImagesService transcriptImagesService;
     private final UrlSetMapper urlSetMapper;
     private final S3Service s3Service;
+    private final ResourceLimitService resourceLimitService;
 
-    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, TranscriptImagesService transcriptImagesService, UrlSetMapper urlSetMapper, S3Service s3Service) {
+    public ImageController(ImageService imageService, ServerInfo serverInfo, WebhookService webhookService, MetricService metricService, PasswordEncoder passwordEncoder, TelegramService telegramService, ImageMapper imageMapper, ShortUserMapper shortUserMapper, S3Client s3Client, S3Presigner s3Presigner, PrometheusMetricService prometheusMetricService, AuditLogService auditLogService, TranscriptImagesService transcriptImagesService, UrlSetMapper urlSetMapper, S3Service s3Service, ResourceLimitService resourceLimitService) {
         this.imageService = imageService;
         this.serverInfo = serverInfo;
         this.webhookService = webhookService;
@@ -88,6 +89,7 @@ public class ImageController {
         this.transcriptImagesService = transcriptImagesService;
         this.urlSetMapper = urlSetMapper;
         this.s3Service = s3Service;
+        this.resourceLimitService = resourceLimitService;
     }
 
     @Value("${cloud.aws.s3.bucket}")
@@ -146,6 +148,7 @@ public class ImageController {
             @RequestParam(value = "source", required = false) ResourceSourceType source
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.IMAGE, 1, Math.max(size == null ? 0 : size, 0));
 
         if (uniqueId == null || uniqueId.isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "Unique ID is required"), HttpStatus.BAD_REQUEST);
@@ -160,6 +163,7 @@ public class ImageController {
 
         try {
             Image savedImage = imageService.registerImage(uploader, uniqueId, pass, isPublic, description, fileType, size, ImageLocation.R2, source);
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.IMAGE, 1, Math.max(size == null ? 0 : size, 0));
 
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
@@ -186,6 +190,7 @@ public class ImageController {
         if (source == null) source = ResourceSourceType.API;
 
         if (file.isEmpty()) return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.IMAGE, 1, file.getSize());
 
         String key = (uniqueId != null ? uniqueId : Utils.generateRandomId());
 
@@ -203,6 +208,7 @@ public class ImageController {
         );
 
         Image savedImage = imageService.registerImage(uploader, key, password, isPrivate == null || !isPrivate, description, fileExtension[fileExtension.length - 1], file.getSize(), ImageLocation.R2, source);
+        resourceLimitService.recordCreation(uploader, ResourceLimitType.IMAGE, 1, file.getSize());
 
         ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
@@ -216,12 +222,14 @@ public class ImageController {
             @RequestParam(required = false) String contentType
     ) throws IOException {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.IMAGE, 1, 0);
 
         String key = Utils.generateRandomId();
 
         String url = s3Service.generatePresignedPutUrl("media/" + key, contentType);
 
         Image savedImage = imageService.registerImage(uploader, key, null, true, null, "png", 0L, ImageLocation.UNKNOWN, ResourceSourceType.UNKNOWN);
+        resourceLimitService.recordCreation(uploader, ResourceLimitType.IMAGE, 1, 0);
 
         return Map.of(
                 "uid", key,
@@ -249,6 +257,7 @@ public class ImageController {
         if (body == null || body.length == 0) {
             return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
         }
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.IMAGE, 1, body.length);
 
         if (uniqueId != null && imageService.doesImageExist(uniqueId)) {
             return new ResponseEntity<>(new DefaultResponse(true, "Image with this UID already exists"), HttpStatus.BAD_REQUEST);
@@ -278,6 +287,7 @@ public class ImageController {
 
         try {
             Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description, source);
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.IMAGE, 1, body.length);
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
 
             metricService.setDatabaseUpdated(true);
@@ -346,6 +356,7 @@ public class ImageController {
         if (file.isEmpty()) {
             return new ResponseEntity<>(new DefaultResponse(true, "File is empty"), HttpStatus.BAD_REQUEST);
         }
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.IMAGE, 1, file.getSize());
 
         if (uniqueId != null) {
             if (imageService.doesImageExist(uniqueId)) {
@@ -370,6 +381,7 @@ public class ImageController {
 
         try {
             Image savedImage = imageService.saveImage(file, uploader, uniqueId, pass, isPublic, description, source);
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.IMAGE, 1, file.getSize());
             ImageInfoDto imageInfoDto = imageMapper.apply(savedImage);
             /*String url = serverInfo.getBaseUrl() + "/v1/image/get/" + savedImage.getUniqueId();
             Map<String, Object> data = new HashMap<>() {{
@@ -401,6 +413,7 @@ public class ImageController {
             @PathVariable String uniqueId
     ) throws RuntimeException, IOException {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
 
         Image image = imageService.getImage(uniqueId);
         if (image.getUploader() == null) {
@@ -439,6 +452,7 @@ public class ImageController {
             @RequestBody Map<String, String> body
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
         Image image = imageService.getImage(uniqueId);
 
         if (!Objects.equals(image.getUploader().getId(), uploader.getId()) && !uploader.isAdmin()) {

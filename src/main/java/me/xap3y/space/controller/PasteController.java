@@ -3,6 +3,7 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.enums.ResourceLimitType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -18,6 +19,7 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.MetricService;
 import me.xap3y.space.service.PasteService;
+import me.xap3y.space.service.ResourceLimitService;
 import me.xap3y.space.service.WebhookService;
 import me.xap3y.space.util.ConfigDb;
 import me.xap3y.space.util.Utils;
@@ -45,15 +47,17 @@ public class PasteController {
     private final ServerInfo serverInfo;
     private final MetricService metricService;
     private final WebhookService webhookService;
+    private final ResourceLimitService resourceLimitService;
 
     //private static final String[] allowedExtensions = {"txt", "log", "java", "py", "sh", "json", "xml", "yml", "yaml", "properties", "md", "gradle", "conf", "cfg", "ini", "md", "markdown", "html", "htm", "css", "scss", "sass", "less", "ts", "js", "jsx", "tsx", "php", "sql", "csv", "tsv", "r", "rmd", "rdata", "rds", "rda", "rproj", "rhistory", "rprofile"};
 
-    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService) {
+    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService, ResourceLimitService resourceLimitService) {
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
         this.serverInfo = serverInfo;
         this.metricService = metricService;
         this.webhookService = webhookService;
+        this.resourceLimitService = resourceLimitService;
     }
 
     /*@PostMapping(
@@ -106,6 +110,7 @@ public class PasteController {
 
         try {
             PasteDto savedPasteDto = pasteService.savePaste(content, uploader);
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.PASTE, 1, content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
             String url2 = serverInfo.getBaseUrl() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
             return new ResponseEntity<>(new JsonResponse(false, savedPasteDto.uniqueId(), url2), HttpStatus.OK);
         } catch (Exception e) {
@@ -147,6 +152,7 @@ public class PasteController {
             log.error(e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.PASTE, 1, content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
 
         try {
             PasteDto savedPasteDto = pasteService.savePaste(content, uploader);
@@ -194,8 +200,10 @@ public class PasteController {
         if (title == null || title.isEmpty()) {
             title = Utils.generateRandomId();
         }
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.PASTE, 1, body.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
         try {
             PasteDto savedPasteDto = pasteService.savePaste(title, body.getText(), uploader, body.getUniqueId());
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.PASTE, 1, body.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
             metricService.setDatabaseUpdated(true);
             metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
             webhookService.postPasteCreated(savedPasteDto);
@@ -215,6 +223,7 @@ public class PasteController {
             @PathVariable String uniqueId
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
 
         Paste paste = pasteService.getPasteByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Paste not found"));
 

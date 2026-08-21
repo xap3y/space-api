@@ -19,6 +19,12 @@ public interface TempMailRepository extends JpaRepository<TempMail, Long> {
 
     boolean existsByEmail(String email);
 
+    @Query("SELECT COUNT(e.id) FROM TempMail e " +
+            "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate AND e.createdBy.id = :createdById")
+    long countByUserInRange(@Param("createdById") Long createdById,
+                            @Param("startDate") LocalDateTime startDate,
+                            @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT DATE(e.createdAt), COUNT(e.id) FROM TempMail e " +
             "WHERE e.createdAt >= :startDate AND e.createdAt <= :endDate " +
             "AND e.createdBy.id = :createdById GROUP BY DATE(e.createdAt) ORDER BY DATE(e.createdAt) ASC")

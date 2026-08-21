@@ -40,15 +40,17 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
     private final PrometheusMetricService prometheusMetricService;
     private final SessionService sessionService;
     private final MinecraftServerReportsService minecraftServerReportsService;
+    private final ResourceLimitService resourceLimitService;
 
 
-    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionService sessionService, MinecraftServerReportsService minecraftServerReportsService) {
+    public ApiKeyInterceptor(ApiKeyService apiKeyService, ObjectMapper objectMapper, LogsService logsService, PrometheusMetricService prometheusMetricService, SessionService sessionService, MinecraftServerReportsService minecraftServerReportsService, ResourceLimitService resourceLimitService) {
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
         this.logsService = logsService;
         this.prometheusMetricService = prometheusMetricService;
         this.sessionService = sessionService;
         this.minecraftServerReportsService = minecraftServerReportsService;
+        this.resourceLimitService = resourceLimitService;
     }
 
     @Override
@@ -110,6 +112,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                         uploader = ses.getUser();
                         logsService.logFile(" --- - SESSION_TOKEN User == " + uploader.getUsername());
                         request.setAttribute("uploader", uploader);
+                        if (isRestrictedMutation(request)) resourceLimitService.assertMutationAllowed(uploader);
                         return true;
                     }
 
@@ -154,10 +157,25 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
                     prometheusMetricService.recordEvent(MetricRecordType.VALID_SPECIAL_API_KEY_REQUEST_MADE);
                 }
 
+                if (isRestrictedMutation(request)) resourceLimitService.assertMutationAllowed(uploader);
+
                 request.setAttribute("uploader", uploader);
             }
         }
         return true;
+    }
+
+    private boolean isRestrictedMutation(HttpServletRequest request) {
+        String method = request.getMethod();
+        String route = request.getRequestURI();
+        if (route.startsWith("/v1/auth/") || route.startsWith("/v1/stats/")) return false;
+        if ("POST".equals(method)) {
+            return !route.startsWith("/v1/image/get/")
+                    && !route.startsWith("/v1/files/pack/public/")
+                    && !route.equals("/v1/email/getmissing");
+        }
+        if ("PUT".equals(method) || "PATCH".equals(method) || "DELETE".equals(method)) return true;
+        return "GET".equals(method) && (route.endsWith("/close") || route.endsWith("/open"));
     }
 
     private void writeErrorResponse(HttpServletResponse response, Object errorObject, HttpStatus status) {

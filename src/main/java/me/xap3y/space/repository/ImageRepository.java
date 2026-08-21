@@ -97,6 +97,12 @@ public interface ImageRepository extends JpaRepository<Image, Long>, JpaSpecific
                                                @Param("endDate") LocalDateTime endDate,
                                                @Param("uploaderId") Long uploaderId);
 
+    @Query("SELECT COALESCE(SUM(e.size), 0) FROM Image e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate AND e.uploader.id = :uploaderId")
+    Long sumStorageByUploaderIdInRange(@Param("uploaderId") Long uploaderId,
+                                        @Param("startDate") LocalDateTime startDate,
+                                        @Param("endDate") LocalDateTime endDate);
+
     // Accept start and end date, get total of images each day
     @Query("SELECT DATE(e.uploadTime) as date, COUNT(e.id) as count " +
             "FROM Image e " +

@@ -2,6 +2,7 @@ package me.xap3y.space.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import me.xap3y.space.api.enums.UserRole;
+import me.xap3y.space.api.enums.ResourceLimitType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -21,6 +22,7 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.repository.UrlRepository;
 import me.xap3y.space.service.MetricService;
+import me.xap3y.space.service.ResourceLimitService;
 import me.xap3y.space.service.UrlLogsService;
 import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.WebhookService;
@@ -49,8 +51,9 @@ public class UrlController {
     private final WebhookService webhookService;
     private final ShortUrlMapper shortUrlMapper;
     private final UrlLogsService urlLogsService;
+    private final ResourceLimitService resourceLimitService;
 
-    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper, UrlLogsService urlLogsService) {
+    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper, UrlLogsService urlLogsService, ResourceLimitService resourceLimitService) {
         this.urlService = urlService;
         this.urlMapper = urlMapper;
         this.serverInfo = serverInfo;
@@ -58,6 +61,7 @@ public class UrlController {
         this.webhookService = webhookService;
         this.shortUrlMapper = shortUrlMapper;
         this.urlLogsService = urlLogsService;
+        this.resourceLimitService = resourceLimitService;
     }
 
     @PostMapping(
@@ -90,10 +94,12 @@ public class UrlController {
         if (!url.startsWith("http")) {
             url = "https://" + url;
         }
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.URL, 1, 0);
 
         int maxUses = body.getMaxUses() == null ? -1 : body.getMaxUses();
 
         ShortUrlDto urlDto = urlService.createUrl(url, uploader, maxUses, uniqueId);
+        resourceLimitService.recordCreation(uploader, ResourceLimitType.URL, 1, 0);
         metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() + 1);
         metricService.setDatabaseUpdated(true);
         webhookService.postUrlShorten(urlDto);
@@ -141,6 +147,7 @@ public class UrlController {
             @PathVariable String uniqueId
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
 
         Url urlDto = urlService.getUrlByUniqueId(uniqueId).orElseThrow(() -> new ResourceNotFoundException("Url not found"));
 

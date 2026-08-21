@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ResourceSourceType;
+import me.xap3y.space.api.enums.ResourceLimitType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.ResourceAccessForbiddenException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -23,6 +24,7 @@ import me.xap3y.space.model.response.FileUploadResponse;
 import me.xap3y.space.model.response.PackInfoResponse;
 import me.xap3y.space.model.response.PackListResponse;
 import me.xap3y.space.service.FileUploadService;
+import me.xap3y.space.service.ResourceLimitService;
 import me.xap3y.space.service.S3Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,15 +57,18 @@ public class FileController {
     private final FileMapper fileMapper;
     private final PasswordEncoder passwordEncoder;
     private final S3Service s3Service;
+    private final ResourceLimitService resourceLimitService;
 
     private static final String PREFIX = "files/";
 
     @PostMapping("/presigned-url/put")
     @RequiresApiKey
     public ResponseEntity<?> generatePresignedPutUrl(
+            HttpServletRequest request,
             @RequestParam String filename,
             @RequestParam String contentType
     ) {
+        resourceLimitService.assertMutationAllowed((User) request.getAttribute("uploader"));
         String url = s3Service.generatePresignedPutUrl(
                 PREFIX + filename,
                 contentType
@@ -90,6 +95,22 @@ public class FileController {
         if (registerRequest.items().size() > 10) {
             throw new BadRequestException("Maximum 10 files per upload");
         }
+
+        long totalBytes = 0;
+        for (FileRegisterItemRequest item : registerRequest.items()) {
+            if (item.uniqueId() == null || item.uniqueId().isEmpty())
+                throw new BadRequestException("uniqueId is required for all items");
+            if (item.fileType() == null || item.fileType().isEmpty())
+                throw new BadRequestException("fileType is required for all items");
+            if (item.size() == null || item.size() <= 0)
+                throw new BadRequestException("size must be greater than 0");
+            try {
+                totalBytes = Math.addExact(totalBytes, item.size());
+            } catch (ArithmeticException exception) {
+                throw new BadRequestException("Total upload size is too large");
+            }
+        }
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.FILE, registerRequest.items().size(), totalBytes);
 
         try {
             ResourceSourceType source = registerRequest.source() != null ?
@@ -146,6 +167,7 @@ public class FileController {
 
             // Complete the pack
             FileUploadPack completedPack = fileUploadService.completeUploadPack(pack);
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.FILE, uploadedFiles.size(), completedPack.getTotalSize());
 
             FileUploadResponse response = new FileUploadResponse(
                     false,
@@ -211,6 +233,7 @@ public class FileController {
             @RequestBody(required = false) Map<String, String> passwordRequest
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
         try {
             FileUploadPack pack = fileUploadService.getUploadPackByPackId(packId);
             if (pack == null) {
@@ -277,6 +300,7 @@ public class FileController {
             @RequestBody(required = false) Map<String, String> passwordRequest
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
         try {
             FileUploadPack pack = fileUploadService.getUploadPackByPackId(packId);
             if (pack == null) {

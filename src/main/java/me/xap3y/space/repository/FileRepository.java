@@ -16,6 +16,18 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
 
     Long countByUploadPackId(Long uploadPackId);
 
+    @Query("SELECT COUNT(e.id) FROM FileEntity e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate AND e.uploader.id = :uploaderId")
+    long countByUploaderIdInRange(@Param("uploaderId") Long uploaderId,
+                                   @Param("startDate") LocalDateTime startDate,
+                                   @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COALESCE(SUM(e.size), 0) FROM FileEntity e " +
+            "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate AND e.uploader.id = :uploaderId")
+    Long sumStorageByUploaderIdInRange(@Param("uploaderId") Long uploaderId,
+                                        @Param("startDate") LocalDateTime startDate,
+                                        @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT DATE(e.uploadTime), COUNT(e.id) FROM FileEntity e " +
             "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate " +
             "AND e.uploader.id = :uploaderId GROUP BY DATE(e.uploadTime) ORDER BY DATE(e.uploadTime) ASC")

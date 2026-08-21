@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.MetricRecordType;
 import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.enums.TempMailStatus;
+import me.xap3y.space.api.enums.ResourceLimitType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceAccessForbiddenException;
@@ -57,8 +58,9 @@ public class EmailController {
     private final TempMailMapper tempMailMapper;
     private final AuditLogService auditLogService;
     private final TurnStileService turnStileService;
+    private final ResourceLimitService resourceLimitService;
 
-    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper, AuditLogService auditLogService, TurnStileService turnStileService) {
+    public EmailController(ObjectProvider<EmailService> emailService, ServerInfo serverInfo, TempMailService tempMailService, TempEmailWebSocketHandler tempEmailWebSocketHandler, InboundMailService inboundMailService, InboundEmailMapper inboundEmailMapper, PrometheusMetricService prometheusMetricService, TempMailMapper tempMailMapper, AuditLogService auditLogService, TurnStileService turnStileService, ResourceLimitService resourceLimitService) {
         this.emailService = emailService.getIfAvailable();
         this.serverInfo = serverInfo;
         this.tempMailService = tempMailService;
@@ -69,6 +71,7 @@ public class EmailController {
         this.tempMailMapper = tempMailMapper;
         this.auditLogService = auditLogService;
         this.turnStileService = turnStileService;
+        this.resourceLimitService = resourceLimitService;
     }
 
     @PostMapping(
@@ -299,8 +302,10 @@ public class EmailController {
             HttpServletRequest request
     ) {
         User creator = (User) request.getAttribute("uploader");
+        resourceLimitService.assertCanCreate(creator, ResourceLimitType.TEMP_MAIL, 1, 0);
 
         TempMail tempMail = tempMailService.createNewRandom(creator);
+        resourceLimitService.recordCreation(creator, ResourceLimitType.TEMP_MAIL, 1, 0);
 
         log.info("Temp mail created: {} | by {}", tempMail.getEmail(), creator.getUsername());
         auditLogService.saveLog(PortalLogType.EMAIL_CREATE, creator, tempMail.getEmail(), "API");
@@ -342,6 +347,7 @@ public class EmailController {
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
         TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
 
         if (tempMail == null) {
@@ -365,6 +371,7 @@ public class EmailController {
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
         TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
 
         if (tempMail == null) {
@@ -387,6 +394,7 @@ public class EmailController {
             HttpServletRequest request
     ) {
         User uploader = (User) request.getAttribute("uploader");
+        resourceLimitService.assertMutationAllowed(uploader);
         TempMail tempMail = tempMailService.findByEmail(email).orElse(null);
 
         if (tempMail == null) {

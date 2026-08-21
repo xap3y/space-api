@@ -60,6 +60,13 @@ public interface PasteRepository extends JpaRepository<Paste, Long>, JpaSpecific
                                                @Param("endDate") LocalDateTime endDate,
                                                @Param("createdBy") Long createdById);
 
+    @Query(value = "SELECT COALESCE(SUM(OCTET_LENGTH(content)), 0) FROM pastes " +
+            "WHERE created_at >= :startDate AND created_at <= :endDate AND created_by_id = :createdById",
+            nativeQuery = true)
+    Long sumContentBytesByUserInRange(@Param("createdById") Long createdById,
+                                       @Param("startDate") LocalDateTime startDate,
+                                       @Param("endDate") LocalDateTime endDate);
+
     // Accept start and end date, get total of images each day
     @Query("SELECT DATE(e.createdAt) as date, COUNT(e.id) as count " +
             "FROM Paste e " +
