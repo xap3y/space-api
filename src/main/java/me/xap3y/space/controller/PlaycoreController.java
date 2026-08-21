@@ -118,7 +118,7 @@ public class PlaycoreController {
     @OptionalApiKey
     public ResponseEntity<?> postActiveVipUpdate(
             @PathVariable String uniqueId,
-            @RequestBody ActivePackage body,
+            @RequestBody ActiveVipModifyRequest body,
             HttpServletRequest request
     ) {
         if (!playcoreWebInSocketHandler.isConnected(uniqueId)) {
@@ -135,6 +135,20 @@ public class PlaycoreController {
             return new ResponseEntity<>(new DefaultResponse(false, "Failed to send ACTIVE_MODIFY message"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+        return new ResponseEntity<>(new DefaultResponse(true, "BROADCASTED"), HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/data/{uniqueId}/pausedvip", produces = MediaType.APPLICATION_JSON_VALUE)
+    @OptionalApiKey
+    public ResponseEntity<?> postPausedVipUpdate(@PathVariable String uniqueId, @RequestBody PausedVipModifyRequest body,
+                                                  HttpServletRequest request) {
+        ResponseEntity<?> connectionCheck = requireConnectedNoLog(uniqueId);
+        if (connectionCheck != null) return connectionCheck;
+        try {
+            playcoreWebInSocketHandler.sendJsonToSession(uniqueId, new OutWebSocketMessage("PAUSED_MODIFY", body));
+        } catch (IOException e) {
+            return new ResponseEntity<>(new DefaultResponse(false, "Failed to send PAUSED_MODIFY message"), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
         return new ResponseEntity<>(new DefaultResponse(true, "BROADCASTED"), HttpStatus.OK);
     }
 
@@ -172,6 +186,16 @@ public class PlaycoreController {
 
         playcoreWebInSocketHandler.postDeleteResource(uniqueId, new ResourceDelete(uuid, "ACTIVE_VIP"));
 
+        return new ResponseEntity<>(new DefaultResponse(true, "DELETED"), HttpStatus.OK);
+    }
+
+    @DeleteMapping(value = "/data/{uniqueId}/paused_vip/{uuid}/{packageName}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @OptionalApiKey
+    public ResponseEntity<?> deletePausedVip(@PathVariable String uniqueId, @PathVariable String uuid,
+                                             @PathVariable String packageName, HttpServletRequest request) {
+        ResponseEntity<?> connectionCheck = requireConnectedNoLog(uniqueId);
+        if (connectionCheck != null) return connectionCheck;
+        playcoreWebInSocketHandler.postDeleteResource(uniqueId, new ResourceDelete(uuid + ":" + packageName, "PAUSED_VIP"));
         return new ResponseEntity<>(new DefaultResponse(true, "DELETED"), HttpStatus.OK);
     }
 
@@ -262,6 +286,24 @@ public class PlaycoreController {
 
         playcoreWebInSocketHandler.sendMessageToSession(uniqueId, "SCRAPE_ACTIVE_VIP");
 
+        return new ResponseEntity<>(new DefaultResponse(true, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @PostMapping(value = "/scrape/{uniqueId}/pausedvips", produces = MediaType.APPLICATION_JSON_VALUE)
+    @OptionalApiKey
+    public ResponseEntity<?> getPausedVips(@PathVariable String uniqueId, HttpServletRequest request) {
+        ResponseEntity<?> connectionCheck = requireConnectedNoLog(uniqueId);
+        if (connectionCheck != null) return connectionCheck;
+        playcoreWebInSocketHandler.sendMessageToSession(uniqueId, "SCRAPE_PAUSED_VIP");
+        return new ResponseEntity<>(new DefaultResponse(true, "OK"), HttpStatus.NO_CONTENT);
+    }
+
+    @PostMapping(value = "/scrape/{uniqueId}/groups", produces = MediaType.APPLICATION_JSON_VALUE)
+    @OptionalApiKey
+    public ResponseEntity<?> getGroups(@PathVariable String uniqueId, HttpServletRequest request) {
+        ResponseEntity<?> connectionCheck = requireConnectedNoLog(uniqueId);
+        if (connectionCheck != null) return connectionCheck;
+        playcoreWebInSocketHandler.sendMessageToSession(uniqueId, "SCRAPE_GROUPS");
         return new ResponseEntity<>(new DefaultResponse(true, "OK"), HttpStatus.NO_CONTENT);
     }
 

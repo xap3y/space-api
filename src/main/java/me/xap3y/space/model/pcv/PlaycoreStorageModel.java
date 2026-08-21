@@ -41,4 +41,10 @@ public class PlaycoreStorageModel {
         codes.removeIf(c -> c.getCode().equals(code.getCode()));
         codes.add(code);
     }
+
+    public void addOrReplacePausedPackage(PausedPackage pausedPackage) {
+        pausedPackages.removeIf(p -> p.getUuid().equals(pausedPackage.getUuid())
+                && p.getPackageUi().equals(pausedPackage.getPackageUi()));
+        pausedPackages.add(pausedPackage);
+    }
 }

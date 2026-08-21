@@ -96,6 +96,9 @@ public class PlaycoreWebOutSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendJson(WebSocketSession session, Object obj) throws IOException {
+        if (session == null || !session.isOpen()) {
+            return;
+        }
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(obj)));
         log.info("SENT OUT MESSAGE TO SESSION {}: {}", session.getId(), objectMapper.writeValueAsString(obj));
         lastActivity.put(session.getId(), Instant.now());

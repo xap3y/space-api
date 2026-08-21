@@ -103,7 +103,9 @@ public class PlaycoreWebInSocketHandler extends TextWebSocketHandler {
 
         String uniqueId = findKeyBySessionId(session.getId());
 
-        if (payload.equals("CODES_READY") || payload.equals("VIP_READY") || payload.equals("ACTIVE_READY") || payload.equals("VIP_UPDATE")) {
+        if (payload.equals("CODES_READY") || payload.equals("VIP_READY") || payload.equals("ACTIVE_READY")
+                || payload.equals("PAUSED_PACKAGES_READY") || payload.equals("VIP_UPDATE")
+                || payload.equals("ACTIVE_UPDATE") || payload.equals("PAUSED_UPDATE") || payload.equals("CODE_UPDATE")) {
             playcoreWebOutSocketHandler.broadcastMessageRaw(uniqueId, payload);
             return;
         }
@@ -131,10 +133,22 @@ public class PlaycoreWebInSocketHandler extends TextWebSocketHandler {
                 ActivePackage vip = objectMapper.treeToValue(wrapper.getData(), ActivePackage.class);
                 handleActiveVip(session, vip);
             }
+            case "PAUSED_PACKAGE" -> {
+                PausedPackage paused = objectMapper.treeToValue(wrapper.getData(), PausedPackage.class);
+                String key = findKeyBySessionId(session.getId());
+                if (key != null) storage.get(key).addOrReplacePausedPackage(paused);
+                playcoreWebOutSocketHandler.broadcastMessageRaw(uniqueId, payload);
+            }
             case "DELETE" -> {
                 ResourceDelete delete = objectMapper.treeToValue(wrapper.getData(), ResourceDelete.class);
-                String key = findKeyBySessionId(session.getId());
-
+                PlaycoreStorageModel model = storage.get(uniqueId);
+                if (model != null) {
+                    switch (delete.getType()) {
+                        case "CODE" -> model.getCodes().removeIf(c -> c.getCode().equals(delete.getUniqueId()));
+                        case "VIP" -> model.getVipPackages().removeIf(v -> v.getName().equals(delete.getUniqueId()));
+                        case "ACTIVE_VIP" -> model.getActivePackages().removeIf(a -> a.getPlayerUniqueId().equals(delete.getUniqueId()));
+                    }
+                }
                 playcoreWebOutSocketHandler.broadcastMessageRaw(uniqueId, payload);
             }
             case "ACCEPT", "ERROR" -> {
@@ -177,6 +191,10 @@ public class PlaycoreWebInSocketHandler extends TextWebSocketHandler {
             case "CODE" -> model.getCodes().removeIf(c -> c.getCode().equals(delete.getUniqueId()));
             case "VIP" -> model.getVipPackages().removeIf(vip -> vip.getName().equals(delete.getUniqueId()));
             case "ACTIVE_VIP" -> model.getActivePackages().removeIf(activeVip -> activeVip.getPlayerUniqueId().equals(delete.getUniqueId()));
+            case "PAUSED_VIP" -> {
+                String[] parts = delete.getUniqueId().split(":", 2);
+                if (parts.length == 2) model.getPausedPackages().removeIf(p -> p.getUuid().equals(parts[0]) && p.getPackageUi().equals(parts[1]));
+            }
         }
 
         sendJson(session, Map.of(
