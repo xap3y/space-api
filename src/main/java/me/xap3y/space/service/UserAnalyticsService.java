@@ -1,5 +1,6 @@
 package me.xap3y.space.service;
 
+import me.xap3y.space.repository.FileRepository;
 import me.xap3y.space.repository.ImageRepository;
 import me.xap3y.space.repository.PasteRepository;
 import me.xap3y.space.repository.TempMailRepository;
@@ -18,15 +19,18 @@ import java.util.Map;
 public class UserAnalyticsService {
 
     private final ImageRepository imageRepository;
+    private final FileRepository fileRepository;
     private final PasteRepository pasteRepository;
     private final UrlRepository urlRepository;
     private final TempMailRepository tempMailRepository;
 
     public UserAnalyticsService(ImageRepository imageRepository,
+                                FileRepository fileRepository,
                                 PasteRepository pasteRepository,
                                 UrlRepository urlRepository,
                                 TempMailRepository tempMailRepository) {
         this.imageRepository = imageRepository;
+        this.fileRepository = fileRepository;
         this.pasteRepository = pasteRepository;
         this.urlRepository = urlRepository;
         this.tempMailRepository = tempMailRepository;
@@ -42,18 +46,24 @@ public class UserAnalyticsService {
 
         Map<LocalDate, Long> images = dailyValues(
                 imageRepository.findTotalImagesPerDayByUser(rangeStart, rangeEnd, userId));
+        Map<LocalDate, Long> files = dailyValues(
+                fileRepository.findTotalFilesPerDayByUser(rangeStart, rangeEnd, userId));
         Map<LocalDate, Long> pastes = dailyValues(
                 pasteRepository.findTotalPastesPerDayByUser(rangeStart, rangeEnd, userId));
         Map<LocalDate, Long> urls = dailyValues(
                 urlRepository.findTotalUrlsPerDayByUser(rangeStart, rangeEnd, userId));
         Map<LocalDate, Long> tempMails = dailyValues(
                 tempMailRepository.findTotalPerDayByUser(rangeStart, rangeEnd, userId));
-        Map<LocalDate, Long> storage = dailyValues(
+        Map<LocalDate, Long> imageStorage = dailyValues(
                 imageRepository.findStoragePerDayByUser(rangeStart, rangeEnd, userId));
+        Map<LocalDate, Long> fileStorage = dailyValues(
+                fileRepository.findStoragePerDayByUser(rangeStart, rangeEnd, userId));
 
-        long cumulativeStorage = number(imageRepository.sumStorageByUploaderIdBefore(userId, rangeStart));
+        long cumulativeStorage = number(imageRepository.sumStorageByUploaderIdBefore(userId, rangeStart))
+                + number(fileRepository.sumStorageByUploaderIdBefore(userId, rangeStart));
         List<Map<String, Object>> daily = new ArrayList<>();
         long totalImages = 0;
+        long totalFiles = 0;
         long totalPastes = 0;
         long totalUrls = 0;
         long totalTempMails = 0;
@@ -61,12 +71,14 @@ public class UserAnalyticsService {
 
         for (LocalDate day = startDay; !day.isAfter(endDay); day = day.plusDays(1)) {
             long dayImages = images.getOrDefault(day, 0L);
+            long dayFiles = files.getOrDefault(day, 0L);
             long dayPastes = pastes.getOrDefault(day, 0L);
             long dayUrls = urls.getOrDefault(day, 0L);
             long dayTempMails = tempMails.getOrDefault(day, 0L);
-            long dayStorage = storage.getOrDefault(day, 0L);
+            long dayStorage = imageStorage.getOrDefault(day, 0L) + fileStorage.getOrDefault(day, 0L);
             cumulativeStorage += dayStorage;
             totalImages += dayImages;
+            totalFiles += dayFiles;
             totalPastes += dayPastes;
             totalUrls += dayUrls;
             totalTempMails += dayTempMails;
@@ -75,6 +87,7 @@ public class UserAnalyticsService {
             Map<String, Object> point = new LinkedHashMap<>();
             point.put("date", day.toString());
             point.put("images", dayImages);
+            point.put("files", dayFiles);
             point.put("pastes", dayPastes);
             point.put("urls", dayUrls);
             point.put("tempMails", dayTempMails);
@@ -85,11 +98,13 @@ public class UserAnalyticsService {
 
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("images", totalImages);
+        summary.put("files", totalFiles);
         summary.put("pastes", totalPastes);
         summary.put("urls", totalUrls);
         summary.put("tempMails", totalTempMails);
         summary.put("storageAddedBytes", storageAdded);
-        summary.put("storageBytes", number(imageRepository.sumStorageByUploaderId(userId)));
+        summary.put("storageBytes", number(imageRepository.sumStorageByUploaderId(userId))
+                + number(fileRepository.sumStorageByUploaderId(userId)));
         summary.put("urlVisits", number(urlRepository.sumVisitsByUser(rangeStart, rangeEnd, userId)));
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -98,9 +113,11 @@ public class UserAnalyticsService {
         result.put("daily", daily);
         result.put("summary", summary);
         result.put("fileTypes", categorized(
-                imageRepository.findFileTypesByUser(rangeStart, rangeEnd, userId), true));
+                imageRepository.findFileTypesByUser(rangeStart, rangeEnd, userId),
+                fileRepository.findFileTypesByUser(rangeStart, rangeEnd, userId), true));
         result.put("storageLocations", categorized(
-                imageRepository.findLocationsByUser(rangeStart, rangeEnd, userId), true));
+                imageRepository.findLocationsByUser(rangeStart, rangeEnd, userId),
+                fileRepository.findLocationsByUser(rangeStart, rangeEnd, userId), true));
         result.put("visibility", visibility(
                 imageRepository.findVisibilityByUser(rangeStart, rangeEnd, userId)));
         result.put("pasteLanguages", categorized(
@@ -128,6 +145,38 @@ public class UserAnalyticsService {
             values.add(value);
         }
         return values;
+    }
+
+    private List<Map<String, Object>> categorized(List<Object[]> firstRows,
+                                                   List<Object[]> secondRows,
+                                                   boolean includeBytes) {
+        Map<String, long[]> totals = new LinkedHashMap<>();
+        mergeCategories(totals, firstRows, includeBytes);
+        mergeCategories(totals, secondRows, includeBytes);
+
+        List<Map<String, Object>> values = new ArrayList<>();
+        for (Map.Entry<String, long[]> entry : totals.entrySet()) {
+            Map<String, Object> value = new LinkedHashMap<>();
+            value.put("label", entry.getKey());
+            value.put("count", entry.getValue()[0]);
+            if (includeBytes)
+                value.put("bytes", entry.getValue()[1]);
+            values.add(value);
+        }
+        values.sort((left, right) -> Long.compare(number(right.get("count")), number(left.get("count"))));
+        return values;
+    }
+
+    private void mergeCategories(Map<String, long[]> totals,
+                                 List<Object[]> rows,
+                                 boolean includeBytes) {
+        for (Object[] row : rows) {
+            String label = row[0] == null ? "Unknown" : row[0].toString();
+            long[] total = totals.computeIfAbsent(label, ignored -> new long[2]);
+            total[0] += number(row[1]);
+            if (includeBytes && row.length > 2)
+                total[1] += number(row[2]);
+        }
     }
 
     private List<Map<String, Object>> visibility(List<Object[]> rows) {
