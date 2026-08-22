@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.SegmentType;
 import me.xap3y.space.api.enums.UrlSetPreference;
+import me.xap3y.space.api.enums.ResourceLimitType;
+import me.xap3y.space.api.enums.ResourceSourceType;
+import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.RequiresApiKey;
@@ -18,6 +21,7 @@ import me.xap3y.space.dto.UserDto;
 import me.xap3y.space.dto.UserSettingsDto;
 import me.xap3y.space.dto.UserSocialsPatchDto;
 import me.xap3y.space.entity.User;
+import me.xap3y.space.entity.Image;
 import me.xap3y.space.entity.UserSettings;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.mapper.UserSettingsMapper;
@@ -32,7 +36,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -55,8 +61,9 @@ public class UserController {
     private final UserSettingsService userSettingsService;
     private final UserSettingsMapper userSettingsMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ResourceLimitService resourceLimitService;
 
-    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper, PasswordEncoder passwordEncoder) {
+    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper, PasswordEncoder passwordEncoder, ResourceLimitService resourceLimitService) {
         this.userService = userService;
         this.imageService = imageService;
         this.userMapper = userMapper;
@@ -66,6 +73,32 @@ public class UserController {
         this.userSettingsService = userSettingsService;
         this.userSettingsMapper = userSettingsMapper;
         this.passwordEncoder = passwordEncoder;
+        this.resourceLimitService = resourceLimitService;
+    }
+
+    @PostMapping(value = "/me/avatar", consumes = "multipart/form-data")
+    @RequiresApiKey
+    public ResponseEntity<?> updateAvatar(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        User uploader = (User) request.getAttribute("uploader");
+        if (file.isEmpty()) throw new BadRequestException("Choose an image to upload");
+        if (file.getSize() > 5L * 1024 * 1024) throw new BadRequestException("Profile pictures must be 5 MB or smaller");
+
+        String contentType = Optional.ofNullable(file.getContentType()).orElse("").toLowerCase();
+        if (!List.of("image/jpeg", "image/png", "image/webp", "image/gif").contains(contentType)) {
+            throw new BadRequestException("Use a JPEG, PNG, WebP, or GIF image");
+        }
+
+        resourceLimitService.assertCanCreate(uploader, ResourceLimitType.IMAGE, 1, file.getSize());
+        Image image = imageService.saveImage(file, uploader, null, null, true, "Profile picture", ResourceSourceType.PORTAL);
+        resourceLimitService.recordCreation(uploader, ResourceLimitType.IMAGE, 1, file.getSize());
+
+        String avatarUrl = serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId();
+        uploader.setAvatar(avatarUrl);
+        userService.saveUser(uploader);
+        return ResponseEntity.ok(new DefaultResponse(false, Map.of("avatar", avatarUrl)));
     }
 
     @PostMapping("/create")

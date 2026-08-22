@@ -138,6 +138,10 @@ public class AuthController {
             throw new UnauthorizedException("You do not own this session");
         }
 
+        if (token != null && token.equals(sessionToRevoke.getToken())) {
+            throw new BadRequestException("Your current session cannot be revoked from this page");
+        }
+
         sessionService.invalidateSessionById(id);
 
         return ResponseEntity.ok(new DefaultResponse(false, "Session revoked successfully"));
