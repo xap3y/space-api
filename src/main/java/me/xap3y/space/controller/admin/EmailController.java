@@ -335,6 +335,7 @@ public class EmailController {
 
         tempMailService.suspendEmail(email);
         tempEmailWebSocketHandler.closeByEmail(email);
+        auditLogService.saveLog(PortalLogType.TEMP_MAIL_SUSPEND, (User) request.getAttribute("uploader"), email, "ADMIN");
 
         return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);
     }

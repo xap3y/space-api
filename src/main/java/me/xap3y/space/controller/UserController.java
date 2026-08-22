@@ -7,6 +7,7 @@ import me.xap3y.space.api.enums.SegmentType;
 import me.xap3y.space.api.enums.UrlSetPreference;
 import me.xap3y.space.api.enums.ResourceLimitType;
 import me.xap3y.space.api.enums.ResourceSourceType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -29,6 +30,7 @@ import me.xap3y.space.model.UserSocials;
 import me.xap3y.space.model.UserWebhookSettings;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.ImageListResponse;
+import me.xap3y.space.model.request.TwoFactorCodeRequest;
 import me.xap3y.space.service.*;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -62,8 +64,10 @@ public class UserController {
     private final UserSettingsMapper userSettingsMapper;
     private final PasswordEncoder passwordEncoder;
     private final ResourceLimitService resourceLimitService;
+    private final TwoFactorService twoFactorService;
+    private final AuditLogService auditLogService;
 
-    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper, PasswordEncoder passwordEncoder, ResourceLimitService resourceLimitService) {
+    public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper, PasswordEncoder passwordEncoder, ResourceLimitService resourceLimitService, TwoFactorService twoFactorService, AuditLogService auditLogService) {
         this.userService = userService;
         this.imageService = imageService;
         this.userMapper = userMapper;
@@ -74,6 +78,50 @@ public class UserController {
         this.userSettingsMapper = userSettingsMapper;
         this.passwordEncoder = passwordEncoder;
         this.resourceLimitService = resourceLimitService;
+        this.twoFactorService = twoFactorService;
+        this.auditLogService = auditLogService;
+    }
+
+    @GetMapping("/me/2fa")
+    @RequiresApiKey
+    public ResponseEntity<?> twoFactorStatus(HttpServletRequest request) {
+        return ResponseEntity.ok(new DefaultResponse(false, twoFactorService.status((User) request.getAttribute("uploader"))));
+    }
+
+    @PostMapping("/me/2fa/setup")
+    @RequiresApiKey
+    public ResponseEntity<?> beginTwoFactorSetup(HttpServletRequest request) {
+        return ResponseEntity.ok(new DefaultResponse(false, twoFactorService.beginSetup((User) request.getAttribute("uploader"))));
+    }
+
+    @PostMapping("/me/2fa/confirm")
+    @RequiresApiKey
+    public ResponseEntity<?> confirmTwoFactorSetup(HttpServletRequest request, @RequestBody TwoFactorCodeRequest body) {
+        if (body == null || body.code() == null) throw new BadRequestException("Authentication code is required");
+        User uploader = (User) request.getAttribute("uploader");
+        List<String> backupCodes = twoFactorService.confirmSetup(uploader, body.code());
+        auditLogService.saveLog(PortalLogType.TWO_FACTOR_SETUP, uploader, "2FA enabled", "PORTAL");
+        return ResponseEntity.ok(new DefaultResponse(false, Map.of("backupCodes", backupCodes)));
+    }
+
+    @PostMapping("/me/2fa/backup-codes")
+    @RequiresApiKey
+    public ResponseEntity<?> regenerateTwoFactorBackupCodes(HttpServletRequest request, @RequestBody TwoFactorCodeRequest body) {
+        if (body == null || body.code() == null) throw new BadRequestException("Authentication code is required");
+        User uploader = (User) request.getAttribute("uploader");
+        List<String> backupCodes = twoFactorService.regenerateBackupCodes(uploader, body.code());
+        auditLogService.saveLog(PortalLogType.TWO_FACTOR_BACKUP_CODES_REGENERATE, uploader, "Backup codes regenerated", "PORTAL");
+        return ResponseEntity.ok(new DefaultResponse(false, Map.of("backupCodes", backupCodes)));
+    }
+
+    @PostMapping("/me/2fa/disable")
+    @RequiresApiKey
+    public ResponseEntity<?> disableTwoFactor(HttpServletRequest request, @RequestBody TwoFactorCodeRequest body) {
+        if (body == null || body.code() == null) throw new BadRequestException("Authentication or backup code is required");
+        User uploader = (User) request.getAttribute("uploader");
+        twoFactorService.disable(uploader, body.code());
+        auditLogService.saveLog(PortalLogType.TWO_FACTOR_REVOKE, uploader, "2FA disabled by user", "PORTAL");
+        return ResponseEntity.ok(new DefaultResponse(false, "Two-factor authentication disabled"));
     }
 
     @PostMapping(value = "/me/avatar", consumes = "multipart/form-data")
@@ -98,6 +146,7 @@ public class UserController {
         String avatarUrl = serverInfo.getBaseUrl() + "/v1/image/get/" + image.getUniqueId();
         uploader.setAvatar(avatarUrl);
         userService.saveUser(uploader);
+        auditLogService.saveLog(PortalLogType.PROFILE_PICTURE_CHANGE, uploader, image.getUniqueId(), "PORTAL");
         return ResponseEntity.ok(new DefaultResponse(false, Map.of("avatar", avatarUrl)));
     }
 

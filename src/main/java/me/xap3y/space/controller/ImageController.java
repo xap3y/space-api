@@ -70,6 +70,7 @@ public class ImageController {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final PrometheusMetricService prometheusMetricService;
+    private final AuditLogService auditLogService;
     private final TranscriptImagesService transcriptImagesService;
     private final UrlSetMapper urlSetMapper;
     private final S3Service s3Service;
@@ -86,6 +87,7 @@ public class ImageController {
         this.s3Client = s3Client;
         this.s3Presigner = s3Presigner;
         this.prometheusMetricService = prometheusMetricService;
+        this.auditLogService = auditLogService;
         this.transcriptImagesService = transcriptImagesService;
         this.urlSetMapper = urlSetMapper;
         this.s3Service = s3Service;
@@ -435,6 +437,7 @@ public class ImageController {
         }*/
         webhookService.postImageDeleted(uniqueId, image);
         imageService.deleteByUniqueId(uniqueId);
+        auditLogService.saveLog(PortalLogType.IMAGE_DELETE, uploader, uniqueId, "API");
         metricService.setDatabaseUpdated(true);
         //metricService.setSessionImagesUploaded(metricService.getSessionImagesUploaded() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "Image deleted"), HttpStatus.OK);
@@ -468,6 +471,8 @@ public class ImageController {
         }
 
         imageService.saveImageDirect(image);
+        auditLogService.saveLog(PortalLogType.IMAGE_LOCK_CHANGE, uploader, uniqueId,
+                newPassword == null || newPassword.trim().isEmpty() ? "UNLOCKED" : "LOCKED");
         metricService.setDatabaseUpdated(true);
 
         return ResponseEntity.ok(new DefaultResponse(false, "Image password updated successfully"));
@@ -494,6 +499,7 @@ public class ImageController {
         else imageInfoDto = imageMapper.apply(image);
 
         prometheusMetricService.recordImageView(uniqueId, "INFO");
+        auditLogService.saveLog(PortalLogType.IMAGE_VIEW, uploader, uniqueId, "INFO");
 
         return ResponseEntity.ok()
                 .body(new UIDResponse(false, uniqueId, imageInfoDto));
@@ -597,6 +603,7 @@ public class ImageController {
         }
 
         prometheusMetricService.recordImageView(uniqueId);
+        auditLogService.saveLog(PortalLogType.IMAGE_VIEW, uploader, uniqueId, download ? "DOWNLOAD" : "RAW");
 
         if (download) {
             Resource resource = new FileSystemResource(image.path());

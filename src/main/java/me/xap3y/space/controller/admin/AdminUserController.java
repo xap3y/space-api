@@ -16,6 +16,9 @@ import me.xap3y.space.service.ImageService;
 import me.xap3y.space.service.PasteService;
 import me.xap3y.space.service.UrlService;
 import me.xap3y.space.service.UserService;
+import me.xap3y.space.service.TwoFactorService;
+import me.xap3y.space.service.AuditLogService;
+import me.xap3y.space.api.enums.PortalLogType;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -40,6 +43,27 @@ public class AdminUserController {
     private final ShortUserMapper shortUserMapper;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final TwoFactorService twoFactorService;
+    private final AuditLogService auditLogService;
+
+    @GetMapping("/{uid}/2fa")
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> getUserTwoFactorStatus(@PathVariable Long uid) {
+        User user = userService.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return ResponseEntity.ok(new DefaultResponse(false, twoFactorService.status(user)));
+    }
+
+    @DeleteMapping("/{uid}/2fa")
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> removeUserTwoFactor(HttpServletRequest request, @PathVariable Long uid) {
+        User user = userService.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!twoFactorService.forceDisable(user)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DefaultResponse(true, "Two-factor authentication is not enabled for this user"));
+        }
+        User actor = (User) request.getAttribute("uploader");
+        auditLogService.saveLog(PortalLogType.TWO_FACTOR_REVOKE, actor, "Removed 2FA from user #" + uid, "ADMIN");
+        return ResponseEntity.ok(new DefaultResponse(false, "Two-factor authentication removed"));
+    }
 
     @GetMapping(
             value = "/get",

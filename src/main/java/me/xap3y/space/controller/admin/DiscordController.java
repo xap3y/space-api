@@ -18,6 +18,7 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.DiscordConnectionService;
 import me.xap3y.space.service.RemoteMessageService;
 import me.xap3y.space.service.SessionService;
+import me.xap3y.space.service.TwoFactorService;
 import me.xap3y.space.util.Utils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
@@ -38,6 +39,7 @@ public class DiscordController {
     private final ServerInfo serverInfo;
     private final Utils utils;
     private DiscordConnectionService discordConnectionService;
+    private final TwoFactorService twoFactorService;
 
     @GetMapping(
             value = "/get/@me",
@@ -235,7 +237,16 @@ public class DiscordController {
         String userAgent = request.getHeader("User-Agent");
         String ipAddress = request.getRemoteAddr();
 
-        String sessionToken = sessionService.createSession(connection.get().getUserId(), userAgent, ipAddress);
+        User loginUser = connection.get().getUserId();
+        if (twoFactorService.isEnabled(loginUser)) {
+            return ResponseEntity.ok(new DefaultResponse(false, java.util.Map.of(
+                    "requiresTwoFactor", true,
+                    "challengeToken", twoFactorService.createLoginChallenge(loginUser),
+                    "expiresInSeconds", 300
+            )));
+        }
+
+        String sessionToken = sessionService.createSession(loginUser, userAgent, ipAddress);
 
         ResponseCookie cookie = ResponseCookie.from("session_token", sessionToken)
                 .httpOnly(true)

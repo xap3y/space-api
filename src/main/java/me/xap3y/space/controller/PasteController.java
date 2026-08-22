@@ -4,11 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.enums.ResourceLimitType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
 import me.xap3y.space.api.iface.PathLengthValidator;
 import me.xap3y.space.api.iface.RequiresApiKey;
+import me.xap3y.space.api.iface.OptionalApiKey;
+import me.xap3y.space.api.iface.OptionalCookieAuth;
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.dto.PasteDto;
 import me.xap3y.space.entity.Paste;
@@ -18,6 +21,7 @@ import me.xap3y.space.model.request.PasteRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.service.MetricService;
+import me.xap3y.space.service.AuditLogService;
 import me.xap3y.space.service.PasteService;
 import me.xap3y.space.service.ResourceLimitService;
 import me.xap3y.space.service.WebhookService;
@@ -48,16 +52,18 @@ public class PasteController {
     private final MetricService metricService;
     private final WebhookService webhookService;
     private final ResourceLimitService resourceLimitService;
+    private final AuditLogService auditLogService;
 
     //private static final String[] allowedExtensions = {"txt", "log", "java", "py", "sh", "json", "xml", "yml", "yaml", "properties", "md", "gradle", "conf", "cfg", "ini", "md", "markdown", "html", "htm", "css", "scss", "sass", "less", "ts", "js", "jsx", "tsx", "php", "sql", "csv", "tsv", "r", "rmd", "rdata", "rds", "rda", "rproj", "rhistory", "rprofile"};
 
-    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService, ResourceLimitService resourceLimitService) {
+    public PasteController(PasteService pasteService, PasteMapper pasteMapper, ServerInfo serverInfo, MetricService metricService, WebhookService webhookService, ResourceLimitService resourceLimitService, AuditLogService auditLogService) {
         this.pasteService = pasteService;
         this.pasteMapper = pasteMapper;
         this.serverInfo = serverInfo;
         this.metricService = metricService;
         this.webhookService = webhookService;
         this.resourceLimitService = resourceLimitService;
+        this.auditLogService = auditLogService;
     }
 
     /*@PostMapping(
@@ -156,6 +162,8 @@ public class PasteController {
 
         try {
             PasteDto savedPasteDto = pasteService.savePaste(content, uploader);
+            resourceLimitService.recordCreation(uploader, ResourceLimitType.PASTE, 1, content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+            auditLogService.saveLog(PortalLogType.PASTE_CREATE, uploader, savedPasteDto.uniqueId(), "API");
             //log.info("GOT DTO");
             String url2 = serverInfo.getBaseUrl() + "/v1/paste/get/" + savedPasteDto.uniqueId() + "?raw=true";
             String webViewUrl = serverInfo.getBaseUrl() + "/web/paste-render/" + savedPasteDto.uniqueId();
@@ -207,6 +215,7 @@ public class PasteController {
             metricService.setDatabaseUpdated(true);
             metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() + 1);
             webhookService.postPasteCreated(savedPasteDto);
+            auditLogService.saveLog(PortalLogType.PASTE_CREATE, uploader, savedPasteDto.uniqueId(), "API");
             return new ResponseEntity<>(new UIDResponse(false, savedPasteDto.uniqueId(), savedPasteDto), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -236,6 +245,7 @@ public class PasteController {
         }
 
         pasteService.deleteByUniqueId(paste.getUniqueId());
+        auditLogService.saveLog(PortalLogType.PASTE_DELETE, uploader, uniqueId, "API");
         metricService.setDatabaseUpdated(true);
         //metricService.setSessionPastesCreated(metricService.getSessionPastesCreated() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "Paste deleted"), HttpStatus.OK);
@@ -249,13 +259,17 @@ public class PasteController {
             }
     )
     @PathLengthValidator
+    @OptionalApiKey
+    @OptionalCookieAuth
     public ResponseEntity<?> getPaste(
+            HttpServletRequest request,
             @PathVariable String uniqueId,
             @RequestParam(required = false, defaultValue = "false", value = "raw") boolean rawData
     ) {
         PasteDto pasteDto = pasteService.getPasteByUniqueId(uniqueId)
                 .map(pasteMapper)
                 .orElseThrow(() -> new ResourceNotFoundException("Paste not found"));
+        auditLogService.saveLog(PortalLogType.PASTE_VIEW, (User) request.getAttribute("uploader"), uniqueId, rawData ? "RAW" : "PORTAL");
 
         HttpHeaders headers = new HttpHeaders();
 

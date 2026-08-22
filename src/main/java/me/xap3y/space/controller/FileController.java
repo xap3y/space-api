@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.enums.ResourceSourceType;
 import me.xap3y.space.api.enums.ResourceLimitType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.ResourceAccessForbiddenException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -26,6 +27,7 @@ import me.xap3y.space.model.response.PackListResponse;
 import me.xap3y.space.service.FileUploadService;
 import me.xap3y.space.service.ResourceLimitService;
 import me.xap3y.space.service.S3Service;
+import me.xap3y.space.service.AuditLogService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,6 +60,7 @@ public class FileController {
     private final PasswordEncoder passwordEncoder;
     private final S3Service s3Service;
     private final ResourceLimitService resourceLimitService;
+    private final AuditLogService auditLogService;
 
     private static final String PREFIX = "files/";
 
@@ -168,6 +171,7 @@ public class FileController {
             // Complete the pack
             FileUploadPack completedPack = fileUploadService.completeUploadPack(pack);
             resourceLimitService.recordCreation(uploader, ResourceLimitType.FILE, uploadedFiles.size(), completedPack.getTotalSize());
+            auditLogService.saveLog(PortalLogType.FILE_PACK_UPLOAD, uploader, completedPack.getPackId(), source.toString());
 
             FileUploadResponse response = new FileUploadResponse(
                     false,
@@ -272,6 +276,7 @@ public class FileController {
 
             // Delete pack and all files from database
             fileUploadService.deleteUploadPack(pack);
+            auditLogService.saveLog(PortalLogType.FILE_PACK_DELETE, uploader, packId, "PORTAL");
 
             log.info("Pack {} deleted successfully. {} files removed from S3", packId, deletedFiles.size());
 
@@ -354,6 +359,7 @@ public class FileController {
             // If pack has no files left, delete the pack
             if (pack.getFiles().isEmpty()) {
                 fileUploadService.deleteUploadPack(pack);
+                auditLogService.saveLog(PortalLogType.FILE_PACK_DELETE, uploader, packId, "LAST_FILE_REMOVED");
                 log.info("Pack {} deleted (no files remaining)", packId);
 
                 return new ResponseEntity<>(new DefaultResponse(false, "OK"), HttpStatus.NO_CONTENT);

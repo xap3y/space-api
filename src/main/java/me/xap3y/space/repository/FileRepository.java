@@ -15,6 +15,7 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
     Optional<FileEntity> findByUniqueId(String uniqueId);
 
     Long countByUploadPackId(Long uploadPackId);
+    long countByUploaderId(Long uploaderId);
 
     @Query("SELECT COUNT(e.id) FROM FileEntity e " +
             "WHERE e.uploadTime >= :startDate AND e.uploadTime <= :endDate AND e.uploader.id = :uploaderId")

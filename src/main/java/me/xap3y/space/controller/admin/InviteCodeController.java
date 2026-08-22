@@ -3,11 +3,14 @@ package me.xap3y.space.controller.admin;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import me.xap3y.space.api.iface.RequiresSpecialApiKey;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.dto.InviteCodeDto;
 import me.xap3y.space.entity.InviteCode;
+import me.xap3y.space.entity.User;
 import me.xap3y.space.mapper.InviteCodeMapper;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.InviteCodeService;
+import me.xap3y.space.service.AuditLogService;
 import me.xap3y.space.util.Utils;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
@@ -27,10 +30,12 @@ public class InviteCodeController {
 
     private final InviteCodeService inviteCodeService;
     private final InviteCodeMapper inviteCodeMapper;
+    private final AuditLogService auditLogService;
 
-    public InviteCodeController(InviteCodeService inviteCodeService, InviteCodeMapper inviteCodeMapper) {
+    public InviteCodeController(InviteCodeService inviteCodeService, InviteCodeMapper inviteCodeMapper, AuditLogService auditLogService) {
         this.inviteCodeService = inviteCodeService;
         this.inviteCodeMapper = inviteCodeMapper;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping(
@@ -39,6 +44,7 @@ public class InviteCodeController {
     )
     @RequiresSpecialApiKey
     public ResponseEntity<?> createInviteCode(
+            HttpServletRequest request,
             @RequestParam(value = "code", required = false) @Nullable String customCode,
             @RequestParam(value = "prefix", required = false) @Nullable String customPrefix,
             @RequestParam(value = "amount", required = false) @Nullable Integer amount
@@ -67,6 +73,7 @@ public class InviteCodeController {
                 inviteCodeDtos.add(codeDto);
             }
             List<String> inviteCodes = inviteCodeDtos.stream().map(InviteCodeDto::code).toList();
+            auditLogService.saveLog(PortalLogType.INVITE_CODE_CREATE, (User) request.getAttribute("uploader"), String.join(", ", inviteCodes), "ADMIN");
             return new ResponseEntity<>(new DefaultResponse(false, inviteCodes), HttpStatus.ACCEPTED);
         }
 
@@ -78,6 +85,7 @@ public class InviteCodeController {
         inviteCodeService.createInviteCode(code);
 
         InviteCodeDto codeDto = inviteCodeMapper.apply(code);
+        auditLogService.saveLog(PortalLogType.INVITE_CODE_CREATE, (User) request.getAttribute("uploader"), codeStr, "ADMIN");
 
         return new ResponseEntity<>(new DefaultResponse(false, codeDto), HttpStatus.ACCEPTED);
     }

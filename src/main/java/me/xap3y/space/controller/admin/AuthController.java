@@ -23,6 +23,7 @@ import me.xap3y.space.mapper.ShortUserMapper;
 import me.xap3y.space.mapper.UserMapper;
 import me.xap3y.space.model.request.AuthLoginRequest;
 import me.xap3y.space.model.request.AuthRegisterRequest;
+import me.xap3y.space.model.request.TwoFactorLoginRequest;
 import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.service.*;
 import me.xap3y.space.util.ConfigDb;
@@ -60,6 +61,7 @@ public class AuthController {
     private final TurnStileService turnStileService;
     private final MinecraftServerReportsService minecraftServerReportsService;
     private final TrSessionService trSessionService;
+    private final TwoFactorService twoFactorService;
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@CookieValue(value = "session_token", required = false) String token) {
@@ -143,6 +145,7 @@ public class AuthController {
         }
 
         sessionService.invalidateSessionById(id);
+        auditLogService.saveLog(PortalLogType.SESSION_REVOKE, uploader, id.toString(), "PORTAL");
 
         return ResponseEntity.ok(new DefaultResponse(false, "Session revoked successfully"));
     }
@@ -215,6 +218,25 @@ public class AuthController {
                 .body(new DefaultResponse(false, user));
     }
 
+    @PostMapping(value = "/login/2fa", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> completeTwoFactorLogin(
+            HttpServletRequest request,
+            @RequestBody TwoFactorLoginRequest body
+    ) {
+        if (body == null) throw new BadRequestException("Missing request body");
+        User user = twoFactorService.verifyLoginChallenge(body.challengeToken(), body.code());
+        if (user.getStatus() != UserAccountStatus.ACTIVE) throw new ResourceAccessForbiddenException("Your account is not active");
+
+        String sessionToken = sessionService.createSession(user, request.getHeader("User-Agent"), request.getRemoteAddr());
+        prometheusMetricService.recordEvent(MetricRecordType.USER_LOGIN);
+        auditLogService.saveLog(PortalLogType.USER_LOGIN, user);
+        ResponseCookie cookie = ResponseCookie.from("session_token", sessionToken)
+                .httpOnly(serverInfo.getSetCookieHttpOnly()).path("/")
+                .maxAge(serverInfo.getAuthCookieMaxAge()).sameSite(serverInfo.getAuthCookieSameSite())
+                .domain(serverInfo.getAuthCookieDomain()).secure(serverInfo.getAuthCookieSecure()).build();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new DefaultResponse(false, userMapper.apply(user)));
+    }
+
     @PostMapping(
             value = "/login",
             produces = MediaType.APPLICATION_JSON_VALUE
@@ -246,6 +268,15 @@ public class AuthController {
         String userAgent = request.getHeader("User-Agent");
         String ipAddress = request.getRemoteAddr();
 
+        if (twoFactorService.isEnabled(user)) {
+            String challengeToken = twoFactorService.createLoginChallenge(user);
+            return ResponseEntity.ok(new DefaultResponse(false, Map.of(
+                    "requiresTwoFactor", true,
+                    "challengeToken", challengeToken,
+                    "expiresInSeconds", 300
+            )));
+        }
+
         if (isUserAgentBot(userAgent)) {
             return ResponseEntity.ok()
                     .body(new DefaultResponse(false, user));
@@ -269,7 +300,7 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new DefaultResponse(false, user));
+                .body(new DefaultResponse(false, userMapper.apply(user)));
     }
 
     @PostMapping(

@@ -3,6 +3,7 @@ package me.xap3y.space.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import me.xap3y.space.api.enums.UserRole;
 import me.xap3y.space.api.enums.ResourceLimitType;
+import me.xap3y.space.api.enums.PortalLogType;
 import me.xap3y.space.api.exception.BadRequestException;
 import me.xap3y.space.api.exception.InvalidApiKeyException;
 import me.xap3y.space.api.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import me.xap3y.space.model.response.DefaultResponse;
 import me.xap3y.space.model.response.UIDResponse;
 import me.xap3y.space.repository.UrlRepository;
 import me.xap3y.space.service.MetricService;
+import me.xap3y.space.service.AuditLogService;
 import me.xap3y.space.service.ResourceLimitService;
 import me.xap3y.space.service.UrlLogsService;
 import me.xap3y.space.service.UrlService;
@@ -52,8 +54,9 @@ public class UrlController {
     private final ShortUrlMapper shortUrlMapper;
     private final UrlLogsService urlLogsService;
     private final ResourceLimitService resourceLimitService;
+    private final AuditLogService auditLogService;
 
-    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper, UrlLogsService urlLogsService, ResourceLimitService resourceLimitService) {
+    public UrlController(UrlService urlService, UrlMapper urlMapper, ServerInfo serverInfo, UrlRepository urlRepository, MetricService metricService, WebhookService webhookService, ShortUrlMapper shortUrlMapper, UrlLogsService urlLogsService, ResourceLimitService resourceLimitService, AuditLogService auditLogService) {
         this.urlService = urlService;
         this.urlMapper = urlMapper;
         this.serverInfo = serverInfo;
@@ -62,6 +65,7 @@ public class UrlController {
         this.shortUrlMapper = shortUrlMapper;
         this.urlLogsService = urlLogsService;
         this.resourceLimitService = resourceLimitService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping(
@@ -103,6 +107,7 @@ public class UrlController {
         metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() + 1);
         metricService.setDatabaseUpdated(true);
         webhookService.postUrlShorten(urlDto);
+        auditLogService.saveLog(PortalLogType.URL_CREATE, uploader, urlDto.uniqueId(), "API");
         return new ResponseEntity<>(new UIDResponse(false, urlDto.uniqueId(), urlDto), HttpStatus.OK);
     }
 
@@ -130,6 +135,7 @@ public class UrlController {
         urlLogs.setIpAddress(ipAddress);
         urlLogs.setTime(LocalDateTime.now());
         urlLogsService.save(urlLogs);
+        auditLogService.saveLog(PortalLogType.URL_REDIRECT, null, uniqueId, "REDIRECT");
         return new ResponseEntity<>(headers, HttpStatus.MOVED_PERMANENTLY);
     }
 
@@ -160,6 +166,7 @@ public class UrlController {
         }
 
         urlService.deleteByShortCode(urlDto.getShortCode());
+        auditLogService.saveLog(PortalLogType.URL_DELETE, uploader, uniqueId, "API");
         metricService.setDatabaseUpdated(true);
         //metricService.setSessionUrlsShortened(metricService.getSessionUrlsShortened() - 1);
         return new ResponseEntity<>(new DefaultResponse(false, "ShortUrl deleted"), HttpStatus.OK);

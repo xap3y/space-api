@@ -26,6 +26,7 @@ public class AuditLog {
     private User userId;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.ORDINAL)
     private PortalLogType type;
 
     @Column(nullable = true)
