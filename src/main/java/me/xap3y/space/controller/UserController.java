@@ -276,6 +276,7 @@ public class UserController {
 
         uploader.setSocials(socials);
         userService.saveUser(uploader);
+        auditLogService.saveLog(PortalLogType.USER_UPDATE_PROFILE, uploader, "Social profiles updated", "PORTAL");
 
         return new ResponseEntity<>(new DefaultResponse(false, "Updated"), HttpStatus.NO_CONTENT);
     }
