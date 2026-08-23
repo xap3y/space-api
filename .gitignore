@@ -52,3 +52,4 @@ opentelemetry-javaagent.jar
 copilot-instructions.md
 .env
 start.sh
+local.sh
