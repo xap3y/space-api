@@ -2,9 +2,11 @@ package me.xap3y.space.service;
 
 import me.xap3y.space.config.ServerInfo;
 import me.xap3y.space.util.TelegramVerifyBot;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(name = "USE_TELEGRAM_VERIFY_BOT", havingValue = "true")
 public class TelegramVerifyService {
 
     private final ServerInfo serverInfo;

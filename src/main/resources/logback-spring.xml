@@ -10,37 +10,47 @@
         </encoder>
     </appender>
 
-    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
-        <labels>
-            compose_service=space
-        </labels>
-        <http>
-            <url>${LOKI_URL:-http://localhost:3100/loki/api/v1/push}</url>
-        </http>
-        <batchSize>100</batchSize>
-        <queueSize>1000</queueSize>
-        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="ch.qos.logback.classic.PatternLayout">
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %level [%thread] ip=%mdc{clientIp} uri=%mdc{uri} method=%mdc{method} trace_id=%mdc{trace_id} span_id=%mdc{span_id} %logger{36} - %msg%n</pattern>
-            </layout>
-        </encoder>
+    <springProfile name="!no-loki">
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+            <labels>
+                compose_service=space
+            </labels>
+            <http>
+                <url>${LOKI_URL:-http://localhost:3100/loki/api/v1/push}</url>
+            </http>
+            <batchSize>100</batchSize>
+            <queueSize>1000</queueSize>
+            <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+                <layout class="ch.qos.logback.classic.PatternLayout">
+                    <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %level [%thread] ip=%mdc{clientIp} uri=%mdc{uri} method=%mdc{method} trace_id=%mdc{trace_id} span_id=%mdc{span_id} %logger{36} - %msg%n</pattern>
+                </layout>
+            </encoder>
 
-        <format>
-            <label>
-                <pattern>compose_service=space,level=%level,logger=%logger{20}</pattern>
-            </label>
-            <message>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] ${LOG_LEVEL_PATTERN} %logger{36} - %msg%n</pattern>
-            </message>
-        </format>
-    </appender>
+            <format>
+                <label>
+                    <pattern>compose_service=space,level=%level,logger=%logger{20}</pattern>
+                </label>
+                <message>
+                    <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] ${LOG_LEVEL_PATTERN} %logger{36} - %msg%n</pattern>
+                </message>
+            </format>
+        </appender>
+    </springProfile>
 
     <logger name="io.opentelemetry.exporter.internal.grpc" level="WARN"/>
     <logger name="io.opentelemetry.exporter.internal" level="WARN"/>
-    <!-- Root logger -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="LOKI"/>
-    </root>
+    <!-- Root logger: console is always enabled, Loki is enabled by default. -->
+    <springProfile name="!no-loki">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="LOKI"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="no-loki">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
 
 </configuration>

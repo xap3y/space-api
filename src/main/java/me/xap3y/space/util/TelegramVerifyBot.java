@@ -11,6 +11,7 @@ import me.xap3y.space.entity.*;
 import me.xap3y.space.handler.VerifyWebSocketHandler;
 import me.xap3y.space.mapper.ImageMapper;
 import me.xap3y.space.service.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
@@ -36,6 +37,7 @@ import java.util.Optional;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "USE_TELEGRAM_VERIFY_BOT", havingValue = "true")
 public class TelegramVerifyBot implements LongPollingSingleThreadUpdateConsumer {
 
     private final ServerInfo serverInfo;

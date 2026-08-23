@@ -7,41 +7,32 @@ import me.xap3y.space.util.TelegramBot;
 import me.xap3y.space.util.TelegramVerifyBot;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import static me.xap3y.space.SpaceApplication.*;
 
 @Slf4j
 @Component
+@Profile("!local")
 public class ApplicationListener {
 
     private final WebhookService webhookService;
     private final TelegramService telegramService;
     private final ServerInfo serverInfo;
-    private final Optional<RemoteMessageService> remoteMessageService;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final TelegramVerifyService telegramVerifyService;
-    private final EmailVerifyCodeService emailVerifyCodeService;
-    private final TelegramConnectionService telegramConnectionService;
-    private final TelegramVerifyBot telegramVerifyBot;
+    private final Optional<TelegramVerifyBot> telegramVerifyBot;
     private final ImageService imageService;
 
 
-    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, Optional<RemoteMessageService> remoteMessageService, TelegramVerifyService telegramVerifyService, EmailVerifyCodeService emailVerifyCodeService, TelegramConnectionService telegramConnectionService, TelegramVerifyBot telegramVerifyBot, ImageService imageService) {
+    public ApplicationListener(WebhookService webhookService, TelegramService telegramService, ServerInfo serverInfo, Optional<TelegramVerifyBot> telegramVerifyBot, ImageService imageService) {
         this.webhookService = webhookService;
         this.telegramService = telegramService;
         this.serverInfo = serverInfo;
-        this.remoteMessageService = remoteMessageService;
-        this.telegramVerifyService = telegramVerifyService;
-        this.emailVerifyCodeService = emailVerifyCodeService;
-        this.telegramConnectionService = telegramConnectionService;
         this.telegramVerifyBot = telegramVerifyBot;
         this.imageService = imageService;
     }
@@ -50,11 +41,15 @@ public class ApplicationListener {
     public void runAfterStartup() {
         log.debug("runAfterStartup()");
         webhookService.init();
-        String botToken = serverInfo.getTelegramBotToken();
-        TelegramBot telegramBot = new TelegramBot(botToken);
-        telegramBot.init();
+        TelegramBotsLongPollingApplication botsApplication = null;
+        if (serverInfo.getUseTelegramBot() || serverInfo.getUseTelegramVerifyBot()) {
+            botsApplication = new TelegramBotsLongPollingApplication();
+        }
 
         if (serverInfo.getUseTelegramBot()) {
+            String botToken = serverInfo.getTelegramBotToken();
+            TelegramBot telegramBot = new TelegramBot(botToken);
+            telegramBot.init();
             try {
                 botsApplication.registerBot(botToken, telegramBot);
                 telegramService.setTelegramBot(telegramBot);
@@ -64,14 +59,10 @@ public class ApplicationListener {
             }
         }
 
-        String verifyBotToken = serverInfo.getTelegramVerifyBotToken();
-        //TelegramVerifyBot telegramVerifyBot = new TelegramVerifyBot(verifyBotToken, emailVerifyCodeService, telegramConnectionService);
-        //telegramVerifyBot.init();
-
-        if (serverInfo.getUseTelegramVerifyBot()) {
+        if (serverInfo.getUseTelegramVerifyBot() && telegramVerifyBot.isPresent()) {
             try {
                 log.info("Telegram Verify Bot registered successfully.");
-                botsApplication.registerBot(serverInfo.getTelegramVerifyBotToken(), telegramVerifyBot);
+                botsApplication.registerBot(serverInfo.getTelegramVerifyBotToken(), telegramVerifyBot.get());
             } catch (TelegramApiException ex) {
                 log.error("Telegram Verify Bot failed to register!", ex);
             }
@@ -89,15 +80,4 @@ public class ApplicationListener {
 
         imageService.fixMissingVideoPostersAsync();
     }
-
-    private void runDiscordTask() {
-        log.info("runDiscordTask() - Sending message to Discord channel: {}", serverInfo.getRemoteDiscordBotChannelId());
-        if (remoteMessageService.isPresent()) {
-            remoteMessageService.get().updateChannelTopic(serverInfo.getRemoteDiscordBotChannelId(), "TEST").subscribe();
-        } else {
-            log.warn("Discord bot service not available, skipping Discord task");
-        }
-    }
-
-
 }
