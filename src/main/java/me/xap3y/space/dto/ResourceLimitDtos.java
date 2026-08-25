@@ -11,9 +11,11 @@ public final class ResourceLimitDtos {
 
     public record RuleValues(Long dailyCount, Long weeklyCount, Long dailyBytes, Long weeklyBytes) {}
 
-    public record PolicyUpdate(Map<ResourceLimitType, RuleValues> limits) {}
+    public record FilePackLimits(Integer maxFiles, Long maxBytes) {}
 
-    public record RolePolicy(UserRole role, Map<ResourceLimitType, RuleValues> limits) {}
+    public record PolicyUpdate(Map<ResourceLimitType, RuleValues> limits, FilePackLimits filePackLimits) {}
+
+    public record RolePolicy(UserRole role, Map<ResourceLimitType, RuleValues> limits, FilePackLimits filePackLimits) {}
 
     public record PauseRequest(Long durationMinutes, Boolean indefinite) {}
 
@@ -26,6 +28,8 @@ public final class ResourceLimitDtos {
             Map<ResourceLimitType, RuleValues> overrides,
             Map<ResourceLimitType, RuleValues> effective,
             Map<ResourceLimitType, UsageValues> usage,
+            FilePackLimits filePackOverrides,
+            FilePackLimits effectiveFilePackLimits,
             boolean paused,
             boolean pausedIndefinitely,
             LocalDateTime pausedUntil

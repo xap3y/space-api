@@ -95,10 +95,6 @@ public class FileController {
             throw new BadRequestException("Items list cannot be empty");
         }
 
-        if (registerRequest.items().size() > 10) {
-            throw new BadRequestException("Maximum 10 files per upload");
-        }
-
         long totalBytes = 0;
         for (FileRegisterItemRequest item : registerRequest.items()) {
             if (item.uniqueId() == null || item.uniqueId().isEmpty())

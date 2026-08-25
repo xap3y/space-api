@@ -26,6 +26,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ResourceLimitService {
 
+    public static final int DEFAULT_MAX_FILES_PER_PACK = 10;
+    public static final long DEFAULT_MAX_PACK_BYTES = 15L * 1024 * 1024 * 1024;
+
     private static final List<UserRole> MANAGED_ROLES = Arrays.stream(UserRole.values())
             .filter(role -> role != UserRole.ADMIN && role != UserRole.OWNER)
             .toList();
@@ -59,6 +62,7 @@ public class ResourceLimitService {
 
     @Transactional
     public void assertCanCreate(User user, ResourceLimitType type, long incomingCount, long incomingBytes) {
+        if (type == ResourceLimitType.FILE) assertFilePackAllowed(user, incomingCount, incomingBytes);
         if (isExempt(user)) return;
         assertMutationAllowed(user);
 
@@ -77,6 +81,23 @@ public class ResourceLimitService {
             checkRule(ResourceLimitType.TOTAL, ResourceLimitPeriod.WEEK, effective.get(ResourceLimitType.TOTAL),
                     usage(user.getId(), ResourceLimitType.TOTAL, weekStart, now), incomingCount, incomingBytes);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public void assertFilePackAllowed(User user, long fileCount, long totalBytes) {
+        if (isExempt(user)) return;
+        if (fileCount <= 0) throw new BadRequestException("A file pack must contain at least one file");
+        if (totalBytes < 0) throw new BadRequestException("File pack size cannot be negative");
+        FilePackLimits limits = effectiveFilePackLimits(user);
+        if (limits.maxFiles() != null && fileCount > limits.maxFiles())
+            throw new ResourceAccessForbiddenException("This file pack contains " + fileCount + " files, but your maximum is " + limits.maxFiles());
+        if (limits.maxBytes() != null && totalBytes > limits.maxBytes())
+            throw new ResourceAccessForbiddenException("This file pack is " + readableBytes(totalBytes) + ", but your maximum pack size is " + readableBytes(limits.maxBytes()));
+    }
+
+    @Transactional(readOnly = true)
+    public FilePackLimits getEffectiveFilePackLimits(User user) {
+        return effectiveFilePackLimits(user);
     }
 
     @Transactional
@@ -118,7 +139,10 @@ public class ResourceLimitService {
     @Transactional(readOnly = true)
     public List<RolePolicy> getRolePolicies() {
         return MANAGED_ROLES.stream()
-                .map(role -> new RolePolicy(role, configuredRules(profileRepository.findByRole(role).orElse(null))))
+                .map(role -> {
+                    ResourceLimitProfile profile = profileRepository.findByRole(role).orElse(null);
+                    return new RolePolicy(role, configuredRules(profile), configuredFilePackLimits(profile));
+                })
                 .toList();
     }
 
@@ -130,8 +154,8 @@ public class ResourceLimitService {
             created.setRole(role);
             return profileRepository.save(created);
         });
-        saveRules(profile, update == null ? null : update.limits());
-        return new RolePolicy(role, configuredRules(profile));
+        savePolicy(profile, update);
+        return new RolePolicy(role, configuredRules(profile), configuredFilePackLimits(profile));
     }
 
     @Transactional
@@ -143,6 +167,7 @@ public class ResourceLimitService {
         boolean paused = profile != null && (profile.isPausedIndefinitely()
                 || profile.getPausedUntil() != null && profile.getPausedUntil().isAfter(now));
         return new UserPolicy(user.getId(), user.getUsername(), user.getRole(), overrides, effectiveRules(user), usageView(userId),
+                configuredFilePackLimits(profile), effectiveFilePackLimits(user),
                 paused, profile != null && profile.isPausedIndefinitely(), profile == null ? null : profile.getPausedUntil());
     }
 
@@ -150,7 +175,7 @@ public class ResourceLimitService {
     public UserPolicy updateUserPolicy(Long userId, PolicyUpdate update) {
         User user = requireManagedUser(userId);
         ResourceLimitProfile profile = getOrCreateUserProfile(user);
-        saveRules(profile, update == null ? null : update.limits());
+        savePolicy(profile, update);
         return getUserPolicy(userId);
     }
 
@@ -158,7 +183,12 @@ public class ResourceLimitService {
     public UserPolicy clearUserOverrides(Long userId) {
         User user = requireManagedUser(userId);
         ResourceLimitProfile profile = profileRepository.findByUserId(userId).orElse(null);
-        if (profile != null) ruleRepository.deleteByProfileId(profile.getId());
+        if (profile != null) {
+            ruleRepository.deleteByProfileId(profile.getId());
+            profile.setMaxFilesPerPack(null);
+            profile.setMaxPackBytes(null);
+            profileRepository.save(profile);
+        }
         return getUserPolicy(user.getId());
     }
 
@@ -226,6 +256,44 @@ public class ResourceLimitService {
                 override.weeklyCount() != null ? override.weeklyCount() : base.weeklyCount(),
                 override.dailyBytes() != null ? override.dailyBytes() : base.dailyBytes(),
                 override.weeklyBytes() != null ? override.weeklyBytes() : base.weeklyBytes());
+    }
+
+    private FilePackLimits configuredFilePackLimits(ResourceLimitProfile profile) {
+        return new FilePackLimits(profile == null ? null : profile.getMaxFilesPerPack(), profile == null ? null : profile.getMaxPackBytes());
+    }
+
+    private FilePackLimits effectiveFilePackLimits(User user) {
+        if (isExempt(user)) return new FilePackLimits(null, null);
+        FilePackLimits role = configuredFilePackLimits(profileRepository.findByRole(user.getRole()).orElse(null));
+        FilePackLimits override = configuredFilePackLimits(profileRepository.findByUserId(user.getId()).orElse(null));
+        Integer maxFiles = override.maxFiles() != null ? override.maxFiles() : role.maxFiles();
+        Long maxBytes = override.maxBytes() != null ? override.maxBytes() : role.maxBytes();
+        return new FilePackLimits(maxFiles == null ? DEFAULT_MAX_FILES_PER_PACK : maxFiles,
+                maxBytes == null ? DEFAULT_MAX_PACK_BYTES : maxBytes);
+    }
+
+    private void savePolicy(ResourceLimitProfile profile, PolicyUpdate update) {
+        saveRules(profile, update == null ? null : update.limits());
+        FilePackLimits pack = update == null ? null : update.filePackLimits();
+        validateFilePackLimits(pack);
+        profile.setMaxFilesPerPack(pack == null ? null : pack.maxFiles());
+        profile.setMaxPackBytes(pack == null ? null : pack.maxBytes());
+        profileRepository.save(profile);
+    }
+
+    private void validateFilePackLimits(FilePackLimits limits) {
+        if (limits == null) return;
+        if (limits.maxFiles() != null && limits.maxFiles() <= 0)
+            throw new BadRequestException("Maximum files per pack must be greater than zero");
+        if (limits.maxBytes() != null && limits.maxBytes() <= 0)
+            throw new BadRequestException("Maximum file pack size must be greater than zero");
+    }
+
+    private String readableBytes(long bytes) {
+        if (bytes >= 1024L * 1024 * 1024) return String.format(Locale.ROOT, "%.2f GB", bytes / (1024d * 1024 * 1024));
+        if (bytes >= 1024L * 1024) return String.format(Locale.ROOT, "%.2f MB", bytes / (1024d * 1024));
+        if (bytes >= 1024L) return String.format(Locale.ROOT, "%.2f KB", bytes / 1024d);
+        return bytes + " B";
     }
 
     private Map<ResourceLimitType, RuleValues> configuredRules(ResourceLimitProfile profile) {

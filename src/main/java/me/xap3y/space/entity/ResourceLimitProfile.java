@@ -38,6 +38,10 @@ public class ResourceLimitProfile {
 
     private LocalDateTime pausedUntil;
 
+    private Integer maxFilesPerPack;
+
+    private Long maxPackBytes;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
