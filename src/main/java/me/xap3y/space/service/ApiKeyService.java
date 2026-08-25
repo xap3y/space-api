@@ -7,6 +7,8 @@ import me.xap3y.space.repository.ApiKeyRepository;
 import me.xap3y.space.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import me.xap3y.space.util.Utils;
+import java.time.LocalDateTime;
 
 @Service
 public class ApiKeyService {
@@ -30,5 +32,17 @@ public class ApiKeyService {
 
     public boolean validateApiKeySimple(String apiKey) {
         return apiKeyRepository.findByKeyCode(apiKey).isPresent();
+    }
+
+    public String rotate(User user) {
+        ApiKey key = user.getApiKey();
+        if (key == null) key = new ApiKey();
+        key.setKeyCode(Utils.generateApiKey());
+        key.setCreatedAt(LocalDateTime.now());
+        if (key.getId() == null) key.setMaxUploadSize(-1);
+        apiKeyRepository.save(key);
+        user.setApiKey(key);
+        userRepository.save(user);
+        return key.getKeyCode();
     }
 }

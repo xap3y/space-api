@@ -17,4 +17,5 @@ public class UserUpdateRequest {
     private String avatar;
     private UserRole role;
     private String password;
+    private String username;
 }

@@ -51,6 +51,17 @@ public class TwoFactorService {
     }
 
     @Transactional
+    public void verifySensitiveAction(User user, String code) {
+        if (!isEnabled(user)) return;
+        if (code == null || code.isBlank()) {
+            throw new BadRequestException("Two-factor authentication code is required");
+        }
+        if (!verifyCredential(enabledConfig(user), code, true)) {
+            throw new BadRequestException("Invalid authentication or backup code");
+        }
+    }
+
+    @Transactional
     public Map<String, Object> beginSetup(User user) {
         byte[] secretBytes = new byte[20]; random.nextBytes(secretBytes);
         String secret = base32Encode(secretBytes);

@@ -45,6 +45,7 @@ public class AdminUserController {
     private final PasswordEncoder passwordEncoder;
     private final TwoFactorService twoFactorService;
     private final AuditLogService auditLogService;
+    private final me.xap3y.space.service.ApiKeyService apiKeyService;
 
     @GetMapping("/{uid}/2fa")
     @RequiresSpecialApiKey
@@ -242,10 +243,38 @@ public class AdminUserController {
         if (body.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(body.getPassword()));
         }
+        if (body.getUsername() != null && !body.getUsername().trim().equals(user.getUsername())) {
+            String username = body.getUsername().trim();
+            if (username.isEmpty()) return ResponseEntity.badRequest().body(new DefaultResponse(true, "Username is required"));
+            if (userService.existsByUsername(username)) return ResponseEntity.badRequest().body(new DefaultResponse(true, "Username already in use"));
+            user.setUsername(username);
+        }
 
         userService.saveUser(user);
 
         return ResponseEntity.ok(new DefaultResponse(false, "User updated successfully"));
+    }
+
+    @PostMapping("/{uid}/api-key/rotate")
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> rotateApiKey(HttpServletRequest request, @PathVariable Long uid) {
+        User user = userService.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        String key = apiKeyService.rotate(user);
+        auditLogService.saveLog(PortalLogType.USER_UPDATE_PROFILE, (User) request.getAttribute("uploader"), "Rotated API key for user #" + uid, "ADMIN");
+        return ResponseEntity.ok(new DefaultResponse(false, key));
+    }
+
+    @DeleteMapping("/{uid}")
+    @RequiresSpecialApiKey
+    public ResponseEntity<?> deleteUser(HttpServletRequest request, @PathVariable Long uid) {
+        User actor = (User) request.getAttribute("uploader");
+        User user = userService.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (actor.getId().equals(uid)) return ResponseEntity.badRequest().body(new DefaultResponse(true, "You cannot delete your own account here"));
+        if (user.getRole() == me.xap3y.space.api.enums.UserRole.OWNER && actor.getRole() != me.xap3y.space.api.enums.UserRole.OWNER)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new DefaultResponse(true, "Only an owner can delete an owner"));
+        auditLogService.saveLog(PortalLogType.USER_DELETE_ACCOUNT, actor, "Deleted user " + user.getUsername() + " (#" + uid + ")", "ADMIN");
+        userService.deleteById(uid);
+        return ResponseEntity.ok(new DefaultResponse(false, "User deleted successfully"));
     }
 
     @PostMapping(

@@ -54,6 +54,9 @@ import java.util.Optional;
 @Slf4j
 public class UserController {
 
+    public record PasswordChangeRequest(String oldPassword, String newPassword, String twoFactorCode) {}
+    public record EmailChangeRequest(String password, String newEmail, String twoFactorCode) {}
+
     private final UserService userService;
     private final ImageService imageService;
     private final UserMapper userMapper;
@@ -66,6 +69,43 @@ public class UserController {
     private final ResourceLimitService resourceLimitService;
     private final TwoFactorService twoFactorService;
     private final AuditLogService auditLogService;
+
+    @PutMapping("/me/password")
+    @RequiresApiKey
+    public ResponseEntity<?> changePassword(HttpServletRequest request, @RequestBody PasswordChangeRequest body) {
+        User user = (User) request.getAttribute("uploader");
+        if (body.oldPassword() == null || !passwordEncoder.matches(body.oldPassword(), user.getPassword()))
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new DefaultResponse(true, "Current password is incorrect"));
+        if (body.newPassword() == null || body.newPassword().length() < 5)
+            return ResponseEntity.badRequest().body(new DefaultResponse(true, "New password must be at least 5 characters"));
+        if (passwordEncoder.matches(body.newPassword(), user.getPassword()))
+            return ResponseEntity.badRequest().body(new DefaultResponse(true, "New password must be different"));
+        twoFactorService.verifySensitiveAction(user, body.twoFactorCode());
+        user.setPassword(passwordEncoder.encode(body.newPassword()));
+        userService.saveUser(user);
+        auditLogService.saveLog(PortalLogType.USER_UPDATE_PROFILE, user, "Changed account password", "PROFILE");
+        return ResponseEntity.ok(new DefaultResponse(false, "Password changed successfully"));
+    }
+
+    @PutMapping("/me/email")
+    @RequiresApiKey
+    public ResponseEntity<?> changeEmail(HttpServletRequest request, @RequestBody EmailChangeRequest body) {
+        User user = (User) request.getAttribute("uploader");
+        if (body.password() == null || !passwordEncoder.matches(body.password(), user.getPassword()))
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new DefaultResponse(true, "Current password is incorrect"));
+        if (body.newEmail() == null || !body.newEmail().trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+            return ResponseEntity.badRequest().body(new DefaultResponse(true, "Enter a valid email address"));
+        String email = body.newEmail().trim().toLowerCase();
+        if (email.equalsIgnoreCase(user.getEmail()))
+            return ResponseEntity.badRequest().body(new DefaultResponse(true, "This is already your email address"));
+        if (userService.existsByEmail(email))
+            return ResponseEntity.badRequest().body(new DefaultResponse(true, "Email address is already in use"));
+        twoFactorService.verifySensitiveAction(user, body.twoFactorCode());
+        user.setEmail(email);
+        userService.saveUser(user);
+        auditLogService.saveLog(PortalLogType.USER_UPDATE_PROFILE, user, "Changed account email address", "PROFILE");
+        return ResponseEntity.ok(new DefaultResponse(false, "Email address changed successfully"));
+    }
 
     public UserController(UserService userService, ImageService imageService, UserMapper userMapper, ServerInfo serverInfo, UrlService urlService, PasteService pasteService, UserSettingsService userSettingsService, UserSettingsMapper userSettingsMapper, PasswordEncoder passwordEncoder, ResourceLimitService resourceLimitService, TwoFactorService twoFactorService, AuditLogService auditLogService) {
         this.userService = userService;
